@@ -1,5 +1,5 @@
-## Main branch<br>
-Only stable and production ready major versions of release branch are merged here.<br>
+## Release branch<br>
+Any finalized changes from dev are merged here in semi-regular intervals.<br>
 
 # KoneAvustajatWebsite<br>
  Website for koneavustajat<br>
