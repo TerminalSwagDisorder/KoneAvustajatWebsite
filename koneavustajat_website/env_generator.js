@@ -12,7 +12,7 @@ const rl = readline.createInterface({
 const newSecret = crypto.randomBytes(64).toString("hex");
 const secret = `SESSION_SECRET=${newSecret}`;
 const db_host = "DB_HOST=localhost";
-const db_name = "DB_NAME=schoolmanagement";
+const db_name = "DB_NAME=koneavustajat_db";
 
 rl.question("Enter DB username: ", (db_user) => {
     rl.question("Enter DB password: ", (db_password) => {
