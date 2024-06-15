@@ -1,6 +1,6 @@
 from pathlib import Path
 from sqlalchemy.orm import sessionmaker, declarative_base
-from sqlalchemy import create_engine, Column, INTEGER, TEXT, DATETIME, BOOLEAN, ForeignKey, Table, MetaData, text, UniqueConstraint, func
+from sqlalchemy import create_engine, Column, INTEGER, TEXT, DATETIME, BOOLEAN, ForeignKey, Table, MetaData, text, UniqueConstraint, func, string
 from sqlalchemy.exc import OperationalError
 
 Base = declarative_base()
@@ -167,7 +167,7 @@ class User(Base):
 		Column("Gender", TEXT),
 		Column("ProfileImage", TEXT),
 		Column("RoleID", INTEGER, ForeignKey("roles.RoleID"), server_default="1"),
-		Column("Email", TEXT, unique=True),
+		Column("Email", String(255), unique=True),
 		Column("Password", TEXT),
 	)
 
