@@ -2,12 +2,6 @@
 // Auth: Terminal Swag Disorder
 // Desc: File containing code for server-side, including express-session, jwt & mysql
 
-//          ////////    //
-//          //    //    //
-//          //    //    //
-//          //    //    //
-////////    ////////    ////////
-
 // General exports
 const express = require("express");
 const helmet = require("helmet");
