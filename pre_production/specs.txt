@@ -1,0 +1,39 @@
+Pages
+
+	Home
+	About
+	Contact
+
+	User authentication
+		Sign in
+		Sign up
+		Profile
+		(Sign out)
+
+	Computer builder
+		Builder
+		Completed builds
+
+	Computer parts (JimmsScraper)
+		Separate parts
+
+Extra features
+
+	Responsivity (bootstrap)
+	Navbar
+	Footer
+	Darkmode switch
+	Email contact
+	(Eng & fin switch)
+	
+	
+Technologies
+
+	Languages & frameworks
+		Python (JimmsScraper)
+		MySQL
+		React
+		Node
+	
+	Github
+	
