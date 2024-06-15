@@ -1,0 +1,498 @@
+/************ Default Css ************/
+* {
+	margin: 0;
+	padding: 0;
+	box-sizing: border-box;
+}
+
+$blue: #5e72e4;
+$light_blue: #00587a;
+$turquoise: #008891;
+$white: #fff;
+$gray: #e7e7de;
+$dark_grey: #3333;
+$black: #000;
+$red: #902424;
+$border: #dee2e6;
+
+// Utrecht style-colors
+//Light mode
+$light_bg_color: #ffffff; //background color
+$light_box_text: #000; //writable boxes and text inside clickable buttons
+$light_click_button: #047A76; //clickable buttons, text inside writable boxes and clickable text
+$light_logo_icons: #000000; //Logo, icons and non clickable text
+$light_active_elems: lightblue; // Active elements
+$light_activehover_elems: darkgray; // Active elements
+$light_navbar: #047A76; //Navbar
+$light_forms: #f2f2f2;
+$light_disabled_input: #808080;
+$light_odd_row: white;
+$light_even_row: lightgray;
+$light_theme_button: #00587a;
+$light_user_select_button: #394588;
+
+//Dark mode
+$dark_bg_color: #586E6D; //background color
+$dark_box_text: #DEF5F4; //writable boxes and text inside clickable buttons
+$dark_click_button: #047A76; //clickable buttons, text inside writable boxes and clickable text
+$dark_logo_icons: #ffffff; //Logo, icons and non clickable text
+$dark_active_elems: #697ef5; // Active elements
+$dark_activehover_elems: gray; // Active elements
+$dark_navbar: #00587a; //Navbar
+$dark_forms: #707070;
+$dark_disabled_input: #595959;
+$dark_odd_row: rgba(0, 0, 0, 0.796);
+$dark_even_row: rgba(56, 56, 56, 0.877);
+$dark_theme_button: #047A76;
+$dark_user_select_button: #697ef5;
+
+
+// Colors from the clients styling requirements
+// Mixin for theme-specific styles
+@mixin theme($bg_color, $box_text, $click_button, $logo_icons, $active_elems, $activehover_elems, $navbar_color, $btn_color, $text_input_bg, $text_input_color, $forms, $odd_row, $even_row, $disabled_input, $theme_button, $user_select_button){
+	// Light mode styles
+	background-color: $bg_color;
+	background: $bg_color;
+	color: $logo_icons; // Assuming default text color follows logo/icon color
+
+	.box, .text-button {
+	  background-color: $box_text; // Writable boxes and text inside buttons
+	  color: $click_button;        // Text inside boxes and clickable text
+	}
+
+	.click-button {
+	  background-color: $click_button;
+	  color: $box_text;
+	}
+
+	.logo, .icons, .non-click-text {
+	  color: $logo_icons;
+	}
+	
+	.active {
+		background-color: $active_elems;
+		color: $box_text;
+	}
+
+	.active:hover {
+		background-color: $activehover_elems;
+		color: $box_text;
+	}
+
+	Form {
+		background-color: $bg_color;
+		color: $text_input_color;
+	}
+	
+	Form input {
+		background-color: $forms;
+		color: $text_input_color;
+		&::placeholder {
+			color: $box_text; // Issue 2
+		}
+	}
+	.searchForm {
+		display: flex;
+		justify-content: left;
+		width: 50%;
+		Form{		
+			
+			color: $box_text;
+			div {
+				background-color: $bg_color;
+				color: $box_text;
+			}
+		}
+	}
+
+	input:disabled {
+		background-color: $disabled_input;
+		color: $box_text !important;
+	}
+
+	.valid-input, .valid-input:active {
+		border-width: 2px;
+		border-color: #28A745 !important;
+	}
+
+	.invalid-input, .invalid-input:active {
+		border-width: 2px;
+		border-color: red !important;
+	}
+
+
+	// Navbar specific styles
+	nav {
+		background-color: $navbar_color; // Applying the theme-specific navbar color
+		box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.15), inset 0 -1px 0 rgba(255, 255, 255, 0.15);
+		padding: 15px 0 !important;
+		font-size: 17px !important;
+		margin-bottom: 20px;
+		font-weight: 600;
+		
+		.nav-logo {
+			height: 40px;
+			max-height: 40px;
+		}
+		
+		.themeSwitcher {
+			background-color: $theme_button;
+		}
+
+		a {
+			color: $white !important; // You might want to make this color theme-specific too
+		}
+	}
+	.btn-primary {
+		background-color: $btn_color;
+		display: inline-block !important;
+		font-weight: 600 !important;
+		text-align: center !important;
+		vertical-align: middle !important;
+		user-select: none !important;
+		border: 1px solid transparent !important;
+		line-height: 1.5 !important;
+		transition: all .15s ease !important;
+		box-shadow: 0 4px 6px rgba(50, 50, 93, .11), 0 1px 3px rgba(0, 0, 0, .08) !important;
+		margin: 0.5rem 0.5rem 0.5rem 0 !important;
+		padding: 0.8rem 0.25rem !important;
+		width: 180px;
+	
+		&:hover {
+			background-color: $black !important;
+			border: 1px solid $black !important;
+		}
+	}
+	input, textarea, select{
+		background-color: $text_input_bg;
+        color: $text_input_color;
+        border: 1px solid darken($text_input_bg, 10%); // Adds a darker border for better contrast
+
+        &:focus {
+            outline: none; // Removes the browser default outline
+            background-color: lighten($text_input_bg, 5%); // Optionally lighten/darken on focus
+            color: $text_input_color !important;
+		}
+	}
+	.table-striped>tbody>tr:nth-child(odd)>td, 
+	.table-striped>tbody>tr:nth-child(odd)>th   {
+		  background-color: $odd_row;
+		  color: $box_text;
+		  &:hover{
+			background-color: lighten($odd_row, 10%);
+		  }
+		}
+	.table-striped>tbody>tr:nth-child(even)>td, 
+	.table-striped>tbody>tr:nth-child(even)>th  {
+		  background-color: $even_row;
+		  color: $box_text;
+		  &:hover{
+			background-color: lighten($even_row, 10%);
+		  }
+
+		}
+	.table th {
+		background: $navbar_color !important;
+		color: white !important;
+	
+	}
+	
+	.profile-details .list-group-item { // Issue 1
+		background-color: $even_row !important;
+		color: $box_text !important;
+		width: 320px;
+		text-align: left;
+	}
+	.btn-danger {
+		background-color: $red !important;
+		border: 1px solid $red !important;
+		width: 180px;
+		padding: 0.8rem 0.25rem !important;
+	}
+	.user-select-button,
+	.course-select-button {
+		color: $user_select_button !important;
+		font-size: 14px;
+		font-weight: 700;
+		float: right;
+		text-decoration: unset !important;
+		cursor: pointer;
+		color: $black;
+	}
+}
+
+:root {
+  @include theme($light_bg_color, $light_box_text, $light_click_button, $light_logo_icons, $light_active_elems, $light_activehover_elems, $light_navbar, $light_navbar, $white, $black, $light_forms, $light_odd_row, $light_even_row, $light_disabled_input, $light_theme_button, $light_user_select_button); // Default/light theme
+}
+
+[data-theme="dark"] {
+    @include theme($dark_bg_color, $dark_box_text, $dark_click_button, $dark_logo_icons, $dark_active_elems, $dark_activehover_elems, $dark_navbar, $light_blue, $dark_grey, $white, $dark_forms, $dark_odd_row, $dark_even_row, $dark_disabled_input, $dark_theme_button, $dark_user_select_button); // Dark theme
+  
+}
+
+// If there are style issues of the background not extending to the whole window
+html, body {
+    min-height: 100vh;
+}
+
+// Continuation of the fill issue, if needed
+#root, .App {
+    flex: 1;  // Makes the App container grow to fill the space
+    display: flex;
+    flex-direction: column;
+}
+
+// Ensure the content div also fills available space if needed
+.content {
+    flex-grow: 1;  // Allows the content area to expand to fill available space
+    display: flex;
+    flex-direction: column;
+}
+
+
+html {
+	scroll-behavior: smooth;
+	scroll-padding-top: 75px;
+}
+
+body {
+	font-weight: 400;
+	overflow-x: hidden;
+	position: relative;
+}
+
+h1,
+h2,
+h3,
+h4,
+h5,
+h6 {
+	margin: 0;
+	padding: 0;
+	line-height: normal;
+}
+
+p,
+a,
+li,
+button,
+ul {
+	margin: 0;
+	padding: 0;
+	line-height: normal;
+	text-decoration: none;
+}
+
+.btn-outline {
+	background-color: $red!important;
+	border: 1px solid $blue !important;
+	color: $blue !important;
+	width: 180px;
+	margin-left: 10px !important;
+	padding: 0.8rem 0.25rem !important;
+
+	&:hover {
+		background-color: $blue !important;
+		border: 1px solid $blue !important;
+		color: $white !important;
+	}
+}
+
+a:hover {
+	text-decoration: none;
+}
+
+button {
+	border: 0;
+	background-color: transparent;
+}
+
+.navbar-toggler {
+	background: $red !important;
+	border: 1px solid $border !important;
+	padding: 3px 10px !important;
+
+	&:focus {
+		background: $red !important;
+		border: 1px solid $border !important;
+	}
+
+	&:active {
+		background: $red !important;
+		border: 1px solid $border !important;
+	}
+}
+
+.navbar-toggler-icon {
+	display: inline-block;
+	width: 1.0em !important;
+	height: 1.2em !important;
+}
+
+.persInfo {
+	text-align: left;
+	width: 247px;
+	padding: 10px;
+	margin: 0 0 0 -12px;
+	border: 1px solid $border;
+	border-bottom: 0;
+	border-radius: 5px 5px 0 0;
+}
+
+.profile-image {
+	width: 70%;
+	padding-top: 50px;
+	border-radius: 50%;
+}
+
+// Admin Dashboard
+.topButtons {
+	display: flex;
+	justify-content: space-between;
+	margin: 20px 0;
+
+	button {
+		padding: 10px 20px !important
+	}
+}
+
+.admin-name {
+	font-weight: 700;
+	text-transform: uppercase;
+	font-size: 22px;
+}
+
+.user-image {
+	width: 50px;
+	height: 50px;
+	object-fit: cover;
+}
+
+
+.user-select-button,
+.course-select-button {
+	color: #394588 !important;
+	font-size: 14px;
+	font-weight: 700;
+	float: right;
+	text-decoration: unset !important;
+	cursor: pointer;
+	color: $black;
+}
+
+.table img,
+.table .btn {
+	vertical-align: middle;
+}
+
+.table td {
+	vertical-align: middle;
+	padding-top: 12px;
+	padding-bottom: 12px;
+}
+
+.table {
+	box-shadow: rgba(0, 0, 0, 0.02) 0px 1px 3px 0px, rgba(27, 31, 35, 0.15) 0px 0px 0px 1px;
+	padding: 20px;
+	border-radius: 8px;
+}
+
+.enrollTable {
+	a {
+		color: $blue !important;
+		cursor: pointer;
+		border-bottom: 1px solid;
+		text-decoration: unset !important;
+	}
+}
+
+#userform {
+	position: absolute;
+	z-index: 1;
+	width: 94%;
+	height: 80vh;
+	left: 50%;
+	transform: translate(-50%);
+	padding: 20px 0;
+}
+
+.paginationButtons {
+	display: flex;
+	justify-content: center;
+
+	Button {
+		max-width: 125px;
+		height: 60px;
+		text-overflow: clip;
+		text-rendering: optimizeLegibility;
+		font-size: 90%;
+	}
+
+	h3 {
+		align-self: center;
+		padding-left: 25px;
+		padding-right: 25px;
+	}
+}
+
+.clickableHeader {
+	display: flex;
+	justify-content: left;
+	width: 200px;
+	margin: 10px;
+	margin-left: 15px;
+	cursor: pointer;
+    user-select: none; /* Standard syntax */
+    -webkit-user-select: none; /* Safari */
+    -moz-user-select: none; /* Firefox */
+    -ms-user-select: none; /* Internet Explorer/Edge */
+	&:hover {
+		background-color: lightgray;
+	}
+}
+
+
+.addUsersRole {
+	display: flex;
+	justify-content: space-around;
+}
+
+.enrollForm {
+	width: 250px;
+	position: absolute;
+	top: 70px;
+	right: 0;
+}
+
+/* Extra small devices (phones, 320px) */
+@media only screen and (max-width: 320px) {
+	.profile-details {
+		width: 296px;
+	}
+}
+
+/* Extra small devices (phones, 600px and down) */
+@media only screen and (max-width: 600px) {
+	.userChangeButtons {
+		display: block;
+	}
+
+	.enrollForm {
+		width: 100%;
+	}
+}
+
+/* Medium devices (landscape tablets, 768px and up) */
+@media only screen and (min-width: 768px) {
+	.profile-details {
+		text-align: left;
+		width: 320px;
+		margin: 10px auto !important;
+	}
+}
+
+/* Large devices (laptops/desktops, 992px and up) */
+@media only screen and (min-width: 992px) {}
+
+/* Extra large devices (large laptops and desktops, 1200px and up) */
+@media only screen and (min-width: 1200px) {}
