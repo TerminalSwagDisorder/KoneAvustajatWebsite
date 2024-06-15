@@ -103,16 +103,16 @@ def define_triggers(engine, session, metadata):
 
 def trigger_check(engine, session, metadata):
 	users = [
-		User(Name="notastudent", RoleID=3, Email="notastudent@example.com", Password="notastudent"),
+		User(Name="notanadmin", RoleID=2, Email="notanadmin@example.com", Password="notanadmin"),
 	]
 
-	students = [
-		Student(UserID=9, StartYear="2021"),
+	admins = [
+		Admin(UserID=9, Department="Sales"),
 	]
 
 	try:
 		[session.merge(user) for user in users]
-		[session.merge(student) for student in students]
+		[session.merge(admin) for admin in admins]
 		session.commit()
 	except OperationalError:	
 		print("Trigger check successful!")
