@@ -312,32 +312,36 @@ app.get("/api/users/:id", async (req, res) => {
 	}
 });
 
-
 // Signing up
-app.post("/api/users/signup", async (req, res) => {
-    const { Name, Email, Password } = req.body;
-    console.log("server api user signup accessed");
+app.post("/api/users/signup", checkRegex, async (req, res) => {
+    console.log("API user signup accessed");
+
+    const { formFields } = req.body;
+	const jsonFormFields = JSON.parse(formFields)
+	const { name, email, password } = jsonFormFields;
 
     try {
-        const emailCheckSql = "SELECT Email FROM users WHERE Email = ?";
-        const [user] = await promisePool.query(emailCheckSql, [Email]);
-
+		// Check if email exists
+        const emailCheckSql = "SELECT email FROM users WHERE Email = ?";
+        const [user] = await promisePool.query(emailCheckSql, [email]);
         if (user.length > 0) {
-            return res.status(409).json({ message: "Email already in use" });
+            return res.status(409).json({ message: "One or more fields already in use" });
         }
 
-        const hashedPassword = await bcrypt.hash(Password, 10);
-        const insertSql = "INSERT INTO users (Name, Email, Password) VALUES (?, ?, ?)";
-        const [result] = await promisePool.query(insertSql, [Name, Email, hashedPassword]);
+		// Hash password & insert data into db
+        const hashedPassword = await bcrypt.hash(password, 10);
+        const insertSql = "INSERT INTO users (name, email, password) VALUES (?, ?, ?)";
+        const [result] = await promisePool.query(insertSql, [name, email, hashedPassword]);
         return res.status(200).json({message: "User registered successfully", id: result.insertId });
 
     } catch (error) {
         console.error(error);
-        return res.status(500).json({ message: "Internal server error" });
+		// If there is a status message or data then use that, otherwise the defaults
+		const message = error.response ? error.response.data : "Internal Server Error";
+        const status = error.response ? error.response.status : 500;
+        return res.status(status).json({ message: message });
     }
 });
-
-
 
 app.post("/api/login", async (req, res) => {
     console.log("server api login accessed");
