@@ -23,9 +23,15 @@ const mysql = require("mysql2");
 require("dotenv").config();
 
 // Session secret for express session
+// Also jwt secret for possible jwt
 const sessionSecret = process.env.SESSION_SECRET;
+const jwtSecret = process.env.JWT_SECRET;
 if (!sessionSecret) {
 	console.error("Missing SESSION_SECRET environment variable. Exiting...\nHave you run env_generator.js yet?");
+	process.exit(1);
+}
+if (!jwtSecret) {
+	console.error("Missing JWT_SECRET environment variable. Exiting...\nHave you run env_generator.js yet?");
 	process.exit(1);
 }
 
@@ -123,10 +129,11 @@ const authenticateJWT = (req, res, next) => {
 // Express-session
 // Cookie settings
 app.use(session({
-  secret: sessionSecret,
-  resave: false,
-  saveUninitialized: false, // Can be useful, creates a cookie even when user is not logged in to track behaviour. This can be taxing though.
-  cookie: { httpOnly: true, sameSite: "lax", maxAge: 3600000 }
+	name: "session-id",
+	secret: sessionSecret,
+	resave: false,
+	saveUninitialized: false, // Can be useful, creates a cookie even when user is not logged in to track behaviour. This can be taxing though.
+	cookie: { httpOnly: true, sameSite: "lax", maxAge: 3600000 }
 }));
 
 // Middleware for checking if user is logged in
@@ -185,15 +192,35 @@ const otherFileUpload = multer({ storage: storage });
 
 // Middleware for pagination
 const routePagination = (req, res, next) => {
-    const page = parseInt(req.query.page) || 1;
-    const items = parseInt(req.query.items) || 100;
+    const numPage = parseInt(req.query.page, 10);
+	const numItems = parseInt(req.query.items, 10);
+	const page = isNaN(numPage) ? 1 : numPage;
+	const items = isNaN(numItems) ? 100 : numItems;
+
+	if (page <= 0) {
+		return res.status(400).json({ message: "Page must be a positive integer" });
+	}
+
+	if (items <= 0) {
+		return res.status(400).json({ message: "Number of items must be a positive integer" });
+	}
 
     if (items >= 1000) {
         return res.status(400).json({ message: "Please limit items to under 1000" });
     }
-	
+
+	let offset = 0;
+	if (page && page !== 1) {
+		offset = (page - 1) * items;
+	}
+
+	if (offset < 0) {
+		//return res.status(400).json({ message: "Offset cannot be below 1" });
+		console.error("Offset cannot be under 0!")
+	}
+
 	// If successful, attach page and items to the req object to be used in the routes
-    req.pagination = { page, items };
+    req.pagination = { page, items, offset };
     next();
 }
 
@@ -252,8 +279,14 @@ app.get("/", async (req, res) => {
 // Route for frontend pagination in MySQL
 app.get("/api/count", async (req, res) => {
 	console.log("MySQL pagination accessed");
+
 	const tableName = req.query.tableName; // Get the table name from the query
-	const items = parseInt(req.query.items) || 50;
+	const numItems = parseInt(req.query.items, 10);
+	const items = isNaN(numItems) ? 50 : numItems;
+	
+	if (items <= 0) {
+		return res.status(400).json({ message: "Number of items cannot be below 1" });
+	}
 
 	const sql = `SELECT COUNT(*) AS total FROM ??`;
 	try {
@@ -270,10 +303,14 @@ app.get("/api/count", async (req, res) => {
 });
 
 // Route for viewing regular users
-app.get("/api/users", async (req, res) => {
-	const sql = "SELECT * FROM users";
+app.get("/api/users", routePagination, async (req, res) => {
+	console.log("API users accessed")
+
+	const { items, offset } = req.pagination;
+
+	const sql = "SELECT * FROM users LIMIT ? OFFSET ?";
 	try {
-		const [users] = await promisePool.query(sql);
+		const [users] = await promisePool.query(sql, [items, offset]);
 		// Process each user to add isAdmin property
 		const processedUsers = users.map(user => {
 			const isAdmin = user.RoleID === 4;
@@ -283,20 +320,28 @@ app.get("/api/users", async (req, res) => {
 			return { ...userData, isAdmin };
 		});
 		return res.status(200).json(processedUsers);
-	} catch (err) {
-		console.error(err);
-		return res.status(500).send(err);
+	} catch (error) {
+        console.error(error);
+		// If there is a status message or data then use that, otherwise the defaults
+		const message = error.response ? error.response.data : "Internal Server Error";
+        const status = error.response ? error.response.status : 500;
+		return res.status(status).json({ message: message });
 	}
 });
 
-app.get("/api/users/:id", async (req, res) => {
-	const { id } = req.params;
+app.get("/api/users/id", async (req, res) => {
+	console.log("API search users by id accessed")
+
+	const numId = parseInt(req.query.id, 10);
+	const id = isNaN(numId) ? 1 : numId;
+
 	const sql = "SELECT * FROM users WHERE UserID = ?";
 	try {
 		const [users] = await promisePool.query(sql, [id]);
 		if (!users.length) {
 			return res.status(404).json({ message: "User not found" });
-		} else {
+		}
+
 		const processedUsers = users.map(user => {
 			const isAdmin = user.RoleID === 4;
 
@@ -304,11 +349,14 @@ app.get("/api/users/:id", async (req, res) => {
 			const { Password, ...userData } = user;
 			return { ...userData, isAdmin };
 		});
+	
 		return res.status(200).json(processedUsers);
-		}
-	} catch (err) {
-		console.error(err);
-		return res.status(500).send(err);
+	} catch (error) {
+        console.error(error);
+		// If there is a status message or data then use that, otherwise the defaults
+		const message = error.response ? error.response.data : "Internal Server Error";
+        const status = error.response ? error.response.status : 500;
+		return res.status(status).json({ message: message });
 	}
 });
 
@@ -343,37 +391,60 @@ app.post("/api/users/signup", checkRegex, async (req, res) => {
     }
 });
 
-app.post("/api/login", async (req, res) => {
-    console.log("server api login accessed");
-    const { Email, Password } = req.body;
+app.post("/api/users/login", async (req, res) => {
+    console.log("API users login accessed");
+    const { formFields, userType } = req.body;
+	const jsonFormFields = JSON.parse(formFields)	
+	
+	const { email, password } = jsonFormFields;
     const sql = "SELECT * FROM users WHERE Email = ?";
     
     try {
 		// [[user]] takes the first user in the array wile [user] returns the whole array and you need to specify user[0] each time otherwise
-        const [[user], fields] = await promisePool.query(sql, [Email]);
+        const [[user], fields] = await promisePool.query(sql, [email]);
 
         if (!user) {
-            return res.status(401).json({ message: "User not found" });
+            return res.status(404).json({ message: "Email or password is incorrect" });
         }
+
+		// If the email is not an exact match
+		if (user.Email !== email) {
+			return res.status(404).json({ message: "Email or password is incorrect" });
+		}
         
-        const match = await bcrypt.compare(Password, user.Password);
+        const match = await bcrypt.compare(password, user.Password);
         if (match) {
             const isAdmin = user.RoleID === 4;
 			req.session.user = { ...user, isAdmin };
-            
+
+			/*
+			// Provide an accessToken cookie
+			const accessToken = jwt.sign({ user, userType }, jwtSecret, {
+				expiresIn: "1h",
+			});
+			res.cookie("accessToken", accessToken, {
+				httpOnly: true,
+				sameSite: "lax",
+				maxAge: 3600000
+			});
+            */
+
 			return res.status(200).json({ message: "Logged in successfully", user: req.session.user });
         } else {
-            return res.status(401).json({ message: "Password incorrect" });
+            return res.status(401).json({ message: "Email or password is incorrect" });
         }
-    } catch (err) {
-        console.error(err);
-        return res.status(500).send(err);
+    } catch (error) {
+        console.error(error);
+		// If there is a status message or data then use that, otherwise the defaults
+		const message = error.response ? error.response.data : "Internal Server Error";
+        const status = error.response ? error.response.status : 500;
+		return res.status(status).json({ message: message });
     }
 });
 
 // Check if the user is logged in
 app.get("/api/profile", authenticateSession, (req, res) => {
-	console.log("server api profile accessed")
+	console.log("API profile accessed")
 	// const userData = { userData: req.user };
 	res.json({
 		message: "Authenticated",
@@ -381,70 +452,75 @@ app.get("/api/profile", authenticateSession, (req, res) => {
 	});
 });
 
-
 // Profile refresh if userdata gets updated
 app.get("/api/profile/refresh", authenticateSession, async (req, res) => {
-	console.log("server api profile refresh accessed")
+	console.log("API profile refresh accessed")
 	const userId = req.user.UserID;
 	const sql = "SELECT * FROM users WHERE UserID = ?";
 	try {
 		const [[user], fields] = await promisePool.query(sql, [userId]);
 		if (!user) {
 			return res.status(404).json({ message: "User not found" });
-		} else {
-			const isAdmin = user.RoleID === 4;
-			// Exclude sensitive information like hashed password before sending the user data
-			const { ...userData } = user;
-			return res.status(200).json( {userData: { ...userData, isAdmin: isAdmin}});
 		}
-	} catch (err) {
-        console.error(err);
-        return res.status(500).send(err);
+		const isAdmin = user.RoleID === 4;
+		// Exclude sensitive information like hashed password before sending the user data
+		const { ...userData } = user;
+		return res.status(200).json( {userData: { ...userData, isAdmin: isAdmin}});
+
+	} catch (error) {
+        console.error(error);
+		// If there is a status message or data then use that, otherwise the defaults
+		const message = error.response ? error.response.data : "Internal Server Error";
+        const status = error.response ? error.response.status : 500;
+		return res.status(status).json({ message: message });
 	}
 });
 
 // Update own user credentials
-app.patch("/api/profile", authenticateSession, profileImgUpload.single("profileImage"), async (req, res) => {
-	console.log("server api update own credentials accessed")
-	console.log(req.user)
+app.patch("/api/profile", authenticateSession, checkRegex, profileImgUpload.single("profileImage"), async (req, res) => {
+	console.log("API update own credentials accessed");
+	console.log(req.user);
 	const userId = req.user.UserID;
-	const { Name, Email, Password, Gender, currentPassword } = req.body; // Updated credentials from request body
+	const { formFields } = req.body; // Updated credentials  from request body
+	const jsonFormFields = JSON.parse(formFields);
 	const ProfileImage = req.file; // Profile image
 
 	try {
 
-		const match = await bcrypt.compare(currentPassword, req.user.Password)
+		const match = await bcrypt.compare(jsonFormFields.currentPassword, req.user.Password)
 		if (!match) {
 			return res.status(403).json({ message: "Current password is incorrect" });
 		}
 
 		let hashedPassword = null;
-		if (Password) {
-			// Hash the new password before storing it
-			hashedPassword = await bcrypt.hash(Password, 10);
-		}
+		const allowedFields = ["name", "email", "password", "gender", "profileImage"];
 
 		// SQL query to update user data
 		// updateQuery allows for multiple fields to be updated simultaneously
 		let updateQuery = "UPDATE users SET ";
 		let queryParams = [];
+ 
+		// More dynamic way of updating users
+		for (const key in jsonFormFields) {
+			console.log(key)
+			if (allowedFields.includes(key)) {
+				if (jsonFormFields.hasOwnProperty(key)) {
+					if (jsonFormFields[key] !== "") {
+						updateQuery += key.charAt(0).toUpperCase() + key.slice(1) + " = ?, "; // Since the first letters are capitalized in the db
+						if (key === "password") {
+							// Hash the new password before storing it
+							hashedPassword = await bcrypt.hash(jsonFormFields[key], 10);
+							queryParams.push(hashedPassword);
 
-		if (Name) {
-			updateQuery += "Name = ?, ";
-			queryParams.push(Name);
+						} else {	
+							queryParams.push(jsonFormFields[key]);
+						}
+					}
+				}
+			}
 		}
-		if (Email) {
-			updateQuery += "Email = ?, ";
-			queryParams.push(Email);
-		}
-		if (Gender) {
-			updateQuery += "Gender = ?, ";
-			queryParams.push(Gender);
-		}
-		if (hashedPassword) {
-			updateQuery += "Password = ?, ";
-			queryParams.push(hashedPassword);
-		}
+
+
 		if (ProfileImage) {
 			const ProfileImage_name = ProfileImage.filename;
 			updateQuery += "ProfileImage = ?, ";
@@ -455,25 +531,32 @@ app.patch("/api/profile", authenticateSession, profileImgUpload.single("profileI
 		if (queryParams.length > 0) {
 			updateQuery = updateQuery.slice(0, -2);
 		}
+
 		updateQuery += " WHERE UserID = ?";
 		queryParams.push(userId);
-
+console.log(updateQuery)
+console.log(queryParams)
 		const [result] = await promisePool.query(updateQuery, queryParams);
 		if (result.affectedRows === 0) {
 			return res.status(404).json({ message: "Item not found" });
 		}
-		if (Name) req.user.Name = Name;
-		if (Email) req.user.Email = Email;
-		if (Gender) req.user.Gender = Gender;
-		if (hashedPassword) req.user.Password = hashedPassword;
-		if (ProfileImage) req.user.ProfileImage = ProfileImage.filename;
-		console.log(req.user)
-		return res.status(200).json({ message: "User updated successfully", id: this.lastID });
+
+		return res.status(200).json({ message: "User updated successfully" });
 	} catch (error) {
-		console.error(error);
-		return res.status(500).json({ message: "Internal server error" });
+        console.error(error);
+		// If there is a status message or data then use that, otherwise the defaults
+		const message = error.response ? error.response.data : "Internal Server Error";
+        const status = error.response ? error.response.status : 500;
+		return res.status(status).json({ message: message });
+		/*		
+		const message = error.message || "Internal Server Error";
+        const status = 500;
+		return res.status(status).json({ message: message });
+		*/
 	}
 });
+
+
 ////////////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////

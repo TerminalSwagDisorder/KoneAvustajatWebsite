@@ -92,7 +92,7 @@ const Profile = ({ currentUser, setCurrentUser, handleCredentialChange, handleSi
               <Form.Control
                 type="password"
                 placeholder="Enter current password"
-                name="currentpassword"
+                name="currentPassword"
 		  		onChange={handleInputChange}
                 required
               />
@@ -141,7 +141,7 @@ const Profile = ({ currentUser, setCurrentUser, handleCredentialChange, handleSi
               <Form.Control
                 type="password"
                 placeholder="Enter current password"
-                name="currentpassword"
+                name="currentPassword"
 		  		onChange={handleInputChange}
                 required
               />
@@ -191,7 +191,7 @@ const Profile = ({ currentUser, setCurrentUser, handleCredentialChange, handleSi
     const newEmail = event.target.email.value;
     const newPassword = event.target.password.value;
 
-    const currentPassword = event.target.currentpassword.value;
+    const currentPassword = event.target.currentPassword.value;
 
     // Check if any field is filled
     if (!newName && !newEmail && !newPassword) {
