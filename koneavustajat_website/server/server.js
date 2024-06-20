@@ -534,8 +534,7 @@ app.patch("/api/profile", authenticateSession, checkRegex, profileImgUpload.sing
 
 		updateQuery += " WHERE UserID = ?";
 		queryParams.push(userId);
-console.log(updateQuery)
-console.log(queryParams)
+
 		const [result] = await promisePool.query(updateQuery, queryParams);
 		if (result.affectedRows === 0) {
 			return res.status(404).json({ message: "Item not found" });
