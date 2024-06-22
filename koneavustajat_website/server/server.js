@@ -465,6 +465,27 @@ app.get("/api/profile", authenticateSession, (req, res) => {
 	});
 });
 
+// Logout route (Frontend will handle removing the token with JWT)
+app.post("/api/logout", (req, res) => {
+	console.log("API logout accessed")
+    req.session.destroy(error => {
+        if (error) {
+            return res.status(500).json({ message: "Could not log out, please try again" });
+        } else {
+            res.clearCookie("session-id")
+            return res.status(200).json({ message: "Logged out successfully" });
+        }
+    });
+});
+
+/*
+app.post("/api/logout", (req, res) => {
+	console.log("API logout accessed")
+	res.clearCookie("accessToken");
+	res.json({ message: "Logged out successfully" });
+});
+*/
+
 // Profile refresh if userdata gets updated
 app.get("/api/profile/refresh", authenticateSession, async (req, res) => {
 	console.log("API profile refresh accessed")
