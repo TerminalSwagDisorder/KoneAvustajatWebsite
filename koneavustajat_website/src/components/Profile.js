@@ -170,15 +170,15 @@ const Profile = ({ currentUser, setCurrentUser, handleCredentialChange, handleSi
 		if (currentUser.role === "user") {
 			return (
 				<ListGroup className="profile-details">
-				  <ListGroup.Item>Name: <span>{currentUser.name}</span></ListGroup.Item>
-				  <ListGroup.Item>Email: <span>{currentUser.email}</span></ListGroup.Item>
+				  <ListGroup.Item>Name: <span>{currentUser.Name}</span></ListGroup.Item>
+				  <ListGroup.Item>Email: <span>{currentUser.Email}</span></ListGroup.Item>
 				</ListGroup>
 			);
 		} else {
 			return(
             <ListGroup className="profile-details">
-              <ListGroup.Item>Name: <span>{currentUser.name}</span></ListGroup.Item>
-              <ListGroup.Item>Email: <span>{currentUser.email}</span></ListGroup.Item>
+              <ListGroup.Item>Name: <span>{currentUser.Name}</span></ListGroup.Item>
+              <ListGroup.Item>Email: <span>{currentUser.Email}</span></ListGroup.Item>
             </ListGroup>
 		)}
 	};

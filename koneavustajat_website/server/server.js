@@ -442,6 +442,19 @@ app.post("/api/users/login", async (req, res) => {
     }
 });
 
+app.post("/api/logout", (req, res) => {
+    console.log("API logout accessed")
+    req.session.destroy(error => {
+        if (error) {
+            return res.status(500).json({ message: "Could not log out, please try again" });
+        } else {
+            res.clearCookie("session-id")
+            return res.status(200).json({ message: "Logged out successfully" });
+        }
+    });
+}); 
+
+
 // Check if the user is logged in
 app.get("/api/profile", authenticateSession, (req, res) => {
 	console.log("API profile accessed")

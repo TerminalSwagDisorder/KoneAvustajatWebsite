@@ -52,7 +52,7 @@ const NavBar = ({ currentUser, handleUserChange, handleSignout, ThemeContext }) 
       userCheck = (
 		  <>
             <Nav.Link as={Link} to="/profile">
-              {currentUser.name}
+              {currentUser.Name}
             </Nav.Link>
             <Nav.Link as={Link} to="/" onClick={handleLogout}>
               Log out

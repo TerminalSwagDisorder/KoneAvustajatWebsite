@@ -4,7 +4,7 @@ import { Outlet, Link } from "react-router-dom";
 import { FaUsersCog } from "react-icons/fa";
 import { LiaSchoolSolid } from "react-icons/lia";
 
-const Admin = ({ setCurrentUser, currentUser }) => {
+const DashboardAdmin = ({ setCurrentUser, currentUser }) => {
   return (
     <div className="mt-4 topButtons">
       <Link to="/admin/users">
@@ -24,4 +24,4 @@ const Admin = ({ setCurrentUser, currentUser }) => {
   );
 };
 
-export default Admin;
+export default DashboardAdmin;
