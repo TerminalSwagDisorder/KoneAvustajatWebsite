@@ -8,6 +8,7 @@ import Signin from "./components/Signin";
 import Signup from "./components/Signup";
 import Admin from "./components/Admin";
 import DashboardAdmin from "./components/DashboardAdmin";
+import UsersAdmin from "./components/UsersAdmin";
 import { ThemeContext, ThemeProvider, fetchUsers, fetchDynamicData, fetchSearchIdData, fetchDataAmount, handleSignin, handleSignup, handleSignout, checkIfSignedIn, refreshProfile, handleCredentialChange } from "./api/api";
 
 
@@ -59,6 +60,8 @@ function App() {
 		{currentUser && currentUser.role === "ambulance" && (
 		<Route path="admin" element={<Admin currentUser={currentUser} />}>
 			<Route path="dashboard" element={<DashboardAdmin currentUser={currentUser} />} />
+			<Route path="users" element={<UsersAdmin currentUser={currentUser} />} />
+
 
 		</Route>
 		)}
