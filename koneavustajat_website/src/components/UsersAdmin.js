@@ -1,35 +1,8 @@
 import React, { useState, useEffect } from 'react';
 
-
-const UsersAdmin = () => {
+const UsersAdmin = ( {fetchUsers} ) => {
   const [users, setUsers] = useState([]);
   const [error, setError] = useState(null);
-
-  const fetchUsers = async () => {
-    try {
-      const response = await fetch(`http://localhost:4000/api/users`, {
-        method: "GET",
-        credentials: "include", // Important, because we're using cookies
-      });
-  
-      const data = await response.json();
-  
-          if (!response.ok) {
-              alert(`HTTP error ${response.status}: ${data.message}`);
-              throw new Error(`HTTP error ${response.status}: ${data.message}`);
-          }
-  
-      // If data is not correct format
-      if (!Array.isArray(data)) {
-        return Object.values(data);
-      }
-      
-      return data;
-    } catch (error) {
-      console.error(error);
-      
-    }
-  };
 
   // Function to fetch data and set users state
   const fetchData = async () => {
@@ -61,7 +34,7 @@ const UsersAdmin = () => {
       <ul>
         {users.slice().map((user) => (
           <li key={user.UserID}>
-            <strong>{user.name}</strong> - {user.email}
+            <strong>{user.Name || 'Unknown Name'}</strong> - {user.Email || 'No Email'}, {user.Gender || 'N/A'}, User id: {user.UserID || 'N/A'}, Role id: {user.RoleID  || 'N/A'}
           </li>
         ))}
       </ul>

@@ -60,7 +60,7 @@ function App() {
 		{currentUser && currentUser.isAdmin && (
 		<Route path="admin" element={<Admin currentUser={currentUser} />}>
 			<Route path="dashboard" element={<DashboardAdmin currentUser={currentUser} />} />
-			<Route path="users" element={<UsersAdmin currentUser={currentUser} />} />
+			<Route path="users" element={<UsersAdmin currentUser={currentUser} fetchUsers={fetchUsers} />} />
 
 
 		</Route>
