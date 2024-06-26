@@ -1,48 +1,72 @@
 import React, { useState, useEffect } from 'react';
-import axios from 'axios';
+
 
 const UsersAdmin = () => {
-    const [users, setUsers] = useState([]);
+  const [users, setUsers] = useState([]);
+  const [error, setError] = useState(null);
 
-    useEffect(() => {
-        // Replace 'https://api.example.com/users' with your API endpoint
-        axios.get('/api/users')
-          .then(response => {
-            setUsers(response.data);
-          })
-          .catch(error => {
-            console.error('There was an error fetching the users!', error);
-          });
-      }, []);
+  const fetchUsers = async () => {
+    try {
+      const response = await fetch(`http://localhost:4000/api/users`, {
+        method: "GET",
+        credentials: "include", // Important, because we're using cookies
+      });
+  
+      const data = await response.json();
+  
+          if (!response.ok) {
+              alert(`HTTP error ${response.status}: ${data.message}`);
+              throw new Error(`HTTP error ${response.status}: ${data.message}`);
+          }
+  
+      // If data is not correct format
+      if (!Array.isArray(data)) {
+        return Object.values(data);
+      }
+      
+      return data;
+    } catch (error) {
+      console.error(error);
+      
+    }
+  };
 
+  // Function to fetch data and set users state
+  const fetchData = async () => {
+    try {
+      const usersData = await fetchUsers();
+      setUsers(usersData);
+    } catch (error) {
+      setError('Error fetching users');
+    }
+  };
 
-      /*THIS IS TEMPORARY*/
-      return (
-        <div>
-          <h1>Admin Dashboard</h1>
-          <h2>All Users</h2>
-          <table>
-            <thead>
-              <tr>
-                <th>ID</th>
-                <th>Name</th>
-                <th>Email</th>
-                <th>Username</th>
-              </tr>
-            </thead>
-            <tbody>
-              {users.map(user => (
-                <tr key={user.id}>
-                  <td>{user.id}</td>
-                  <td>{user.name}</td>
-                  <td>{user.email}</td>
-                  <td>{user.username}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      );
-    };
+  // Use useEffect to fetch data on component mount
+  useEffect(() => {
+    fetchData();
+  }, []);
+
+  if (error) {
+    return <div>{error}</div>;
+  }
+
+  if (!users.length) {
+    return <div>Loading users...</div>;
+  }
+  
+/*Seems to be a bit broken*/
+  return (
+    <div>
+      <h1>Manage Users</h1>
+      <ul>
+        {users.slice().map((user) => (
+          <li key={user.UserID}>
+            <strong>{user.name}</strong> - {user.email}
+          </li>
+        ))}
+      </ul>
+    </div>
+  );
+};
 
 export default UsersAdmin;

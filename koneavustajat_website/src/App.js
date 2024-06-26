@@ -57,7 +57,7 @@ function App() {
 		<Routes>
 	  		<Route path="/" element={<Home />} />
 		{/*{currentUser && currentUser.role === "admin" && (*/}
-		{currentUser && currentUser.role === "ambulance" && (
+		{currentUser && currentUser.isAdmin && (
 		<Route path="admin" element={<Admin currentUser={currentUser} />}>
 			<Route path="dashboard" element={<DashboardAdmin currentUser={currentUser} />} />
 			<Route path="users" element={<UsersAdmin currentUser={currentUser} />} />
