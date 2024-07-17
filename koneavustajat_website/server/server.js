@@ -589,6 +589,39 @@ app.patch("/api/profile", authenticateSession, checkRegex, profileImgUpload.sing
 	}
 });
 
+app.get("/api/part", async (req, res) => {
+	const sql = "SELECT * FROM part";
+	try {
+		const [parts] = await promisePool.query(sql);
+		
+		if (parts.length === 0) {
+			return res.status(204).json({ message: "No parts found" });
+		}
+
+		return res.status(200).json(parts);
+	} catch (err) {
+		console.error(err);
+		return res.status(500).send("Internal Server Error");
+	}
+});
+
+app.get("/api/part/:id", async (req, res) => {
+	const { id } = req.params;
+	const sql = "SELECT * FROM part WHERE PartID = ?";
+	try {
+		const [part] = await promisePool.query(sql, [id]);
+
+		if (part.length === 0) {
+			return res.status(404).json({ message: "Part not found" });
+		}
+
+		return res.status(200).json(part[0]);
+	} catch (err) {
+		console.error(err);
+		return res.status(500).send("Internal Server Error");
+	}
+});
+
 
 ////////////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////

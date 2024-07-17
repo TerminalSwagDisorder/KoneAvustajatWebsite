@@ -1,6 +1,10 @@
 import React, { useState, useEffect } from 'react';
+import { ListGroup, Col } from 'react-bootstrap';
+import renderUserData from './Profile';
+import renderUserForm from './Profile';
 
-const UsersAdmin = ( {fetchUsers} ) => {
+
+const UsersAdmin = ( {fetchUsers, currentUser} ) => {
   const [users, setUsers] = useState([]);
   const [error, setError] = useState(null);
 
@@ -19,6 +23,24 @@ const UsersAdmin = ( {fetchUsers} ) => {
     fetchData();
   }, []);
 
+  /*
+  const renderUserData = () => {
+		if (currentUser.role === "user") {
+			return (
+				<ListGroup className="profile-details">
+				  <ListGroup.Item>Name: <span>{currentUser.Name}</span></ListGroup.Item>
+				  <ListGroup.Item>Email: <span>{currentUser.Email}</span></ListGroup.Item>
+				</ListGroup>
+			);
+		} else {
+			return(
+            <ListGroup className="profile-details">
+              <ListGroup.Item>Name: <span>{currentUser.Name}</span></ListGroup.Item>
+              <ListGroup.Item>Email: <span>{currentUser.Email}</span></ListGroup.Item>
+            </ListGroup>
+		)}
+	};*/
+
   if (error) {
     return <div>{error}</div>;
   }
@@ -27,7 +49,6 @@ const UsersAdmin = ( {fetchUsers} ) => {
     return <div>Loading users...</div>;
   }
   
-/*Seems to be a bit broken*/
   return (
     <div>
       <h1>Manage Users</h1>
@@ -41,5 +62,23 @@ const UsersAdmin = ( {fetchUsers} ) => {
     </div>
   );
 };
+
+
+/*
+return (
+  <div>
+    <h1>Manage Users</h1>
+    <ul>
+    <Col md={8}>
+	  		
+        {renderUserData()}
+        /*{/* User Form *//*}
+        {renderUserForm()}
+      </Col>
+
+    </ul>
+  </div>
+  );
+};*/
 
 export default UsersAdmin;

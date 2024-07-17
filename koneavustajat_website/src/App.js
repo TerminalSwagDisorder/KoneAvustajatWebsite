@@ -1,4 +1,4 @@
-import {Routes, Route, BrowserRouter } from "react-router-dom";
+import {Routes, Route, BrowserRouter, Link } from "react-router-dom";
 import React, { useState, useEffect } from "react";
 import "./style/style.scss";
 import Home from "./components/Home";
@@ -9,6 +9,7 @@ import Signup from "./components/Signup";
 import Admin from "./components/Admin";
 import DashboardAdmin from "./components/DashboardAdmin";
 import UsersAdmin from "./components/UsersAdmin";
+import PartsDisplay from "./components/PartsDisplay";
 import { ThemeContext, ThemeProvider, fetchUsers, fetchDynamicData, fetchSearchIdData, fetchDataAmount, handleSignin, handleSignup, handleSignout, checkIfSignedIn, refreshProfile, handleCredentialChange } from "./api/api";
 
 
@@ -75,6 +76,9 @@ function App() {
 			<Route path="Signin" element={<Signin handleUserChange={handleUserChange} currentUser={currentUser} handleSignin={handleSignin} checkIfSignedIn={checkIfSignedIn}/>} />
 			</>
 		)}
+
+		<Route path="parts" element={<PartsDisplay />} />
+		
 		</Routes>
 		</BrowserRouter>
 		</div>
