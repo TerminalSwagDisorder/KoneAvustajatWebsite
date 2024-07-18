@@ -10,11 +10,15 @@ import Admin from "./components/Admin";
 import DashboardAdmin from "./components/DashboardAdmin";
 import UsersAdmin from "./components/UsersAdmin";
 import PartsDisplay from "./components/PartsDisplay";
+import PartsList from "./components/PartsList";
+import PartsDetail from "./components/PartsDetail";
 import { ThemeContext, ThemeProvider, fetchUsers, fetchDynamicData, fetchSearchIdData, fetchDataAmount, handleSignin, handleSignup, handleSignout, checkIfSignedIn, refreshProfile, handleCredentialChange } from "./api/api";
 
 
 function App() {
 
+	const [selectedPartName, setSelectedPartName] = useState("cpu");
+    const [selectedPartId, setSelectedPartId] = useState(null);
 	const [currentUser, setCurrentUser] = useState(null);
 
 	// Check if the user is signed in on page load
@@ -59,12 +63,14 @@ function App() {
 	  		<Route path="/" element={<Home />} />
 		{/*{currentUser && currentUser.role === "admin" && (*/}
 		{currentUser && currentUser.isAdmin && (
-		<Route path="admin" element={<Admin currentUser={currentUser} />}>
-			<Route path="dashboard" element={<DashboardAdmin currentUser={currentUser} />} />
-			<Route path="users" element={<UsersAdmin currentUser={currentUser} fetchUsers={fetchUsers} />} />
-
-
-		</Route>
+                            <Route path="admin" element={<Admin currentUser={currentUser} />}>
+                                <Route path="dashboard" element={<DashboardAdmin currentUser={currentUser} />} />
+                                <Route path="users" element={<UsersAdmin currentUser={currentUser} fetchUsers={fetchUsers} />} />
+                                <Route path="parts" element={<PartsDisplay currentUser={currentUser} />}>
+                                    <Route path="list" element={<PartsList partName={selectedPartName} onSelectPart={setSelectedPartId} />} />
+                                    {selectedPartId && <Route path="detail" element={<PartsDetail partName={selectedPartName} id={selectedPartId} />} />}
+                                </Route>
+                            </Route>
 		)}
 		{currentUser ? (
 			<>
@@ -76,8 +82,6 @@ function App() {
 			<Route path="Signin" element={<Signin handleUserChange={handleUserChange} currentUser={currentUser} handleSignin={handleSignin} checkIfSignedIn={checkIfSignedIn}/>} />
 			</>
 		)}
-
-		<Route path="parts" element={<PartsDisplay />} />
 		
 		</Routes>
 		</BrowserRouter>

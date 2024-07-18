@@ -1,26 +1,34 @@
 import React, { useState, useEffect } from 'react';
+import { fetchDynamicData } from '../api/api'; 
 
-const PartsDisplay = () => {
+const PartsDisplay = ({ partName = "cpu" }) => {
   const [parts, setParts] = useState([]);
   const [error, setError] = useState(null);
+  const [loading, setLoading] = useState(true); // Add a loading state
 
   const fetchParts = async () => {
+    setLoading(true); // Set loading to true at the beginning
     try {
-      const response = await fetch('/api/part');
-      if (!response.ok) {
-        throw new Error('Network response was not ok');
+      const data = await fetchDynamicData(1, 'part', partName); // Adjust page number or other parameters as needed
+      if (!data || !Array.isArray(data)) {
+        throw new Error('Invalid data format received');
       }
-      const result = await response.json();
-      setParts(result);
+      setParts(data);
     } catch (error) {
       console.error('Error fetching parts:', error);
-      setError('Error fetching parts');
+      setError(`Error fetching parts: ${error.message}`);
+    } finally {
+      setLoading(false); // Set loading to false after data fetch completes
     }
   };
 
   useEffect(() => {
     fetchParts();
-  }, []);
+  }, [partName]); // Add dependencies to refetch if partName changes
+
+  if (loading) {
+    return <div>Loading parts...</div>;
+  }
 
   if (error) {
     return <div>{error}</div>;
@@ -35,10 +43,10 @@ const PartsDisplay = () => {
       <h1>Parts</h1>
       <ul>
         {parts.map((part) => (
-          <li key={part.PartID}>
-            <strong>ID:</strong> {part.PartID} <br />
-            <strong>Name:</strong> {part.PartName} <br />
-            <strong>Description:</strong> {part.PartDescription} <br />
+          <li key={part.ID}>
+            <strong>ID:</strong> {part.ID} <br />
+            <strong>Name:</strong> {part.name || 'Unknown Name'} <br />
+            <strong>Description:</strong> {part.description || 'No Description'} <br />
           </li>
         ))}
       </ul>
@@ -47,4 +55,3 @@ const PartsDisplay = () => {
 };
 
 export default PartsDisplay;
-
