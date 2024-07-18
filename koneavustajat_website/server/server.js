@@ -589,39 +589,63 @@ app.patch("/api/profile", authenticateSession, checkRegex, profileImgUpload.sing
 	}
 });
 
-app.get("/api/part", async (req, res) => {
-	const sql = "SELECT * FROM part";
+// Route for viewing regular users
+app.get("/api/part", routePagination, async (req, res) => {
+	console.log("API users accessed");
+
+	const partName = req.query.partName ? req.query.partName : "cpu"; // Get the table name from the query
+	const { items, offset } = req.pagination;
+
+	const allowedPartNames = ["chassis", "cpu", "cpu_cooler", "gpu", "memory", "motherboard", "psu", "storage"];
+	if (!allowedPartNames.includes(partName) || partName === "") {
+		console.error(`partName "${partName}" is not allowed!`);
+		throw new Error(`partName "${partName}" is not allowed!`);
+	}
+
+	const sql = `SELECT * FROM ${partName} LIMIT ? OFFSET ?`;
 	try {
-		const [parts] = await promisePool.query(sql);
-		
-		if (parts.length === 0) {
-			return res.status(204).json({ message: "No parts found" });
-		}
+		const [parts] = await promisePool.query(sql, [items, offset]);
+		// Process each user to add isAdmin property
 
 		return res.status(200).json(parts);
-	} catch (err) {
-		console.error(err);
-		return res.status(500).send("Internal Server Error");
+	} catch (error) {
+        console.error(error);
+		// If there is a status message or data then use that, otherwise the defaults
+		const message = error.response ? error.response.data : "Internal Server Error";
+        const status = error.response ? error.response.status : 500;
+		return res.status(status).json({ message: message });
 	}
 });
 
-app.get("/api/part/:id", async (req, res) => {
-	const { id } = req.params;
-	const sql = "SELECT * FROM part WHERE PartID = ?";
+app.get("/api/part/id", async (req, res) => {
+	console.log("API search users by id accessed");
+
+	const numId = parseInt(req.query.id, 10);
+	const id = isNaN(numId) ? 1 : numId;
+	const partName = req.query.partName ? req.query.partName : "cpu"; // Get the table name from the query
+
+	const allowedPartNames = ["chassis", "cpu", "cpu_cooler", "gpu", "memory", "motherboard", "psu", "storage"];
+	if (!allowedPartNames.includes(partName) || partName === "") {
+		console.error(`partName "${partName}" is not allowed!`);
+		throw new Error(`partName "${partName}" is not allowed!`);
+	}
+
+	const sql = `SELECT * FROM ${partName} WHERE ID = ?`;
 	try {
 		const [part] = await promisePool.query(sql, [id]);
-
-		if (part.length === 0) {
+		if (!part.length) {
 			return res.status(404).json({ message: "Part not found" });
 		}
-
-		return res.status(200).json(part[0]);
-	} catch (err) {
-		console.error(err);
-		return res.status(500).send("Internal Server Error");
+	
+		return res.status(200).json(part);
+	} catch (error) {
+        console.error(error);
+		// If there is a status message or data then use that, otherwise the defaults
+		const message = error.response ? error.response.data : "Internal Server Error";
+        const status = error.response ? error.response.status : 500;
+		return res.status(status).json({ message: message });
 	}
 });
-
 
 ////////////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////

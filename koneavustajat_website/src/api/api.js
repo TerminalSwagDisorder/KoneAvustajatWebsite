@@ -64,7 +64,7 @@ export const fetchUsers = async (page) => {
 // Fetch different types of data from pages
 export const fetchDynamicData = async (page, tableName) => {
 	// Only allow the specified tableNames
-	const allowedTableNames = ["other/users", "users"]
+	const allowedTableNames = ["other/users", "users", "chassis", "cpu", "cpu_cooler", "gpu", "memory", "motherboard", "psu", "storage"]
 	if (!allowedTableNames.includes(tableName) || tableName === "") {
 		console.error(`tableName "${tableName}" is not allowed!`)
 		throw new Error(`tableName "${tableName}" is not allowed!`)
@@ -97,7 +97,7 @@ export const fetchDynamicData = async (page, tableName) => {
 // Search function for users/otherusers
 export const fetchSearchData = async (searchTerm, tableName) => {
 	// Only allow the specified tableNames
-	const allowedTableNames = ["other/users", "users"]
+	const allowedTableNames = ["other/users", "users", "chassis", "cpu", "cpu_cooler", "gpu", "memory", "motherboard", "psu", "storage"]
 	if (!allowedTableNames.includes(tableName) || tableName === "") {
 		console.error(`tableName "${tableName}" is not allowed!`)
 		throw new Error(`tableName "${tableName}" is not allowed!`)
@@ -131,7 +131,7 @@ export const fetchSearchData = async (searchTerm, tableName) => {
 export const fetchSearchIdData = async (UserId, tableName) => {
 	console.log(UserId, tableName)
 	// Only allow the specified tableNames
-	const allowedTableNames = ["other/users", "users"]
+	const allowedTableNames = ["other/users", "users", "chassis", "cpu", "cpu_cooler", "gpu", "memory", "motherboard", "psu", "storage"]
 	if (!allowedTableNames.includes(tableName) || tableName === "") {
 		console.error(`tableName "${tableName}" is not allowed!`)
 		throw new Error(`tableName "${tableName}" is not allowed!`)
