@@ -62,16 +62,21 @@ export const fetchUsers = async (page) => {
 
 
 // Fetch different types of data from pages
-export const fetchDynamicData = async (page, tableName) => {
+export const fetchDynamicData = async (page, tableName, partName) => {
 	// Only allow the specified tableNames
-	const allowedTableNames = ["other/users", "users", "chassis", "cpu", "cpu_cooler", "gpu", "memory", "motherboard", "psu", "storage"]
+	const allowedTableNames = ["other/users", "users", "part"]
 	if (!allowedTableNames.includes(tableName) || tableName === "") {
 		console.error(`tableName "${tableName}" is not allowed!`)
 		throw new Error(`tableName "${tableName}" is not allowed!`)
 	}
+	const allowedPartNames = ["chassis", "cpu", "cpu_cooler", "gpu", "memory", "motherboard", "psu", "storage"];
+	if (!allowedPartNames.includes(partName) || partName === "") {
+		console.error(`partName "${partName}" is not allowed!`);
+		throw new Error(`partName "${partName}" is not allowed!`);
+	}
 
 	try {
-		const response = await fetch(`http://localhost:4000/api/${tableName}?page=${page}&items=50`, {
+		const response = await fetch(`http://localhost:4000/api/${tableName}?partName=${partName}&page=${page}&items=50`, {
 			method: "GET",
 			credentials: "include", // Important, because we're using cookies
 		});
@@ -97,7 +102,7 @@ export const fetchDynamicData = async (page, tableName) => {
 // Search function for users/otherusers
 export const fetchSearchData = async (searchTerm, tableName) => {
 	// Only allow the specified tableNames
-	const allowedTableNames = ["other/users", "users", "chassis", "cpu", "cpu_cooler", "gpu", "memory", "motherboard", "psu", "storage"]
+	const allowedTableNames = ["other/users", "users", "part"]
 	if (!allowedTableNames.includes(tableName) || tableName === "") {
 		console.error(`tableName "${tableName}" is not allowed!`)
 		throw new Error(`tableName "${tableName}" is not allowed!`)
@@ -128,16 +133,22 @@ export const fetchSearchData = async (searchTerm, tableName) => {
 
 
 // Search function for users/otherusers using id
-export const fetchSearchIdData = async (UserId, tableName) => {
-	console.log(UserId, tableName)
+export const fetchSearchIdData = async (ID, tableName, partName) => {
+	console.log(ID, tableName)
 	// Only allow the specified tableNames
-	const allowedTableNames = ["other/users", "users", "chassis", "cpu", "cpu_cooler", "gpu", "memory", "motherboard", "psu", "storage"]
+	const allowedTableNames = ["other/users", "users", "part/id"]
 	if (!allowedTableNames.includes(tableName) || tableName === "") {
 		console.error(`tableName "${tableName}" is not allowed!`)
 		throw new Error(`tableName "${tableName}" is not allowed!`)
 	}
+	const allowedPartNames = ["chassis", "cpu", "cpu_cooler", "gpu", "memory", "motherboard", "psu", "storage"];
+	if (!allowedPartNames.includes(partName) || partName === "") {
+		console.error(`partName "${partName}" is not allowed!`);
+		throw new Error(`partName "${partName}" is not allowed!`);
+	}
+
 	try {
-		const response = await fetch(`http://localhost:4000/api/${tableName}/${UserId}`, {
+		const response = await fetch(`http://localhost:4000/api/${tableName}?partName=${partName}&id=${ID}`, {
 			method: "GET",
 			credentials: "include", // Important, because we're using cookies
 		});
