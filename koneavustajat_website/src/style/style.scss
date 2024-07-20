@@ -151,12 +151,12 @@ $dark_user_select_button: #697ef5;
 		vertical-align: middle !important;
 		user-select: none !important;
 		border: 1px solid transparent !important;
-		line-height: 1.5 !important;
+		line-height: 1 !important;
 		transition: all .15s ease !important;
 		box-shadow: 0 4px 6px rgba(50, 50, 93, .11), 0 1px 3px rgba(0, 0, 0, .08) !important;
 		margin: 0.5rem 0.5rem 0.5rem 0 !important;
 		padding: 0.8rem 0.25rem !important;
-		width: 180px;
+		width: 100px;
 	
 		&:hover {
 			background-color: $black !important;

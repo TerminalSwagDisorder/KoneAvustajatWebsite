@@ -14,9 +14,6 @@ import { ThemeContext, ThemeProvider, fetchUsers, fetchDynamicData, fetchSearchI
 
 
 function App() {
-
-	const [selectedPartName, setSelectedPartName] = useState("cpu");
-    const [selectedPartId, setSelectedPartId] = useState(null);
 	const [currentUser, setCurrentUser] = useState(null);
 
 	// Check if the user is signed in on page load
@@ -64,7 +61,7 @@ function App() {
                             <Route path="admin" element={<Admin currentUser={currentUser} />}>
                                 <Route path="dashboard" element={<DashboardAdmin currentUser={currentUser} />} />
                                 <Route path="users" element={<UsersAdmin currentUser={currentUser} fetchUsers={fetchUsers} />} />
-								<Route path="parts" element={<PartsDisplay partName={selectedPartName} />} />
+								<Route path="parts" element={<PartsDisplay fetchDynamicData={fetchDynamicData} />} />
                             </Route>
 		)}
 		{currentUser ? (
