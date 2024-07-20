@@ -4,12 +4,13 @@ import { fetchDynamicData } from '../api/api';
 const PartsDisplay = ({ partName = "cpu" }) => {
   const [parts, setParts] = useState([]);
   const [error, setError] = useState(null);
-  const [loading, setLoading] = useState(true); // Add a loading state
+  const [loading, setLoading] = useState(true);
+  const [page, setPage] = useState(1);
 
-  const fetchParts = async () => {
-    setLoading(true); // Set loading to true at the beginning
+  const fetchParts = async (page) => {
+    setLoading(true);
     try {
-      const data = await fetchDynamicData(1, 'part', partName); // Adjust page number or other parameters as needed
+      const data = await fetchDynamicData(page, 'part', partName);
       if (!data || !Array.isArray(data)) {
         throw new Error('Invalid data format received');
       }
@@ -18,13 +19,13 @@ const PartsDisplay = ({ partName = "cpu" }) => {
       console.error('Error fetching parts:', error);
       setError(`Error fetching parts: ${error.message}`);
     } finally {
-      setLoading(false); // Set loading to false after data fetch completes
+      setLoading(false);
     }
   };
 
   useEffect(() => {
-    fetchParts();
-  }, [partName]); // Add dependencies to refetch if partName changes
+    fetchParts(page);
+  }, [partName, page]);
 
   if (loading) {
     return <div>Loading parts...</div>;
@@ -45,11 +46,17 @@ const PartsDisplay = ({ partName = "cpu" }) => {
         {parts.map((part) => (
           <li key={part.ID}>
             <strong>ID:</strong> {part.ID} <br />
-            <strong>Name:</strong> {part.name || 'Unknown Name'} <br />
-            <strong>Description:</strong> {part.description || 'No Description'} <br />
+            <strong>Name:</strong> {part.Name || 'Unknown Name'} <br />
+            <strong>Price:</strong> {part.Price || 'N/A'} <br />
           </li>
         ))}
       </ul>
+      <button onClick={() => setPage(page > 1 ? page - 1 : 1)} disabled={page <= 1}>
+        Previous
+      </button>
+      <button onClick={() => setPage(page + 1)}>
+        Next
+      </button>
     </div>
   );
 };

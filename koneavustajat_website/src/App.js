@@ -10,8 +10,6 @@ import Admin from "./components/Admin";
 import DashboardAdmin from "./components/DashboardAdmin";
 import UsersAdmin from "./components/UsersAdmin";
 import PartsDisplay from "./components/PartsDisplay";
-import PartsList from "./components/PartsList";
-import PartsDetail from "./components/PartsDetail";
 import { ThemeContext, ThemeProvider, fetchUsers, fetchDynamicData, fetchSearchIdData, fetchDataAmount, handleSignin, handleSignup, handleSignout, checkIfSignedIn, refreshProfile, handleCredentialChange } from "./api/api";
 
 
@@ -66,10 +64,7 @@ function App() {
                             <Route path="admin" element={<Admin currentUser={currentUser} />}>
                                 <Route path="dashboard" element={<DashboardAdmin currentUser={currentUser} />} />
                                 <Route path="users" element={<UsersAdmin currentUser={currentUser} fetchUsers={fetchUsers} />} />
-                                <Route path="parts" element={<PartsDisplay currentUser={currentUser} />}>
-                                    <Route path="list" element={<PartsList partName={selectedPartName} onSelectPart={setSelectedPartId} />} />
-                                    {selectedPartId && <Route path="detail" element={<PartsDetail partName={selectedPartName} id={selectedPartId} />} />}
-                                </Route>
+								<Route path="parts" element={<PartsDisplay partName={selectedPartName} />} />
                             </Route>
 		)}
 		{currentUser ? (
