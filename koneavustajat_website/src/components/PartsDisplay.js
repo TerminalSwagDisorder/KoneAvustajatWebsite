@@ -82,7 +82,7 @@ const PartsDisplay = ({ fetchDynamicData }) => {
 						<tr key={part.ID}>
 							<td>ID: {part.ID}</td>
 							<td>Name: {part.Name || "Unknown Name"}</td>
-							<td>Price:{part.Price || "N/A"}</td>
+							<td>Price: {part.Price || "N/A"} €</td>
 						</tr>
 					))}
 					<Button onClick={() => setPage(page > 1 ? page - 1 : 1)} disabled={page <= 1}>
