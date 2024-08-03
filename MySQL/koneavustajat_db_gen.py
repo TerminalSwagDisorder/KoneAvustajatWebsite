@@ -1,6 +1,6 @@
 from pathlib import Path
 from sqlalchemy.orm import sessionmaker, declarative_base
-from sqlalchemy import create_engine, Column, INTEGER, TEXT, DATETIME, BOOLEAN, ForeignKey, Table, MetaData, text, UniqueConstraint, func, String
+from sqlalchemy import create_engine, Column, INTEGER, TEXT, DATETIME, BOOLEAN, ForeignKey, Table, MetaData, text, UniqueConstraint, func, String, DECIMAL, JSON
 from sqlalchemy.exc import OperationalError
 
 Base = declarative_base()
@@ -94,10 +94,25 @@ def define_triggers(engine, session, metadata):
 	END;
 	"""
 
+	customer_before_trigger = """
+	CREATE TRIGGER check_customer_role BEFORE INSERT ON customers
+	FOR EACH ROW BEGIN
+		DECLARE role_id INT;
+
+		SELECT RoleID INTO role_id FROM users WHERE UserID = NEW.UserID;
+
+		IF role_id != 2 THEN
+			SIGNAL SQLSTATE '45000'
+			SET MESSAGE_TEXT = 'This user is not a customer';
+		END IF;
+	END;
+	"""
+
 	# Create db if it does not exist
 	with engine.connect() as conn:
 		try:
 			conn.execute(text(admin_before_trigger))
+			conn.execute(text(customer_before_trigger))
 		except OperationalError as e:
 			print(f"Error occurred: {e}")
 
@@ -148,6 +163,32 @@ def add_entries(engine, session, metadata):
 		Admin(UserID=6, Department="IT"),
 	]
 
+	# Add entries to the "part_types" table
+	part_types = [
+		PartType(PartTypeID=1, PartTypeName="Chassis"),
+		PartType(PartTypeID=2, PartTypeName="Cpu"),
+		PartType(PartTypeID=3, PartTypeName="Cpu cooler"),
+		PartType(PartTypeID=4, PartTypeName="Gpu"),
+		PartType(PartTypeID=5, PartTypeName="Memory"),
+		PartType(PartTypeID=6, PartTypeName="Motherboard"),
+		PartType(PartTypeID=7, PartTypeName="Psu"),
+		PartType(PartTypeID=8, PartTypeName="Storage"),
+	]
+
+	# Add entries to the "order_types" table
+	order_types = [
+		OrderType(OrderTypeID=1, OrderTypeName="Scraper build"),
+		OrderType(OrderTypeID=2, OrderTypeName="Inventory build"),
+		OrderType(OrderTypeID=3, OrderTypeName="Scraper part"),
+		OrderType(OrderTypeID=4, OrderTypeName="Inventory part"),
+	]
+
+	# Add entries to the "address_types" table
+	address_types = [
+		AddressType(AddressTypeID=1, AddressTypeName="Billing"),
+		AddressType(AddressTypeID=2, AddressTypeName="Shipping"),
+	]
+
 	# Add entries to the session and commit changes
 	try:
 		[session.merge(role) for role in roles]
@@ -186,6 +227,78 @@ class Admin(Base):
 		Column("AdminID", INTEGER, primary_key=True, autoincrement=True),
 		Column("UserID", INTEGER, ForeignKey("users.UserID")),
 		Column("Department", TEXT),
+	)	
+
+class PartType(Base):
+	__tablename__ = "part_types"
+	__table_args__ = (
+		Column("PartTypeID", INTEGER, primary_key=True, autoincrement=True),
+		Column("PartTypeName", String(255), nullable=False),
+	)
+
+class OrderType(Base):
+	__tablename__ = "order_types"
+	__table_args__ = (
+		Column("OrderTypeID", INTEGER, primary_key=True, autoincrement=True),
+		Column("OrderTypeName", String(255), nullable=False),
+	)
+
+class AddressType(Base):
+	__tablename__ = "address_types"
+	__table_args__ = (
+		Column("AddressTypeID", INTEGER, primary_key=True, autoincrement=True),
+		Column("AddressTypeName", String(255), nullable=False),
+	)
+
+class Customer(Base):
+	__tablename__ = "customers"
+	__table_args__ = (
+		Column("CustomerID", INTEGER, primary_key=True, autoincrement=True),
+		Column("UserID", INTEGER, ForeignKey("users.UserID"), nullable=False),
+
+	)
+
+class Address(Base):
+	__tablename__ = "addresses"
+	__table_args__ = (
+		Column("AddressID", INTEGER, primary_key=True, autoincrement=True),
+		Column("CustomerID", INTEGER, ForeignKey("customers.CustomerID"), nullable=False),
+		Column("AddressTypeID", INTEGER, ForeignKey("address_types.AddressTypeID"), nullable=False),
+		Column("Street", String(100)),
+		Column("City", String(100)),
+		Column("State", String(100)),
+		Column("PostalCode", String(60)),
+		Column("Country", String(100)),
+	)
+
+class PartInventory(Base):
+	__tablename__ = "part_inventory"
+	__table_args__ = (
+		Column("PartID", INTEGER, primary_key=True, autoincrement=True),
+		Column("PartTypeID", INTEGER, ForeignKey("part_types.PartTypeID"), nullable=False),
+		Column("Name", String(255), nullable=False),
+		Column("Manufacturer", String(255)),
+		Column("ModelNumber", String(255)),
+		Column("SerialNumber", String(255)),
+		Column("Price", DECIMAL(10,2)),
+		Column("Available", BOOLEAN, server_default="1"),
+		Column("DateAdded", DATETIME, server_default=func.current_timestamp()),
+		Column("AdditionalDetails", JSON),
+	)
+
+class Order(Base):
+	__tablename__ = "orders"
+	__table_args__ = (
+		Column("OrderID", INTEGER, primary_key=True, autoincrement=True),
+		Column("OrderTypeID", INTEGER, ForeignKey("order_types.OrderTypeID"), nullable=False),
+		Column("CustomerID", INTEGER, ForeignKey("customers.CustomerID"), nullable=False),
+		Column("ReceiptID", INTEGER, unique=True, server_default=None),
+		Column("OrderDate", DATETIME, server_default=func.current_timestamp()),
+		Column("Status", String(255)),
+		Column("TotalPrice", DECIMAL(10,2)),
+		Column("Items", JSON),
+		Column("PaymentMethod", String(255)),
+		Column("PaymentStatus", String(255)),
 	)
 
 if __name__ == "__main__":
