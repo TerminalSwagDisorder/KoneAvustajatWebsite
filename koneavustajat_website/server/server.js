@@ -589,9 +589,9 @@ app.patch("/api/profile", authenticateSession, checkRegex, profileImgUpload.sing
 	}
 });
 
-// Route for viewing regular users
+// Route for viewing parts
 app.get("/api/part", routePagination, async (req, res) => {
-	console.log("API users accessed");
+	console.log("API parts accessed");
 
 	const partName = req.query.partName ? req.query.partName : "cpu"; // Get the table name from the query
 	const { items, offset } = req.pagination;
@@ -618,7 +618,7 @@ app.get("/api/part", routePagination, async (req, res) => {
 });
 
 app.get("/api/part/id", async (req, res) => {
-	console.log("API search users by id accessed");
+	console.log("API search parts by id accessed");
 
 	const numId = parseInt(req.query.id, 10);
 	const id = isNaN(numId) ? 1 : numId;
@@ -638,6 +638,241 @@ app.get("/api/part/id", async (req, res) => {
 		}
 	
 		return res.status(200).json(part);
+	} catch (error) {
+        console.error(error);
+		// If there is a status message or data then use that, otherwise the defaults
+		const message = error.response ? error.response.data : "Internal Server Error";
+        const status = error.response ? error.response.status : 500;
+		return res.status(status).json({ message: message });
+	}
+});
+
+// Route for viewing inventory
+app.get("/api/inventory", routePagination, async (req, res) => {
+	console.log("API inventory accessed");
+
+	const { items, offset } = req.pagination;
+
+	const sql = "SELECT * FROM part_inventory LIMIT ? OFFSET ?";
+	try {
+		const [partInventory] = await promisePool.query(sql, [items, offset]);
+		
+		// AdditionalDetails needs to be parsed
+		const parseInventory = partInventory.map(item => ({
+			...item,
+			AdditionalDetails: item.AdditionalDetails ? JSON.parse(item.AdditionalDetails) : null
+		}));
+
+		// Process each user to add isAdmin property
+
+		return res.status(200).json(parseInventory);
+	} catch (error) {
+        console.error(error);
+		// If there is a status message or data then use that, otherwise the defaults
+		const message = error.response ? error.response.data : "Internal Server Error";
+        const status = error.response ? error.response.status : 500;
+		return res.status(status).json({ message: message });
+	}
+});
+
+app.get("/api/inventory/id", async (req, res) => {
+	console.log("API search parts by id accessed");
+
+	const numId = parseInt(req.query.id, 10);
+	const id = isNaN(numId) ? 1 : numId;
+
+	const sql = "SELECT * FROM part_inventory WHERE PartID = ?";
+	try {
+		const [partInventory] = await promisePool.query(sql, [id]);
+		if (!partInventory.length) {
+			return res.status(404).json({ message: "Inventory item not found" });
+		}
+
+		// AdditionalDetails needs to be parsed
+		const parseInventory = partInventory.map(item => ({
+			...item,
+			AdditionalDetails: item.AdditionalDetails ? JSON.parse(item.AdditionalDetails) : null
+		}));
+	
+		return res.status(200).json(parseInventory);
+	} catch (error) {
+        console.error(error);
+		// If there is a status message or data then use that, otherwise the defaults
+		const message = error.response ? error.response.data : "Internal Server Error";
+        const status = error.response ? error.response.status : 500;
+		return res.status(status).json({ message: message });
+	}
+});
+
+// Route for viewing orders
+app.get("/api/orders", routePagination, async (req, res) => {
+	console.log("API inventory accessed");
+
+	const { items, offset } = req.pagination;
+
+	const sql = "SELECT * FROM orders LIMIT ? OFFSET ?";
+	try {
+		const [orders] = await promisePool.query(sql, [items, offset]);
+		
+		// Items needs to be parsed
+		const parseInventory = orders.map(item => ({
+			...item,
+			Items: item.Items ? JSON.parse(item.Items) : null
+		}));
+
+		return res.status(200).json(parseInventory);
+	} catch (error) {
+        console.error(error);
+		// If there is a status message or data then use that, otherwise the defaults
+		const message = error.response ? error.response.data : "Internal Server Error";
+        const status = error.response ? error.response.status : 500;
+		return res.status(status).json({ message: message });
+	}
+});
+
+app.get("/api/orders/id", async (req, res) => {
+	console.log("API search parts by id accessed");
+
+	const numId = parseInt(req.query.id, 10);
+	const id = isNaN(numId) ? 1 : numId;
+
+	const sql = "SELECT * FROM orders WHERE PartID = ?";
+	try {
+		const [orders] = await promisePool.query(sql, [id]);
+		if (!orders.length) {
+			return res.status(404).json({ message: "Order not found" });
+		}
+
+		// Items needs to be parsed
+		const parseInventory = orders.map(item => ({
+			...item,
+			Items: item.Items ? JSON.parse(item.Items) : null
+		}));
+	
+		return res.status(200).json(parseInventory);
+	} catch (error) {
+        console.error(error);
+		// If there is a status message or data then use that, otherwise the defaults
+		const message = error.response ? error.response.data : "Internal Server Error";
+        const status = error.response ? error.response.status : 500;
+		return res.status(status).json({ message: message });
+	}
+});
+
+// Route for viewing customers
+app.get("/api/users/customers", routePagination, async (req, res) => {
+	console.log("API inventory accessed");
+
+	const { items, offset } = req.pagination;
+
+	const sql = `SELECT c.*, u.*, a.* FROM customers c JOIN users u ON c.UserID = u.UserID JOIN addresses a ON c.CustomerID = a.CustomerID LIMIT ? OFFSET ?`;
+	try {
+		const [customers] = await promisePool.query(sql, [items, offset]);
+
+		// Separate userdata from customer data
+		const parseCustomers = customers.map(item => { 
+			const { Name, Gender, ProfileImage, RoleID, Email, Password, AddressID, AddressTypeID, Street, City, State, PostalCode, Country, ...customerData } = item;
+			return {
+				...customerData,
+				UserData: { Name, Gender, ProfileImage, RoleID, Email, Password },
+				AddressData: { AddressID, AddressTypeID, Street, City, State, PostalCode, Country }
+			};
+		
+		});
+
+		// More manual way to do this
+		/*
+		const parseCustomers = customers.map(item => ({
+			CustomerID: item.CustomerID,
+			UserID: item.UserID,
+			UserData: {
+				Name: item.Name,
+				Gender: item.Gender,
+				ProfileImage: item.ProfileImage,
+				RoleID: item.RoleID,
+				Email: item.Email,
+				Password: item.Password
+			}
+		}));
+		*/
+
+		return res.status(200).json(parseCustomers);
+	} catch (error) {
+        console.error(error);
+		// If there is a status message or data then use that, otherwise the defaults
+		const message = error.response ? error.response.data : "Internal Server Error";
+        const status = error.response ? error.response.status : 500;
+		return res.status(status).json({ message: message });
+	}
+});
+
+app.get("/api/users/customers/id", async (req, res) => {
+	console.log("API search parts by id accessed");
+
+	const numId = parseInt(req.query.id, 10);
+	const id = isNaN(numId) ? 1 : numId;
+
+	const sql = `SELECT c.*, u.*, a.* FROM customers c JOIN users u ON c.UserID = u.UserID JOIN addresses a ON c.CustomerID = a.CustomerID WHERE c.CustomerID = ? `;
+	try {
+		const [customers] = await promisePool.query(sql, [id]);
+		if (!customers.length) {
+			return res.status(404).json({ message: "Customer not found" });
+		}
+
+		const parseCustomers = customers.map(item => { 
+			const { Name, Gender, ProfileImage, RoleID, Email, Password, AddressID, AddressTypeID, Street, City, State, PostalCode, Country, ...customerData } = item;
+			return {
+				...customerData,
+				UserData: { Name, Gender, ProfileImage, RoleID, Email, Password },
+				AddressData: { AddressID, AddressTypeID, Street, City, State, PostalCode, Country }
+			};
+		
+		});
+
+		return res.status(200).json(parseCustomers);
+	} catch (error) {
+        console.error(error);
+		// If there is a status message or data then use that, otherwise the defaults
+		const message = error.response ? error.response.data : "Internal Server Error";
+        const status = error.response ? error.response.status : 500;
+		return res.status(status).json({ message: message });
+	}
+});
+
+// Route for viewing addresses
+app.get("/api/users/customers/addresses", routePagination, async (req, res) => {
+	console.log("API inventory accessed");
+
+	const { items, offset } = req.pagination;
+
+	const sql = "SELECT * FROM addresses LIMIT ? OFFSET ?";
+	try {
+		const [addresses] = await promisePool.query(sql, [items, offset]);
+
+		return res.status(200).json(addresses);
+	} catch (error) {
+        console.error(error);
+		// If there is a status message or data then use that, otherwise the defaults
+		const message = error.response ? error.response.data : "Internal Server Error";
+        const status = error.response ? error.response.status : 500;
+		return res.status(status).json({ message: message });
+	}
+});
+
+app.get("/api/users/customers/addresses/id", async (req, res) => {
+	console.log("API search parts by id accessed");
+
+	const numId = parseInt(req.query.id, 10);
+	const id = isNaN(numId) ? 1 : numId;
+
+	const sql = "SELECT * FROM addresses WHERE AddressID = ?";
+	try {
+		const [addresses] = await promisePool.query(sql, [id]);
+		if (!addresses.length) {
+			return res.status(404).json({ message: "Order not found" });
+		}
+
+		return res.status(200).json(addresses);
 	} catch (error) {
         console.error(error);
 		// If there is a status message or data then use that, otherwise the defaults
