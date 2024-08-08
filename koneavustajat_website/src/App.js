@@ -10,6 +10,12 @@ import Admin from "./components/Admin";
 import DashboardAdmin from "./components/DashboardAdmin";
 import UsersAdmin from "./components/UsersAdmin";
 import PartsDisplay from "./components/PartsDisplay";
+import ComputerWizard from './components/ComputerWizard';
+import UsedParts from './components/UsedParts';
+import Browse from './components/Browse';
+import Purchase from './components/Purchase';
+import Build from './components/Build';
+import ModifyUsedParts from './components/ModifyUsedParts';
 import { ThemeContext, ThemeProvider, fetchUsers, fetchDynamicData, fetchSearchIdData, fetchDataAmount, handleSignin, handleSignup, handleSignout, checkIfSignedIn, refreshProfile, handleCredentialChange } from "./api/api";
 
 
@@ -74,6 +80,17 @@ function App() {
 			<Route path="Signin" element={<Signin handleUserChange={handleUserChange} currentUser={currentUser} handleSignin={handleSignin} checkIfSignedIn={checkIfSignedIn}/>} />
 			</>
 		)}
+			<Route path="computerwizard" element={<ComputerWizard />}>
+				<Route path="browse" element={<Browse />} />
+				<Route path="purchase" element={<Purchase />} />
+				<Route path="build" element={<Build />} />
+			</Route>
+			<Route path="usedparts" element={<UsedParts />}>
+				<Route path="browse" element={<Browse />} />
+				<Route path="purchase" element={<Purchase />} />
+				<Route path="build" element={<Build />} />
+				<Route path="modify" element={<ModifyUsedParts />} />
+			</Route>
 		
 		</Routes>
 		</BrowserRouter>
