@@ -98,6 +98,22 @@ const NavBar = ({ currentUser, handleUserChange, handleSignout, ThemeContext }) 
             <Nav.Link as={Link} to="/" className={ activeLink === "/" ? "active-navbar-link" : "navbar-link" } onClick={() => onUpdateActiveLink("/")}>
               Home
             </Nav.Link>
+            <Nav.Link
+              as={Link}
+              to="/computerwizard"
+              className={activeLink === "/computerwizard" ? "active-navbar-link" : "navbar-link"}
+              onClick={() => onUpdateActiveLink("/computerwizard")}
+            >
+              Computer Wizard
+            </Nav.Link>
+            <Nav.Link
+              as={Link}
+              to="/usedparts"
+              className={activeLink === "/usedparts" ? "active-navbar-link" : "navbar-link"}
+              onClick={() => onUpdateActiveLink("/usedparts")}
+            >
+              Used Parts  
+            </Nav.Link>
           </Nav>
 		  <Nav className="ml-auto">
 			{userNavbar()}

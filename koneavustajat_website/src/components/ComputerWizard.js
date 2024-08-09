@@ -1,19 +1,31 @@
 import React from 'react';
 import { Outlet, Link } from 'react-router-dom';
+import { Button } from 'react-bootstrap';
+import { FaSearch, FaShoppingCart, FaTools } from 'react-icons/fa';
 
 const ComputerWizard = () => {
   return (
-    <div>
-      <h1>Computer Wizard</h1>
-      <nav>
-        <ul>
-          <li><Link to="browse">Browse</Link></li>
-          <li><Link to="purchase">Purchase</Link></li>
-          <li><Link to="build">Build</Link></li>
-        </ul>
-      </nav>
-      <Outlet />
-    </div>
+      <div className="mt-4 topButtons">
+          <Link to="/computerwizard/browse">
+              <Button className="wizardButton" style={{ width: "100%" }}>
+                  Browse &nbsp;
+                  <FaSearch />
+              </Button>
+          </Link>
+          <Link to="/computerwizard/purchase">
+              <Button className="wizardButton" style={{ width: "100%" }}>
+                  Purchase &nbsp;
+                  <FaShoppingCart />
+              </Button>
+          </Link>
+          <Link to="/computerwizard/build">
+              <Button className="wizardButton" style={{ width: "100%" }}>
+                  Build &nbsp;
+                  <FaTools />
+              </Button>
+          </Link>
+          <Outlet />
+      </div>
   );
 };
 

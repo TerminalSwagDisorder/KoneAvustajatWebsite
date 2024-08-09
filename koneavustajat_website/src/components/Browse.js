@@ -4,7 +4,7 @@ const Browse = () => {
   return (
     <div>
       <h2>Browse</h2>
-      <p>Browse parts here...</p>
+      <p>Seems empty...</p>
     </div>
   );
 };
