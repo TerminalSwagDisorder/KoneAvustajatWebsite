@@ -5,14 +5,27 @@ import { FaSearch, FaShoppingCart, FaWrench, FaEdit } from 'react-icons/fa';
 import { fetchDynamicData } from "../api/api";
 
 
-const UsedParts = ({ fetchDynamicData }) => {
+const UsedParts = () => {
+
+	const partTypeMapping = {
+		1: 'Chassis',
+		2: 'Cpu',
+		3: 'Cpu cooler',
+		4: 'Gpu',
+		5: 'Memory',
+		6: 'Motherboard',
+		7: 'Psu',
+		8: 'Storage'
+	};
+
+
 	const [parts, setParts] = useState([]);
 	const [partName, setPartName] = useState("cpu");
 	const [error, setError] = useState(null);
 	const [loading, setLoading] = useState(true);
 	const [page, setPage] = useState(1);
 
-    const fetchParts = async (page, tableName = "part") => {
+    const fetchParts = async (page, tableName = "inventory") => {
         setLoading(true);
         try {
             const data = await fetchDynamicData(page, tableName, partName);     //Error????
@@ -27,7 +40,7 @@ const UsedParts = ({ fetchDynamicData }) => {
     
 
 	useEffect(() => {
-		fetchParts(page, "part_inventory");     //Error????
+		fetchParts(page, "inventory");     //Error????
 	}, [page]);
 
 	const handleSearchTerm = (event) => {
@@ -39,7 +52,7 @@ const UsedParts = ({ fetchDynamicData }) => {
 		event.preventDefault();
 		try {
 			if (partName !== "" && partName !== " " && partName !== undefined && partName !== null) {
-				const data = await await fetchDynamicData(page, "part_inventory", partName);
+				const data = await await fetchDynamicData(page, "inventory", partName);
 				setParts(data);
 				setPage(1);
 			} else {
@@ -52,7 +65,7 @@ const UsedParts = ({ fetchDynamicData }) => {
 		}
 	};
 
-	const searchParts = () => {
+	/*const searchParts = () => {
 		return (
 			<div className="searchForm">
 				<Form
@@ -76,18 +89,18 @@ const UsedParts = ({ fetchDynamicData }) => {
 				<br />
 			</div>
 		);
-	};
+	};*/
 		
 	const renderParts = () => {
-		if (parts.length > 0) {
+		if (Array.isArray(parts) && parts.length > 0) {
 			return (
 				<>
 					{parts.map((part) => (
-						<tr key={part.ID}>
-							<td>ID: {part.ID}</td>
-							<td>Name: {part.Name || "Unknown Name"}</td>
-							<td>Price: {part.Price || "N/A"} €</td>
-							<td>Part Type: {part.PartTypeID || "Unknown Type"}</td> 
+						<tr key={part.PartID}>
+							<td> {part.PartID}</td>
+							<td> {part.Name || "Unknown Name"}</td>
+							<td> {part.Price || "N/A"} €</td>
+							<td> {partTypeMapping[part.PartTypeID]  || "Unknown Type"}</td> 
 						</tr>
 					))}
 					<Button onClick={() => setPage(page > 1 ? page - 1 : 1)} disabled={page <= 1}>
@@ -96,26 +109,42 @@ const UsedParts = ({ fetchDynamicData }) => {
 					<Button onClick={() => setPage(page + 1)}>Next</Button>
 				</>
 			);
-		}
-		if (parts.length === 0 && page > 1) {
-			return (
-				<>
-					<h3>No parts available</h3>
-					<Button onClick={() => setPage(page > 1 ? page - 1 : 1)} disabled={page <= 1}>
-						Previous
-					</Button>
-				</>
-			);
-		}
-		if (loading) {
-			return <h3>Loading parts...</h3>;
-		}
-		if (error) {
-			return <h3>{error}</h3>;
+		} else if (Array.isArray(parts) && parts.length === 0 && page > 1) {
+		return (
+			<>
+				<h3>No parts available</h3>
+				<Button onClick={() => setPage(page > 1 ? page - 1 : 1)} disabled={page <= 1}>
+					Previous
+				</Button>
+			</>
+		);
+		} else if (loading) {
+		return <h3>Loading parts...</h3>;
+		} else if (error) {
+		return <h3>{error}</h3>;
+		} else {
+		return <h3>No parts available</h3>;  
 		}
 	};
 
     return (
+
+		<div>
+		<h1>Used Parts</h1>
+		{/*searchParts()*/}
+		<Table responsive="md" hover bordered className="table-striped">
+			<thead>
+				<tr>
+					<th>ID</th>
+					<th>Name</th>
+					<th>Price</th>
+					<th>Part Type</th> 
+
+				</tr>
+			</thead>
+			<tbody>{renderParts()}</tbody>
+		</Table>
+
         <div className="mt-4 topButtons">
             <Link to="/usedparts/browse">
                 <Button className="usedPartsButton" style={{ width: "100%" }}>
@@ -142,21 +171,7 @@ const UsedParts = ({ fetchDynamicData }) => {
                 </Button>
             </Link>
 
-        <div>
-            <h1>Parts</h1>
-            {searchParts()}
-            <Table responsive="md" hover bordered className="table-striped">
-                <thead>
-                    <tr>
-                        <th>ID</th>
-                        <th>Name</th>
-                        <th>Price</th>
-                        <th>Part Type</th> 
 
-                    </tr>
-                </thead>
-                <tbody>{renderParts()}</tbody>
-            </Table>
         </div>
 
             <Outlet />

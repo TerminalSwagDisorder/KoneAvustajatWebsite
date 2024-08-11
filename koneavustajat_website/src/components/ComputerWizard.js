@@ -5,6 +5,7 @@ import { FaSearch, FaShoppingCart, FaTools } from 'react-icons/fa';
 
 const ComputerWizard = () => {
   return (
+    
       <div className="mt-4 topButtons">
           <Link to="/computerwizard/browse">
               <Button className="wizardButton" style={{ width: "100%" }}>
@@ -25,6 +26,7 @@ const ComputerWizard = () => {
               </Button>
           </Link>
           <Outlet />
+
       </div>
   );
 };

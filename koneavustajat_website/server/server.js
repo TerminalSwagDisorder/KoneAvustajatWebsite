@@ -882,61 +882,6 @@ app.get("/api/users/customers/addresses/id", async (req, res) => {
 	}
 });
 
-// Route for viewing parts in part_inventory
-app.get("/api/part_inventory", routePagination, async (req, res) => {
-    console.log("API part_inventory accessed");
-
-    const partTypeId = req.query.partName ? req.query.partName : 1; // Get the PartTypeID from the query (defaults to 1)
-    const { items, offset } = req.pagination;
-
-    const allowedPartTypeIds = [1, 2, 3, 4, 5, 6, 7, 8]; // Example PartTypeID values, adjust based on your schema
-    if (!allowedPartTypeIds.includes(parseInt(partTypeId)) || partTypeId === "") {
-        console.error(`PartTypeID "${partTypeId}" is not allowed!`);
-        throw new Error(`PartTypeID "${partTypeId}" is not allowed!`);
-    }
-
-    const sql = `SELECT * FROM part_inventory WHERE PartTypeID = ? LIMIT ? OFFSET ?`;
-    try {
-        const [parts] = await promisePool.query(sql, [partTypeId, items, offset]);
-        return res.status(200).json(parts);
-    } catch (error) {
-        console.error(error);
-        // If there is a status message or data then use that, otherwise the defaults
-        const message = error.response ? error.response.data : "Internal Server Error";
-        const status = error.response ? error.response.status : 500;
-        return res.status(status).json({ message: message });
-    }
-});
-
-// Route for viewing a specific part in part_inventory by ID
-app.get("/api/part_inventory/id", async (req, res) => {
-    console.log("API search part_inventory by id accessed");
-
-    const numId = parseInt(req.query.id, 10);
-    const id = isNaN(numId) ? 1 : numId;
-    const partTypeId = req.query.partName ? req.query.partName : 1; // Get the PartTypeID from the query (defaults to 1)
-
-    const allowedPartTypeIds = [1, 2, 3, 4, 5, 6, 7, 8]; // Example PartTypeID values, adjust based on your schema
-    if (!allowedPartTypeIds.includes(parseInt(partTypeId)) || partTypeId === "") {
-        console.error(`PartTypeID "${partTypeId}" is not allowed!`);
-        throw new Error(`PartTypeID "${partTypeId}" is not allowed!`);
-    }
-
-    const sql = `SELECT * FROM part_inventory WHERE ID = ? AND PartTypeID = ?`;
-    try {
-        const [part] = await promisePool.query(sql, [id, partTypeId]);
-        if (!part.length) {
-            return res.status(404).json({ message: "Part not found" });
-        }
-        return res.status(200).json(part);
-    } catch (error) {
-        console.error(error);
-        // If there is a status message or data then use that, otherwise the defaults
-        const message = error.response ? error.response.data : "Internal Server Error";
-        const status = error.response ? error.response.status : 500;
-        return res.status(status).json({ message: message });
-    }
-});
 
 
 ////////////////////////////////////////////////////////////////////

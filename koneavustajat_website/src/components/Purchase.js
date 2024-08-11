@@ -4,7 +4,6 @@ const Purchase = () => {
   return (
     <div>
       <h2>Purchase</h2>
-      <p>Seems empty...</p>
     </div>
   );
 };
