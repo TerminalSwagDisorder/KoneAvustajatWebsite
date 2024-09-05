@@ -11,11 +11,14 @@ import DashboardAdmin from "./components/DashboardAdmin";
 import UsersAdmin from "./components/UsersAdmin";
 import PartsDisplay from "./components/PartsDisplay";
 import ComputerWizard from './components/ComputerWizard';
+import ComputerWizardBrowse from './components/ComputerWizardBrowse';
+import ComputerWizardPurchase from './components/ComputerWizardPurchase';
+import ComputerWizardBuild from './components/ComputerWizardBuild';
 import UsedParts from './components/UsedParts';
-import Browse from './components/Browse';
-import Purchase from './components/Purchase';
-import Build from './components/Build';
-import ModifyUsedParts from './components/ModifyUsedParts';
+import UsedPartsBrowse from './components/UsedPartsBrowse';
+import UsedPartsPurchase from './components/UsedPartsPurchase';
+import UsedPartsBuild from './components/UsedPartsBuild';
+import UsedPartsModify from './components/UsedPartsModify';
 import { ThemeContext, ThemeProvider, fetchUsers, fetchDynamicData, fetchSearchIdData, fetchDataAmount, handleSignin, handleSignup, handleSignout, checkIfSignedIn, refreshProfile, handleCredentialChange } from "./api/api";
 
 
@@ -81,15 +84,15 @@ function App() {
 			</>
 		)}
 			<Route path="computerwizard" element={<ComputerWizard />}>
-				<Route path="browse" element={<Browse />} />
-				<Route path="purchase" element={<Purchase />} />
-				<Route path="build" element={<Build />} />
+				<Route path="browse" element={<ComputerWizardBrowse />} />
+				<Route path="purchase" element={<ComputerWizardPurchase />} />
+				<Route path="build" element={<ComputerWizardBuild />} />
 			</Route>
 			<Route path="usedparts" element={<UsedParts />}>
-				<Route path="browse" element={<Browse />} />
-				<Route path="purchase" element={<Purchase />} />
-				<Route path="build" element={<Build />} />
-				<Route path="modify" element={<ModifyUsedParts />} />
+				<Route path="browse" element={<UsedPartsBrowse fetchDynamicData={fetchDynamicData} />} />
+				<Route path="purchase" element={<UsedPartsPurchase />} />
+				<Route path="build" element={<UsedPartsBuild />} />
+				<Route path="modify" element={<UsedPartsModify />} />
 			</Route>
 		
 		</Routes>

@@ -1,6 +1,6 @@
 import React from 'react';
 
-const Browse = () => {
+const ComputerWizardBrowse = () => {
   return (
     <div>
       <h2>Browse</h2>
@@ -8,4 +8,4 @@ const Browse = () => {
   );
 };
 
-export default Browse;
+export default ComputerWizardBrowse;

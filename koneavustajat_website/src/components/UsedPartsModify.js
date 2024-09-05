@@ -1,6 +1,6 @@
 import React from 'react';
 
-const ModifyUsedParts = () => {
+const UsedPartsModify = () => {
   return (
     <div>
       <h2>Modify Used Parts</h2>
@@ -8,4 +8,4 @@ const ModifyUsedParts = () => {
   );
 };
 
-export default ModifyUsedParts;
+export default UsedPartsModify;

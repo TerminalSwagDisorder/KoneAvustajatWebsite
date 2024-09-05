@@ -1,6 +1,6 @@
 import React from 'react';
 
-const Build = () => {
+const UsedPartsBuild = () => {
   return (
     <div>
       <h2>Build</h2>
@@ -8,4 +8,4 @@ const Build = () => {
   );
 };
 
-export default Build;
+export default UsedPartsBuild;
