@@ -130,6 +130,7 @@ $dark_user_select_button: #697ef5;
 		margin-bottom: 20px;
 		font-weight: 600;
 		
+		
 		.nav-logo {
 			height: 40px;
 			max-height: 40px;
@@ -139,10 +140,44 @@ $dark_user_select_button: #697ef5;
 			background-color: $theme_button;
 		}
 
+		.active-navbar-link {
+			background-color: lighten($navbar_color, 10%) !important;
+		}
+
 		a {
-			color: $white !important; // You might want to make this color theme-specific too
+			color: $white; // You might want to make this color theme-specific too
 		}
 	}
+
+	// Navbar specific styles
+	nav .dropdown {
+		box-shadow: none;
+		
+		a {
+			text-decoration: none;
+		}
+		
+		&:hover .dropdown-toggle a {
+			color: black;
+		}
+		
+		.dropdown-menu {
+			background-color: $navbar_color;
+			margin-top: 0;
+			&:hover a {
+				background-color: inherit;
+				
+			}
+		}
+	}
+	
+/*
+ * // for CSS based on hover dropdown
+	.nav-item.dropdown:hover .dropdown-menu {
+    	display: block;
+	}
+*/
+
 	.btn-primary {
 		background-color: $btn_color;
 		display: inline-block !important;
@@ -462,6 +497,10 @@ button {
 	position: absolute;
 	top: 70px;
 	right: 0;
+}
+
+#basic-nav-dropdown:hover .dropdown-menu {
+	display: block;
 }
 
 /* Extra small devices (phones, 320px) */
