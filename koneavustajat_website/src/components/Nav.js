@@ -37,8 +37,8 @@ const NavBar = ({ currentUser, handleUserChange, handleSignout, ThemeContext }) 
 		}
 	};
 
-	const toggleDropdownShow = (event) => {
-		setShowDropdown(true);
+	const toggleDropdownShow = (value) => {
+		setShowDropdown(value);
 	};
 	const toggleDropdownHide = (event) => {
 		setShowDropdown(false);
@@ -128,9 +128,10 @@ const NavBar = ({ currentUser, handleUserChange, handleSignout, ThemeContext }) 
 									? "active-navbar-link"
 									: "navbar-link"
 							}
+							name="computer_wizard"
 							id="collasible-nav-dropdown"
-							show={showDropdown}
-							onMouseEnter={toggleDropdownShow}
+							show={showDropdown === "computer_wizard"}
+							onMouseEnter={() => toggleDropdownShow("computer_wizard")}
 							onMouseLeave={toggleDropdownHide}>
 							<NavDropdown.Item
 								as={Link}
@@ -161,13 +162,58 @@ const NavBar = ({ currentUser, handleUserChange, handleSignout, ThemeContext }) 
 							</NavDropdown.Item>
 						</NavDropdown>
 
-						<Nav.Link
-							as={Link}
-							to="/usedparts"
-							className={activeLink === "/usedparts" ? "active-navbar-link" : "navbar-link"}
-							onClick={() => onUpdateActiveLink("/usedparts")}>
-							Used Parts
-						</Nav.Link>
+						<NavDropdown
+							title={
+								<Link
+									to="/usedparts"
+									onClick={() => onUpdateActiveLink("/usedparts")}>
+									Used parts
+								</Link>
+							}
+							className={
+								[
+									"/usedparts",
+									"/usedparts/browse",
+									"/usedparts/purchase",
+									"/usedparts/build"
+								].includes(activeLink)
+									? "active-navbar-link"
+									: "navbar-link"
+							}
+							name="used_parts"
+							id="collasible-nav-dropdown"
+							show={showDropdown === "used_parts"}
+							onMouseEnter={() => toggleDropdownShow("used_parts")}
+							onMouseLeave={toggleDropdownHide}>
+							<NavDropdown.Item
+								as={Link}
+								to="/usedparts/browse"
+								className={
+									activeLink === "/usedparts/browse" ? "active-navbar-link" : "navbar-link"
+								}
+								onClick={() => onUpdateActiveLink("/usedparts/browse")}>
+								Browse
+							</NavDropdown.Item>
+							<NavDropdown.Item
+								as={Link}
+								to="/usedparts/purchase"
+								className={
+									activeLink === "/usedparts/purchase" ? "active-navbar-link" : "navbar-link"
+								}
+								onClick={() => onUpdateActiveLink("/usedparts/purchase")}>
+								Purchase
+							</NavDropdown.Item>
+							<NavDropdown.Item
+								as={Link}
+								to="/usedparts/build"
+								className={
+									activeLink === "/usedparts/build" ? "active-navbar-link" : "navbar-link"
+								}
+								onClick={() => onUpdateActiveLink("/usedparts/build")}>
+								Build
+							</NavDropdown.Item>
+						</NavDropdown>
+
 					</Nav>
 					<Nav className="ml-auto">{userNavbar()}</Nav>
 				</Navbar.Collapse>
