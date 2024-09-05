@@ -30,7 +30,7 @@ const UsedPartsBrowse = ({ fetchDynamicData, fetchDataAmount }) => {
 
 	// Update run fetchData when pagination changes
 	useEffect(() => {
-		fetchData(page);
+		fetchData();
 	}, [page]);
 
 /*
@@ -113,14 +113,14 @@ const UsedPartsBrowse = ({ fetchDynamicData, fetchDataAmount }) => {
 				<Button onClick={() => handlePageChange(1)} disabled={page === 1}>First page</Button>
 
 				<Button onClick={() => handlePageChange(page - 1)} disabled={page === 1}>Previous page</Button>
-				<h3> {page} / {totalPages} </h3>
+				<h3>{page} / {totalPages}</h3>
 				<Button onClick={() => handlePageChange(page + 1)} disabled={page === totalPages}>Next page</Button>
 
 				<Button onClick={() => handlePageChange(totalPages)} disabled={page === totalPages}>Last page</Button>
 			</div>
 			</>
 		)
-	}
+	};
 
 	const renderParts = () => {
 		if (Array.isArray(parts) && parts.length > 0) {
@@ -134,7 +134,6 @@ const UsedPartsBrowse = ({ fetchDynamicData, fetchDataAmount }) => {
 							<td> {partTypeMapping[part.PartTypeID]  || "Unknown Type"}</td> 
 						</tr>
 					))}
-					{renderPagination(page, totalPages)}
 				</>
 			);
 		} else {
@@ -146,6 +145,7 @@ const UsedPartsBrowse = ({ fetchDynamicData, fetchDataAmount }) => {
 		<div>
 		<h1>Used Parts</h1>
 		{/*searchParts()*/}
+		{renderPagination(page, totalPages)}
 		<Table responsive="md" hover bordered className="table-striped">
 			<thead>
 				<tr>

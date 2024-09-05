@@ -84,7 +84,7 @@ function App() {
 			</>
 		)}
 			<Route path="computerwizard" element={<ComputerWizard />}>
-				<Route path="browse" element={<ComputerWizardBrowse />} />
+				<Route path="browse" element={<ComputerWizardBrowse fetchDynamicData={fetchDynamicData} fetchDataAmount={fetchDataAmount} />} />
 				<Route path="purchase" element={<ComputerWizardPurchase />} />
 				<Route path="build" element={<ComputerWizardBuild />} />
 			</Route>
