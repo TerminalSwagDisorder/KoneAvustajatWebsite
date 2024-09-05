@@ -2,7 +2,13 @@ import React, { useState, useEffect } from "react";
 import { Link } from 'react-router-dom';
 import { Button, Container, Table, Form } from 'react-bootstrap';
 
-const UsedPartsBrowse = ({ fetchDynamicData }) => {
+const UsedPartsBrowse = ({ fetchDynamicData, fetchDataAmount }) => {
+	const [parts, setParts] = useState([]);
+	const [partName, setPartName] = useState("cpu");
+	const [error, setError] = useState(null);
+	const [loading, setLoading] = useState(true);
+	const [totalPages, setTotalPages] = useState(0);
+	const [page, setPage] = useState(1);
 
 	const partTypeMapping = {
 		1: 'Chassis',
@@ -15,30 +21,42 @@ const UsedPartsBrowse = ({ fetchDynamicData }) => {
 		8: 'Storage'
 	};
 
+	// On initial page load
+	useEffect(() => {
+		fetchData();
+		handlePagination();
 
-	const [parts, setParts] = useState([]);
-	const [partName, setPartName] = useState("cpu");
-	const [error, setError] = useState(null);
-	const [loading, setLoading] = useState(true);
-	const [page, setPage] = useState(1);
+	}, []);
 
-    const fetchParts = async (page, tableName = "inventory") => {
-        setLoading(true);
-        try {
-            const data = await fetchDynamicData(page, tableName, partName);     //Error????
-            setParts(data);
-        } catch (error) {
-            console.error("Error fetching parts:", error);
-            setError(`Error fetching parts: ${error.message}`);
-        } finally {
-            setLoading(false);
-        }
-    };
-    
+	// Update run fetchData when pagination changes
+	useEffect(() => {
+		fetchData(page);
+	}, [page]);
 
+/*
 	useEffect(() => {
 		fetchParts(page, "inventory");     //Error????
 	}, [page]);
+*/
+	
+	const handlePagination = async () => {
+		const dataCount = await fetchDataAmount("part_inventory");
+		setTotalPages(dataCount.index);
+	};
+
+	const handlePageChange = (newPage) => {
+		setPage(newPage);
+	};
+
+	const fetchData = async () => {
+		try {
+			const data = await fetchDynamicData(page, "inventory", partName);
+			setParts(data);
+			//console.log(data);
+		} catch (error) {
+			console.error("Error while fetching medUsers:", error);
+		}
+	};
 
 	const handleSearchTerm = (event) => {
 		event.preventDefault();
@@ -87,7 +105,23 @@ const UsedPartsBrowse = ({ fetchDynamicData }) => {
 			</div>
 		);
 	};*/
-		
+
+	const renderPagination = (page, totalPages) => {
+		return (
+			<>
+			<div className="paginationButtons">
+				<Button onClick={() => handlePageChange(1)} disabled={page === 1}>First page</Button>
+
+				<Button onClick={() => handlePageChange(page - 1)} disabled={page === 1}>Previous page</Button>
+				<h3> {page} / {totalPages} </h3>
+				<Button onClick={() => handlePageChange(page + 1)} disabled={page === totalPages}>Next page</Button>
+
+				<Button onClick={() => handlePageChange(totalPages)} disabled={page === totalPages}>Last page</Button>
+			</div>
+			</>
+		)
+	}
+
 	const renderParts = () => {
 		if (Array.isArray(parts) && parts.length > 0) {
 			return (
@@ -100,25 +134,9 @@ const UsedPartsBrowse = ({ fetchDynamicData }) => {
 							<td> {partTypeMapping[part.PartTypeID]  || "Unknown Type"}</td> 
 						</tr>
 					))}
-					<Button onClick={() => setPage(page > 1 ? page - 1 : 1)} disabled={page <= 1}>
-						Previous
-					</Button>
-					<Button onClick={() => setPage(page + 1)}>Next</Button>
+					{renderPagination(page, totalPages)}
 				</>
 			);
-		} else if (Array.isArray(parts) && parts.length === 0 && page > 1) {
-		return (
-			<>
-				<h3>No parts available</h3>
-				<Button onClick={() => setPage(page > 1 ? page - 1 : 1)} disabled={page <= 1}>
-					Previous
-				</Button>
-			</>
-		);
-		} else if (loading) {
-		return <h3>Loading parts...</h3>;
-		} else if (error) {
-		return <h3>{error}</h3>;
 		} else {
 		return <h3>No parts available</h3>;  
 		}

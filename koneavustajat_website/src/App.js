@@ -89,7 +89,7 @@ function App() {
 				<Route path="build" element={<ComputerWizardBuild />} />
 			</Route>
 			<Route path="usedparts" element={<UsedParts />}>
-				<Route path="browse" element={<UsedPartsBrowse fetchDynamicData={fetchDynamicData} />} />
+				<Route path="browse" element={<UsedPartsBrowse fetchDynamicData={fetchDynamicData} fetchDataAmount={fetchDataAmount} />} />
 				<Route path="purchase" element={<UsedPartsPurchase />} />
 				<Route path="build" element={<UsedPartsBuild />} />
 				<Route path="modify" element={<UsedPartsModify />} />
