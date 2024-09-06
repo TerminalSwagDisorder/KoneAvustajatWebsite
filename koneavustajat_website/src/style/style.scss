@@ -142,6 +142,7 @@ $dark_user_select_button: #697ef5;
 
 		.active-navbar-link {
 			background-color: lighten($navbar_color, 10%) !important;
+			border-radius:	0.5rem;
 		}
 
 		a {
