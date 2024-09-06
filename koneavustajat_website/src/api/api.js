@@ -65,12 +65,12 @@ export const fetchUsers = async (page) => {
 export const fetchDynamicData = async (page, tableName, partName) => {
 	// Only allow the specified tableNames
 	const allowedTableNames = ["other/users", "users", "part", "inventory"]
-	if (!allowedTableNames.includes(tableName) || tableName === "") {
+	if (!tableName || !allowedTableNames.includes(tableName) || tableName === "") {
 		console.error(`tableName "${tableName}" is not allowed!`)
 		throw new Error(`tableName "${tableName}" is not allowed!`)
 	}
 	const allowedPartNames = ["chassis", "cpu", "cpu_cooler", "gpu", "memory", "motherboard", "psu", "storage"];
-	if (!allowedPartNames.includes(partName) || partName === "") {
+	if (partName && (!allowedPartNames.includes(partName) || partName === "")) {
 		console.error(`partName "${partName}" is not allowed!`);
 		throw new Error(`partName "${partName}" is not allowed!`);
 	}

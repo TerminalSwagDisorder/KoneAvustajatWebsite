@@ -33,7 +33,13 @@ const UsedPartsBrowse = ({ fetchDynamicData, fetchDataAmount }) => {
 		fetchData();
 	}, [page]);
 
+	
 /*
+	useEffect(() => {
+		fetchData();
+		handlePagination();
+	}, [partName]);
+
 	useEffect(() => {
 		fetchParts(page, "inventory");     //Error????
 	}, [page]);
@@ -50,7 +56,7 @@ const UsedPartsBrowse = ({ fetchDynamicData, fetchDataAmount }) => {
 
 	const fetchData = async () => {
 		try {
-			const data = await fetchDynamicData(page, "inventory", partName);
+			const data = await fetchDynamicData(page, "inventory");
 			setParts(data);
 			//console.log(data);
 		} catch (error) {

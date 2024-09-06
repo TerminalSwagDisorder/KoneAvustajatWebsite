@@ -19,8 +19,12 @@ const ComputerWizardBrowse = ({ fetchDynamicData, fetchDataAmount }) => {
 	// Update run fetchData when pagination changes
 	useEffect(() => {
 		fetchData();
+	}, [page]);
+
+	useEffect(() => {
+		fetchData();
 		handlePagination();
-	}, [page, partName]);
+	}, [partName]);
 
 	const handlePagination = async () => {
 		const dataCount = await fetchDataAmount(partName);
