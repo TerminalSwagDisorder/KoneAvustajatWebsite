@@ -1,8 +1,21 @@
 import React, { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
-import { Button, Container, Table, Form, Dropdown, Alert, CloseButton, OverlayTrigger, Tooltip, Image } from "react-bootstrap";
-import { ciDesktopMouse1 } from "react-icons/ci";
+import {
+	Button,
+	Container,
+	Table,
+	Form,
+	Dropdown,
+	Alert,
+	CloseButton,
+	OverlayTrigger,
+	Tooltip,
+	Image
+} from "react-bootstrap";
+import { CiDesktopMouse1  } from "react-icons/ci";
 import { FaUserEdit } from "react-icons/fa";
+import { useSelector, useDispatch } from "react-redux";
+import { addToShoppingCart, removeFromShoppingCart, clearShoppingCart } from "../redux/shoppingCartSlice";
 
 const ComputerWizardBrowse = ({ fetchDynamicData, fetchDataAmount }) => {
 	const [parts, setParts] = useState([]);
@@ -16,6 +29,8 @@ const ComputerWizardBrowse = ({ fetchDynamicData, fetchDataAmount }) => {
 	const [page, setPage] = useState(1);
 	const [selectedPart, setSelectedPart] = useState("");
 	const [inputValue, setInputValue] = useState("");
+	const shoppingCart = useSelector((state) => state.shoppingCart.shoppingCart);
+	const dispatch = useDispatch();
 
 	// On initial page load
 	useEffect(() => {
@@ -32,6 +47,19 @@ const ComputerWizardBrowse = ({ fetchDynamicData, fetchDataAmount }) => {
 		fetchData();
 		handlePagination();
 	}, [partName]);
+
+	const handleAddToCart = (item) => {
+		const newItem = {
+			...item,
+			table: partName.key,
+			quantity: 1 // Set default quantity to 1
+		};
+		dispatch(addToShoppingCart(newItem));
+	};
+
+	const handleRemoveFromCart = (itemId) => {
+		dispatch(removeFromShoppingCart(itemId));
+	};
 
 	const closeForm = () => {
 		setSelectedPart(null);
@@ -119,8 +147,9 @@ const ComputerWizardBrowse = ({ fetchDynamicData, fetchDataAmount }) => {
 
 					<Dropdown.Menu>
 						{Object.keys(partNameMapping).map((key) => (
-							<Dropdown.Item key={key} onClick={() => handlePartTypeChange({key: key, value: partNameMapping[key]})}>
-								
+							<Dropdown.Item
+								key={key}
+								onClick={() => handlePartTypeChange({ key: key, value: partNameMapping[key] })}>
 								{partNameMapping[key]}
 							</Dropdown.Item>
 						))}
@@ -166,9 +195,14 @@ const ComputerWizardBrowse = ({ fetchDynamicData, fetchDataAmount }) => {
 							<td> {part.Name}</td>
 							<td> {part.Price} €</td>
 							<td>
-								<a className="user-select-button" onClick={() => handleSelectPart(part)}>
+								<Button className="user-select-button" onClick={() => handleSelectPart(part)}>
 									View part
-								</a>
+								</Button>
+								<Button
+									className="user-select-button"
+									onClick={() => handleAddToCart(part)}>
+									Add to Cart
+								</Button>
 							</td>
 						</tr>
 					))}
@@ -197,7 +231,11 @@ const ComputerWizardBrowse = ({ fetchDynamicData, fetchDataAmount }) => {
 											{selectedPart[key]}
 										</a>
 									) : key === "Image" ? (
-										<Image src={process.env.PUBLIC_URL + "/product_images/" + selectedPart[key]} alt={key} style={{ width: "100px", height: "auto" }} />
+										<Image
+											src={process.env.PUBLIC_URL + "/product_images/" + selectedPart[key]}
+											alt={key}
+											style={{ width: "100px", height: "auto" }}
+										/>
 									) : (
 										selectedPart[key]
 									)}
@@ -211,7 +249,7 @@ const ComputerWizardBrowse = ({ fetchDynamicData, fetchDataAmount }) => {
 			return (
 				<div className="userChangePrompt">
 					<Alert>
-						<ciDesktopMouse1 /> Select a part to view details.
+						<CiDesktopMouse1  /> Select a part to view details.
 					</Alert>
 				</div>
 			);
@@ -229,7 +267,7 @@ const ComputerWizardBrowse = ({ fetchDynamicData, fetchDataAmount }) => {
 						<th>ID</th>
 						<th>Name</th>
 						<th>Price</th>
-						<th>View</th>
+						<th>Actions</th>
 					</tr>
 				</thead>
 				<tbody>{renderParts()}</tbody>

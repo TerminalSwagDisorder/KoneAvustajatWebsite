@@ -2,12 +2,18 @@ import { useEffect, useState, useContext } from "react";
 import Container from "react-bootstrap/Container";
 import { Nav, Navbar, NavDropdown, Button, Image } from "react-bootstrap";
 import { Link } from "react-router-dom";
+import { AiOutlineShoppingCart } from "react-icons/ai";
+import { useSelector, useDispatch } from "react-redux";
 
 const NavBar = ({ currentUser, handleUserChange, handleSignout, ThemeContext }) => {
 	const [activeLink, setActiveLink] = useState("home");
 	const [scrolled, setScrolled] = useState(false);
 	const [showDropdown, setShowDropdown] = useState(false);
 	const { theme, toggleTheme } = useContext(ThemeContext);
+	const shoppingCart = useSelector((state) => state.shoppingCart.shoppingCart);
+	const dispatch = useDispatch();
+	const cartItems = Object.values(shoppingCart);
+  	const totalCartItems = cartItems.reduce((total, item) => total + item.quantity, 0);
 
 	useEffect(() => {
 		const onScroll = () => {
@@ -44,13 +50,24 @@ const NavBar = ({ currentUser, handleUserChange, handleSignout, ThemeContext }) 
 		setShowDropdown(false);
 	};
 
+	const shoppingCartNavbar = () => {
+		if (totalCartItems || totalCartItems > 0) {
+			return (
+				<Nav.Link as={Link} to="/shoppingcart" className={activeLink === "/shoppingcart" ? "active-navbar-link" : "navbar-link"} onClick={() => onUpdateActiveLink("/shoppingcart")}>
+					View Cart <AiOutlineShoppingCart /> {totalCartItems}
+				</Nav.Link>
+			);
+		}
+	};
+
+	
 	const userNavbar = () => {
 		let adminCheck;
 		let userCheck;
 		if (currentUser && currentUser.role !== "user") {
 			adminCheck = (
 				<>
-					<Nav.Link as={Link} to="/admin/dashboard">
+					<Nav.Link as={Link} to="/admin/dashboard" className={activeLink === "/admin/dashboard" ? "active-navbar-link" : "navbar-link"} onClick={() => onUpdateActiveLink("/admin/dashboard")}>
 						Dashboard
 					</Nav.Link>
 				</>
@@ -71,10 +88,10 @@ const NavBar = ({ currentUser, handleUserChange, handleSignout, ThemeContext }) 
 			userCheck = (
 				// If false do this
 				<>
-					<Nav.Link as={Link} to="/signin">
+					<Nav.Link as={Link} to="/signin" className={activeLink === "/signin" ? "active-navbar-link" : "navbar-link"} onClick={() => onUpdateActiveLink("/signin")}>
 						Not signed in
 					</Nav.Link>
-					<Nav.Link as={Link} to="/signup">
+					<Nav.Link as={Link} to="/signup" className={activeLink === "/signup" ? "active-navbar-link" : "navbar-link"} onClick={() => onUpdateActiveLink("/signup")}>
 						Signup
 					</Nav.Link>
 				</>
@@ -91,7 +108,7 @@ const NavBar = ({ currentUser, handleUserChange, handleSignout, ThemeContext }) 
 	return (
 		<Navbar expand="md" className={scrolled ? "scrolled" : ""}>
 			<Container>
-				<Navbar.Brand as={Link} to="/">
+				<Navbar.Brand as={Link} to="/" onClick={() => onUpdateActiveLink("/")}>
 					KoneAvustajat
 				</Navbar.Brand>
 				<Button className="themeSwitcher" onClick={toggleTheme}>
@@ -213,9 +230,10 @@ const NavBar = ({ currentUser, handleUserChange, handleSignout, ThemeContext }) 
 								Build
 							</NavDropdown.Item>
 						</NavDropdown>
-
 					</Nav>
 					<Nav className="ml-auto">{userNavbar()}</Nav>
+					<Nav className="ml-auto">{shoppingCartNavbar()}</Nav>
+
 				</Navbar.Collapse>
 			</Container>
 		</Navbar>

@@ -19,11 +19,21 @@ import UsedPartsBrowse from './components/UsedPartsBrowse';
 import UsedPartsPurchase from './components/UsedPartsPurchase';
 import UsedPartsBuild from './components/UsedPartsBuild';
 import UsedPartsModify from './components/UsedPartsModify';
+import ShoppingCart from './components/ShoppingCart';
 import { ThemeContext, ThemeProvider, fetchUsers, fetchDynamicData, fetchSearchIdData, fetchDataAmount, handleSignin, handleSignup, handleSignout, checkIfSignedIn, refreshProfile, handleCredentialChange } from "./api/api";
+import { useSelector, useDispatch } from "react-redux";
+
 
 
 function App() {
 	const [currentUser, setCurrentUser] = useState(null);
+
+	const shoppingCart = useSelector((state) => state.shoppingCart.shoppingCart);
+	const dispatch = useDispatch();
+	const cartItems = Object.values(shoppingCart);
+  	const totalCartItems = cartItems.reduce((total, item) => total + item.quantity, 0);
+	console.log(shoppingCart);
+	console.log(cartItems);
 
 	// Check if the user is signed in on page load
 	const fetchUserStatus = async () => {
@@ -34,8 +44,8 @@ function App() {
 				// Refresh profile
 				const refreshedUserData = await refreshProfile();
 				setCurrentUser(refreshedUserData);
-				console.log("userData", userData) // note that userData remains the same until re-login
-				console.log("refreshedUserData", refreshedUserData) // Thats why we have refreshedUserData
+				console.log("userData", userData); // note that userData remains the same until re-login
+				console.log("refreshedUserData", refreshedUserData); // Thats why we have refreshedUserData
 			} else {
 				setCurrentUser(null);
 			}
@@ -94,7 +104,9 @@ function App() {
 				<Route path="build" element={<UsedPartsBuild />} />
 				<Route path="modify" element={<UsedPartsModify />} />
 			</Route>
-		
+			{shoppingCart && totalCartItems && totalCartItems > 0 && (
+				<Route path="shoppingcart" element={<ShoppingCart />} />
+			)}
 		</Routes>
 		</BrowserRouter>
 		</div>
