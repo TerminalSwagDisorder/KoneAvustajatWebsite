@@ -12,7 +12,7 @@ import {
 	Tooltip,
 	Image
 } from "react-bootstrap";
-import { CiDesktopMouse1  } from "react-icons/ci";
+import { CiDesktopMouse1 } from "react-icons/ci";
 import { FaUserEdit } from "react-icons/fa";
 import { useSelector, useDispatch } from "react-redux";
 import { addToShoppingCart, removeFromShoppingCart, clearShoppingCart } from "../redux/shoppingCartSlice";
@@ -55,10 +55,6 @@ const ComputerWizardBrowse = ({ fetchDynamicData, fetchDataAmount }) => {
 			quantity: 1 // Set default quantity to 1
 		};
 		dispatch(addToShoppingCart(newItem));
-	};
-
-	const handleRemoveFromCart = (itemId) => {
-		dispatch(removeFromShoppingCart(itemId));
 	};
 
 	const closeForm = () => {
@@ -198,9 +194,7 @@ const ComputerWizardBrowse = ({ fetchDynamicData, fetchDataAmount }) => {
 								<Button className="user-select-button" onClick={() => handleSelectPart(part)}>
 									View part
 								</Button>
-								<Button
-									className="user-select-button"
-									onClick={() => handleAddToCart(part)}>
+								<Button className="user-select-button" onClick={() => handleAddToCart(part)}>
 									Add to Cart
 								</Button>
 							</td>
@@ -242,6 +236,9 @@ const ComputerWizardBrowse = ({ fetchDynamicData, fetchDataAmount }) => {
 								</li>
 							</ul>
 						))}
+						<Button className="user-select-button" onClick={() => handleAddToCart(selectedPart)}>
+							Add to Cart
+						</Button>
 					</Form>
 				</div>
 			);
@@ -249,7 +246,7 @@ const ComputerWizardBrowse = ({ fetchDynamicData, fetchDataAmount }) => {
 			return (
 				<div className="userChangePrompt">
 					<Alert>
-						<CiDesktopMouse1  /> Select a part to view details.
+						<CiDesktopMouse1 /> Select a part to view details.
 					</Alert>
 				</div>
 			);
