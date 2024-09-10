@@ -1,6 +1,8 @@
 import React, { useState, useEffect } from "react";
 import { Link } from 'react-router-dom';
 import { Button, Container, Table, Form } from 'react-bootstrap';
+import { useSelector, useDispatch } from "react-redux";
+import { addToShoppingCart, removeFromShoppingCart, clearShoppingCart } from "../redux/shoppingCartSlice";
 
 const UsedPartsBrowse = ({ fetchDynamicData, fetchDataAmount }) => {
 	const [parts, setParts] = useState([]);
@@ -9,6 +11,9 @@ const UsedPartsBrowse = ({ fetchDynamicData, fetchDataAmount }) => {
 	const [loading, setLoading] = useState(true);
 	const [totalPages, setTotalPages] = useState(0);
 	const [page, setPage] = useState(1);
+	const [selectedPart, setSelectedPart] = useState("");
+	const shoppingCart = useSelector((state) => state.shoppingCart.shoppingCart);
+	const dispatch = useDispatch();
 
 	const partTypeMapping = {
 		1: 'Chassis',
@@ -45,6 +50,15 @@ const UsedPartsBrowse = ({ fetchDynamicData, fetchDataAmount }) => {
 	}, [page]);
 */
 	
+	const handleAddToCart = (item) => {
+		const newItem = {
+			...item,
+			table: "usedParts",
+			quantity: 1 // Set default quantity to 1
+		};
+		dispatch(addToShoppingCart(newItem));
+	};
+
 	const handlePagination = async () => {
 		const dataCount = await fetchDataAmount("part_inventory");
 		setTotalPages(dataCount.index);
@@ -52,6 +66,11 @@ const UsedPartsBrowse = ({ fetchDynamicData, fetchDataAmount }) => {
 
 	const handlePageChange = (newPage) => {
 		setPage(newPage);
+	};
+
+	const handleSelectPart = (part) => {
+		setSelectedPart(part);
+		window.scrollTo(0, 180);
 	};
 
 	const fetchData = async () => {
@@ -138,6 +157,11 @@ const UsedPartsBrowse = ({ fetchDynamicData, fetchDataAmount }) => {
 							<td> {part.Name || "Unknown Name"}</td>
 							<td> {part.Price || "N/A"} €</td>
 							<td> {partTypeMapping[part.PartTypeID]  || "Unknown Type"}</td> 
+							<td>
+								<Button className="user-select-button" onClick={() => handleAddToCart(part)}>
+									Add to Cart
+								</Button>
+							</td>
 						</tr>
 					))}
 				</>
@@ -159,6 +183,7 @@ const UsedPartsBrowse = ({ fetchDynamicData, fetchDataAmount }) => {
 					<th>Name</th>
 					<th>Price</th>
 					<th>Part Type</th> 
+					<th>Actions</th> 
 
 				</tr>
 			</thead>

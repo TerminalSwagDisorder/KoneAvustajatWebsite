@@ -11,7 +11,7 @@ const shoppingCartSlice = createSlice({
 	reducers: {
 		addToShoppingCart: (state, action) => {
 			const item = action.payload;
-			const CID = `${item.table}_${item.ID}`;
+			const CID = `${item.table}_${item.ID || item.PartID}`;
 			if (state.shoppingCart[CID]) {
 				state.shoppingCart[CID].quantity += item.quantity;
 			} else {
