@@ -29,11 +29,18 @@ function App() {
 	const [currentUser, setCurrentUser] = useState(null);
 
 	const shoppingCart = useSelector((state) => state.shoppingCart.shoppingCart);
+	const wizard = useSelector((state) => state.wizard.wizard);
 	const dispatch = useDispatch();
 	const cartItems = Object.values(shoppingCart);
+	const wizardItems = Object.values(wizard);
   	const totalCartItems = cartItems.reduce((total, item) => total + item.quantity, 0);
-	console.log(shoppingCart);
-	console.log(cartItems);
+  	const totalWizardItems = wizardItems.reduce((total, item) => total + item.quantity, 0);
+
+	console.log("shoppingCart ", shoppingCart);
+	console.log("cartItems ", cartItems);
+
+	console.log("wizard ", wizard);
+	console.log("wizardItems ", wizardItems);
 
 	// Check if the user is signed in on page load
 	const fetchUserStatus = async () => {
