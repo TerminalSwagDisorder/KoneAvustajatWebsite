@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import { Button, Container, Table, Form } from 'react-bootstrap';
 import { useSelector, useDispatch } from "react-redux";
 import { addToShoppingCart, removeFromShoppingCart, clearShoppingCart } from "../redux/shoppingCartSlice";
+import { addToWizard, removeFromWizard, clearWizard } from "../redux/wizardSlice";
 
 const UsedPartsBrowse = ({ fetchDynamicData, fetchDataAmount }) => {
 	const [parts, setParts] = useState([]);
@@ -13,6 +14,7 @@ const UsedPartsBrowse = ({ fetchDynamicData, fetchDataAmount }) => {
 	const [page, setPage] = useState(1);
 	const [selectedPart, setSelectedPart] = useState("");
 	const shoppingCart = useSelector((state) => state.shoppingCart.shoppingCart);
+	const wizard = useSelector((state) => state.wizard.wizard);
 	const dispatch = useDispatch();
 
 	const partTypeMapping = {
@@ -57,6 +59,14 @@ const UsedPartsBrowse = ({ fetchDynamicData, fetchDataAmount }) => {
 			quantity: 1 // Set default quantity to 1
 		};
 		dispatch(addToShoppingCart(newItem));
+	};
+
+	const handleAddToWizard = (item) => {
+		const newItem = {
+			...item,
+			table: "usedParts",
+		};
+		dispatch(addToWizard(newItem));
 	};
 
 	const handlePagination = async () => {
@@ -160,6 +170,9 @@ const UsedPartsBrowse = ({ fetchDynamicData, fetchDataAmount }) => {
 							<td>
 								<Button className="user-select-button" onClick={() => handleAddToCart(part)}>
 									Add to Cart
+								</Button>
+								<Button className="user-select-button" onClick={() => handleAddToWizard(part)}>
+									Add to Wizard
 								</Button>
 							</td>
 						</tr>

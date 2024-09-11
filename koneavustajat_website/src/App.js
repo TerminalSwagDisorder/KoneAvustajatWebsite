@@ -34,13 +34,16 @@ function App() {
 	const cartItems = Object.values(shoppingCart);
 	const wizardItems = Object.values(wizard);
   	const totalCartItems = cartItems.reduce((total, item) => total + item.quantity, 0);
-  	const totalWizardItems = wizardItems.reduce((total, item) => total + item.quantity, 0);
+  	const totalWizardItems = wizardItems.length;
 
-	console.log("shoppingCart ", shoppingCart);
-	console.log("cartItems ", cartItems);
+	//console.log("shoppingCart ", shoppingCart);
+	//console.log("cartItems ", cartItems);
 
-	console.log("wizard ", wizard);
-	console.log("wizardItems ", wizardItems);
+	//console.log("wizard ", wizard);
+	//console.log("wizardItems ", wizardItems);
+
+	console.log("totalCartItems ", totalCartItems);
+	console.log("totalWizardItems ", totalWizardItems);
 
 	// Check if the user is signed in on page load
 	const fetchUserStatus = async () => {
