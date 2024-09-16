@@ -9,6 +9,10 @@ const ComputerWizardBuild = () => {
     const wizardItems = Object.values(wizard);
     const wizardEntries = Object.entries(wizard);
         
+    const totalPrice = wizardItems.reduce((acc, item) => {
+        return acc + (parseFloat(item.Price) || 0);
+    }, 0).toFixed(2);
+
     const handleAddToWizard = (item) => {
         const newItem = {
             ...item,
@@ -42,49 +46,44 @@ const ComputerWizardBuild = () => {
     };
 
     const renderWizardItems = () => {
-        if (wizardEntries) {
+        if (wizardEntries && wizardEntries.length > 0) {
             return (
-                <ListGroup className="parts-details">
+                <ListGroup className="wizard-details">
                     {wizardEntries.map(([partKey, partVal]) => (
-                        <ListGroup key={partKey} className="mb-4">
-                            {Object.keys(partVal).map((key, idx) => 
-							key == "Name" && (
-                                <ListGroup.Item key={idx}>
-                                    <span>
-                                        <b>{key}</b>:{" "}
-                                    </span>
-                                    {key === "Image" ? (
-                                        <Image
-                                            src={process.env.PUBLIC_URL + "/product_images/" + partVal[key]}
-                                            alt={partVal.Name}
-                                            className="part-image mb-3"
-                                            style={{ width: "100px", height: "auto" }}
-                                        />
-                                    ) : key === "Url" || key === "Image_Url" ? (
-                                        <a href={partVal[key]} target="_blank" rel="noopener noreferrer">
-                                            {partVal[key]}
-                                        </a>
-                                    ) : typeof partVal[key] === "object" && partVal[key] !== null ? (
-                                        renderNestedObject(partVal[key])
-                                    ) : (
-                                        partVal[key]
-                                    )}
-                                </ListGroup.Item>
-                            ))}
-                            <Button className="user-select-button" onClick={() => handleRemoveFromWizard(partKey)}>
-                                Remove all {partKey} from wizard
-                            </Button>
-                        </ListGroup>
+                        <ListGroup.Item>
+                            <p>
+                                {partKey}: <b>{partVal.Name}</b> | <b>{parseFloat(partVal.Price).toFixed(2)}</b> €
+                                <Button className="user-select-button" onClick={() => handleRemoveFromWizard(partKey)}>
+                                    <span>Remove</span>
+                                </Button>
+                            </p>
+                        </ListGroup.Item>
                     ))}
+                    <ListGroup.Item>
+                        {(totalPrice && totalPrice > 0) ? (
+                            <p>
+                                Total price: <b>{totalPrice}</b> €
+                            </p>
+                        ) : (
+                            <p>No price could be calculated!</p>
+                        )}
+                    </ListGroup.Item>
                 </ListGroup>
             );
         } else {
-            return <p>Something went wrong!</p>;
+            return (
+            <ListGroup className="wizard-details">
+                <ListGroup.Item>
+                    <p>No parts chosen!</p>
+                </ListGroup.Item>
+            </ListGroup>
+            );
         }
     };
 
     return (
         <div>
+            <h3>Computer build</h3>
             <Button className="user-select-button" onClick={() => handleClearWizard()}>
                 Clear Wizard
             </Button>

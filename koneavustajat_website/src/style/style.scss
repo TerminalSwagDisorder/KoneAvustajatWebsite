@@ -19,11 +19,11 @@ $border: #dee2e6;
 //Light mode
 $light_bg_color: #ffffff; //background color
 $light_box_text: #000; //writable boxes and text inside clickable buttons
-$light_click_button: #047A76; //clickable buttons, text inside writable boxes and clickable text
+$light_click_button: #047a76; //clickable buttons, text inside writable boxes and clickable text
 $light_logo_icons: #000000; //Logo, icons and non clickable text
 $light_active_elems: lightblue; // Active elements
 $light_activehover_elems: darkgray; // Active elements
-$light_navbar: #047A76; //Navbar
+$light_navbar: #047a76; //Navbar
 $light_forms: #f2f2f2;
 $light_disabled_input: #808080;
 $light_odd_row: white;
@@ -32,9 +32,9 @@ $light_theme_button: #00587a;
 $light_user_select_button: #394588;
 
 //Dark mode
-$dark_bg_color: #586E6D; //background color
-$dark_box_text: #DEF5F4; //writable boxes and text inside clickable buttons
-$dark_click_button: #047A76; //clickable buttons, text inside writable boxes and clickable text
+$dark_bg_color: #586e6d; //background color
+$dark_box_text: #def5f4; //writable boxes and text inside clickable buttons
+$dark_click_button: #047a76; //clickable buttons, text inside writable boxes and clickable text
 $dark_logo_icons: #ffffff; //Logo, icons and non clickable text
 $dark_active_elems: #697ef5; // Active elements
 $dark_activehover_elems: gray; // Active elements
@@ -43,32 +43,51 @@ $dark_forms: #707070;
 $dark_disabled_input: #595959;
 $dark_odd_row: rgba(0, 0, 0, 0.796);
 $dark_even_row: rgba(56, 56, 56, 0.877);
-$dark_theme_button: #047A76;
+$dark_theme_button: #047a76;
 $dark_user_select_button: #697ef5;
-
 
 // Colors from the clients styling requirements
 // Mixin for theme-specific styles
-@mixin theme($bg_color, $box_text, $click_button, $logo_icons, $active_elems, $activehover_elems, $navbar_color, $btn_color, $text_input_bg, $text_input_color, $forms, $odd_row, $even_row, $disabled_input, $theme_button, $user_select_button){
+@mixin theme(
+	$bg_color,
+	$box_text,
+	$click_button,
+	$logo_icons,
+	$active_elems,
+	$activehover_elems,
+	$navbar_color,
+	$btn_color,
+	$text_input_bg,
+	$text_input_color,
+	$forms,
+	$odd_row,
+	$even_row,
+	$disabled_input,
+	$theme_button,
+	$user_select_button
+) {
 	// Light mode styles
 	background-color: $bg_color;
 	background: $bg_color;
 	color: $logo_icons; // Assuming default text color follows logo/icon color
 
-	.box, .text-button {
-	  background-color: $box_text; // Writable boxes and text inside buttons
-	  color: $click_button;        // Text inside boxes and clickable text
+	.box,
+	.text-button {
+		background-color: $box_text; // Writable boxes and text inside buttons
+		color: $click_button; // Text inside boxes and clickable text
 	}
 
 	.click-button {
-	  background-color: $click_button;
-	  color: $box_text;
+		background-color: $click_button;
+		color: $box_text;
 	}
 
-	.logo, .icons, .non-click-text {
-	  color: $logo_icons;
+	.logo,
+	.icons,
+	.non-click-text {
+		color: $logo_icons;
 	}
-	
+
 	.active {
 		background-color: $active_elems;
 		color: $box_text;
@@ -83,7 +102,7 @@ $dark_user_select_button: #697ef5;
 		background-color: $bg_color;
 		color: $text_input_color;
 	}
-	
+
 	Form input {
 		background-color: $forms;
 		color: $text_input_color;
@@ -95,8 +114,7 @@ $dark_user_select_button: #697ef5;
 		display: flex;
 		justify-content: left;
 		width: 50%;
-		Form{		
-			
+		Form {
 			color: $box_text;
 			div {
 				background-color: $bg_color;
@@ -110,39 +128,41 @@ $dark_user_select_button: #697ef5;
 		color: $box_text !important;
 	}
 
-	.valid-input, .valid-input:active {
+	.valid-input,
+	.valid-input:active {
 		border-width: 2px;
-		border-color: #28A745 !important;
+		border-color: #28a745 !important;
 	}
 
-	.invalid-input, .invalid-input:active {
+	.invalid-input,
+	.invalid-input:active {
 		border-width: 2px;
 		border-color: red !important;
 	}
 
-
 	// Navbar specific styles
 	nav {
 		background-color: $navbar_color; // Applying the theme-specific navbar color
-		box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.15), inset 0 -1px 0 rgba(255, 255, 255, 0.15);
+		box-shadow:
+			0 0.5rem 1rem rgba(0, 0, 0, 0.15),
+			inset 0 -1px 0 rgba(255, 255, 255, 0.15);
 		padding: 15px 0 !important;
 		font-size: 17px !important;
 		margin-bottom: 20px;
 		font-weight: 600;
-		
-		
+
 		.nav-logo {
 			height: 40px;
 			max-height: 40px;
 		}
-		
+
 		.themeSwitcher {
 			background-color: $theme_button;
 		}
 
 		.active-navbar-link {
 			background-color: lighten($navbar_color, 10%) !important;
-			border-radius:	0.5rem;
+			border-radius: 0.5rem;
 		}
 
 		a {
@@ -153,26 +173,25 @@ $dark_user_select_button: #697ef5;
 	// Navbar specific styles
 	nav .dropdown {
 		box-shadow: none;
-		
+
 		a {
 			text-decoration: none;
 		}
-		
+
 		&:hover .dropdown-toggle a {
 			color: black;
 		}
-		
+
 		.dropdown-menu {
 			background-color: $navbar_color;
 			margin-top: 0;
 			&:hover a {
 				background-color: inherit;
-				
 			}
 		}
 	}
-	
-/*
+
+	/*
  * // for CSS based on hover dropdown
 	.nav-item.dropdown:hover .dropdown-menu {
     	display: block;
@@ -188,52 +207,55 @@ $dark_user_select_button: #697ef5;
 		user-select: none !important;
 		border: 1px solid transparent !important;
 		line-height: 1 !important;
-		transition: all .15s ease !important;
-		box-shadow: 0 4px 6px rgba(50, 50, 93, .11), 0 1px 3px rgba(0, 0, 0, .08) !important;
+		transition: all 0.15s ease !important;
+		box-shadow:
+			0 4px 6px rgba(50, 50, 93, 0.11),
+			0 1px 3px rgba(0, 0, 0, 0.08) !important;
 		margin: 0.5rem 0.5rem 0.5rem 0 !important;
 		padding: 0.8rem 0.25rem !important;
 		width: 100px;
-	
+
 		&:hover {
 			background-color: $black !important;
 			border: 1px solid $black !important;
 		}
 	}
-	input, textarea, select{
+	input,
+	textarea,
+	select {
 		background-color: $text_input_bg;
-        color: $text_input_color;
-        border: 1px solid darken($text_input_bg, 10%); // Adds a darker border for better contrast
+		color: $text_input_color;
+		border: 1px solid darken($text_input_bg, 10%); // Adds a darker border for better contrast
 
-        &:focus {
-            outline: none; // Removes the browser default outline
-            background-color: lighten($text_input_bg, 5%); // Optionally lighten/darken on focus
-            color: $text_input_color !important;
+		&:focus {
+			outline: none; // Removes the browser default outline
+			background-color: lighten($text_input_bg, 5%); // Optionally lighten/darken on focus
+			color: $text_input_color !important;
 		}
 	}
-	.table-striped>tbody>tr:nth-child(odd)>td, 
-	.table-striped>tbody>tr:nth-child(odd)>th   {
-		  background-color: $odd_row;
-		  color: $box_text;
-		  &:hover{
+	.table-striped > tbody > tr:nth-child(odd) > td,
+	.table-striped > tbody > tr:nth-child(odd) > th {
+		background-color: $odd_row;
+		color: $box_text;
+		&:hover {
 			background-color: lighten($odd_row, 10%);
-		  }
 		}
-	.table-striped>tbody>tr:nth-child(even)>td, 
-	.table-striped>tbody>tr:nth-child(even)>th  {
-		  background-color: $even_row;
-		  color: $box_text;
-		  &:hover{
+	}
+	.table-striped > tbody > tr:nth-child(even) > td,
+	.table-striped > tbody > tr:nth-child(even) > th {
+		background-color: $even_row;
+		color: $box_text;
+		&:hover {
 			background-color: lighten($even_row, 10%);
-		  }
-
 		}
+	}
 	.table th {
 		background: $navbar_color !important;
 		color: white !important;
-	
 	}
-	
-	.profile-details .list-group-item { // Issue 1
+
+	.profile-details .list-group-item {
+		// Issue 1
 		background-color: $even_row !important;
 		color: $box_text !important;
 		width: 320px;
@@ -247,44 +269,86 @@ $dark_user_select_button: #697ef5;
 	}
 	.user-select-button,
 	.course-select-button {
-		color: $user_select_button !important;
+		color: white !important;
 		font-size: 14px;
 		font-weight: 700;
 		float: right;
 		text-decoration: unset !important;
 		cursor: pointer;
-		color: $black;
+	}
+	.wizard-details {
+		.list-group-item {
+			background-color: $even_row;
+			color: $box_text;
+			&:hover {
+				background-color: lighten($even_row, 10%);
+			}
+		}
 	}
 }
 
 :root {
-  @include theme($light_bg_color, $light_box_text, $light_click_button, $light_logo_icons, $light_active_elems, $light_activehover_elems, $light_navbar, $light_navbar, $white, $black, $light_forms, $light_odd_row, $light_even_row, $light_disabled_input, $light_theme_button, $light_user_select_button); // Default/light theme
+	@include theme(
+		$light_bg_color,
+		$light_box_text,
+		$light_click_button,
+		$light_logo_icons,
+		$light_active_elems,
+		$light_activehover_elems,
+		$light_navbar,
+		$light_navbar,
+		$white,
+		$black,
+		$light_forms,
+		$light_odd_row,
+		$light_even_row,
+		$light_disabled_input,
+		$light_theme_button,
+		$light_user_select_button
+	); // Default/light theme
 }
 
 [data-theme="dark"] {
-    @include theme($dark_bg_color, $dark_box_text, $dark_click_button, $dark_logo_icons, $dark_active_elems, $dark_activehover_elems, $dark_navbar, $light_blue, $dark_grey, $white, $dark_forms, $dark_odd_row, $dark_even_row, $dark_disabled_input, $dark_theme_button, $dark_user_select_button); // Dark theme
-  
+	@include theme(
+		$dark_bg_color,
+		$dark_box_text,
+		$dark_click_button,
+		$dark_logo_icons,
+		$dark_active_elems,
+		$dark_activehover_elems,
+		$dark_navbar,
+		$light_blue,
+		$dark_grey,
+		$white,
+		$dark_forms,
+		$dark_odd_row,
+		$dark_even_row,
+		$dark_disabled_input,
+		$dark_theme_button,
+		$dark_user_select_button
+	); // Dark theme
 }
 
 // If there are style issues of the background not extending to the whole window
-html, body {
-    min-height: 100vh;
+html,
+body {
+	min-height: 100vh;
 }
 
 // Continuation of the fill issue, if needed
-#root, .App {
-    flex: 1;  // Makes the App container grow to fill the space
-    display: flex;
-    flex-direction: column;
+#root,
+.App {
+	flex: 1; // Makes the App container grow to fill the space
+	display: flex;
+	flex-direction: column;
 }
 
 // Ensure the content div also fills available space if needed
 .content {
-    flex-grow: 1;  // Allows the content area to expand to fill available space
-    display: flex;
-    flex-direction: column;
+	flex-grow: 1; // Allows the content area to expand to fill available space
+	display: flex;
+	flex-direction: column;
 }
-
 
 html {
 	scroll-behavior: smooth;
@@ -320,7 +384,7 @@ ul {
 }
 
 .btn-outline {
-	background-color: $red!important;
+	background-color: $red !important;
 	border: 1px solid $blue !important;
 	color: $blue !important;
 	width: 180px;
@@ -361,7 +425,7 @@ button {
 
 .navbar-toggler-icon {
 	display: inline-block;
-	width: 1.0em !important;
+	width: 1em !important;
 	height: 1.2em !important;
 }
 
@@ -388,7 +452,7 @@ button {
 	margin: 20px 0;
 
 	button {
-		padding: 10px 20px !important
+		padding: 10px 20px !important;
 	}
 }
 
@@ -404,18 +468,6 @@ button {
 	object-fit: cover;
 }
 
-
-.user-select-button,
-.course-select-button {
-	color: #394588 !important;
-	font-size: 14px;
-	font-weight: 700;
-	float: right;
-	text-decoration: unset !important;
-	cursor: pointer;
-	color: $black;
-}
-
 .table img,
 .table .btn {
 	vertical-align: middle;
@@ -425,12 +477,6 @@ button {
 	vertical-align: middle;
 	padding-top: 12px;
 	padding-bottom: 12px;
-}
-
-.table {
-	box-shadow: rgba(0, 0, 0, 0.02) 0px 1px 3px 0px, rgba(27, 31, 35, 0.15) 0px 0px 0px 1px;
-	padding: 20px;
-	border-radius: 8px;
 }
 
 .enrollTable {
@@ -478,15 +524,14 @@ button {
 	margin: 10px;
 	margin-left: 15px;
 	cursor: pointer;
-    user-select: none; /* Standard syntax */
-    -webkit-user-select: none; /* Safari */
-    -moz-user-select: none; /* Firefox */
-    -ms-user-select: none; /* Internet Explorer/Edge */
+	user-select: none; /* Standard syntax */
+	-webkit-user-select: none; /* Safari */
+	-moz-user-select: none; /* Firefox */
+	-ms-user-select: none; /* Internet Explorer/Edge */
 	&:hover {
 		background-color: lightgray;
 	}
 }
-
 
 .addUsersRole {
 	display: flex;
@@ -532,7 +577,9 @@ button {
 }
 
 /* Large devices (laptops/desktops, 992px and up) */
-@media only screen and (min-width: 992px) {}
+@media only screen and (min-width: 992px) {
+}
 
 /* Extra large devices (large laptops and desktops, 1200px and up) */
-@media only screen and (min-width: 1200px) {}
+@media only screen and (min-width: 1200px) {
+}
