@@ -108,12 +108,8 @@ function App() {
 				<Route path="purchase" element={<ComputerWizardPurchase />} />
 				<Route path="build" element={<ComputerWizardBuild />} />
 			</Route>
-			<Route path="usedparts" element={<UsedParts />}>
-				<Route path="browse" element={<UsedPartsBrowse fetchDynamicData={fetchDynamicData} fetchDataAmount={fetchDataAmount} />} />
-				<Route path="purchase" element={<UsedPartsPurchase />} />
-				<Route path="build" element={<UsedPartsBuild />} />
-				<Route path="modify" element={<UsedPartsModify />} />
-			</Route>
+			<Route path="usedparts" element={<UsedPartsBrowse fetchDynamicData={fetchDynamicData} fetchDataAmount={fetchDataAmount} />} />
+
 			{shoppingCart && totalCartItems && totalCartItems > 0 && (
 				<Route path="shoppingcart" element={<ShoppingCart />} />
 			)}

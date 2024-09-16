@@ -178,58 +178,13 @@ const NavBar = ({ currentUser, handleUserChange, handleSignout, ThemeContext }) 
 								Build
 							</NavDropdown.Item>
 						</NavDropdown>
-
-						<NavDropdown
-							title={
-								<Link
-									to="/usedparts"
-									onClick={() => onUpdateActiveLink("/usedparts")}>
-									Used parts
-								</Link>
-							}
-							className={
-								[
-									"/usedparts",
-									"/usedparts/browse",
-									"/usedparts/purchase",
-									"/usedparts/build"
-								].includes(activeLink)
-									? "active-navbar-link"
-									: "navbar-link"
-							}
-							name="used_parts"
-							id="collasible-nav-dropdown"
-							show={showDropdown === "used_parts"}
-							onMouseEnter={() => toggleDropdownShow("used_parts")}
-							onMouseLeave={toggleDropdownHide}>
-							<NavDropdown.Item
-								as={Link}
-								to="/usedparts/browse"
-								className={
-									activeLink === "/usedparts/browse" ? "active-navbar-link" : "navbar-link"
-								}
-								onClick={() => onUpdateActiveLink("/usedparts/browse")}>
-								Browse
-							</NavDropdown.Item>
-							<NavDropdown.Item
-								as={Link}
-								to="/usedparts/purchase"
-								className={
-									activeLink === "/usedparts/purchase" ? "active-navbar-link" : "navbar-link"
-								}
-								onClick={() => onUpdateActiveLink("/usedparts/purchase")}>
-								Purchase
-							</NavDropdown.Item>
-							<NavDropdown.Item
-								as={Link}
-								to="/usedparts/build"
-								className={
-									activeLink === "/usedparts/build" ? "active-navbar-link" : "navbar-link"
-								}
-								onClick={() => onUpdateActiveLink("/usedparts/build")}>
-								Build
-							</NavDropdown.Item>
-						</NavDropdown>
+						<Nav.Link
+							as={Link}
+							to="/usedparts"
+							className={activeLink === "/usedparts" ? "active-navbar-link" : "navbar-link"}
+							onClick={() => onUpdateActiveLink("/usedparts")}>
+							Used parts
+						</Nav.Link>
 					</Nav>
 					<Nav className="ml-auto">{userNavbar()}</Nav>
 					<Nav className="ml-auto">{shoppingCartNavbar()}</Nav>
