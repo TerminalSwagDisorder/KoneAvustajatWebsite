@@ -2,7 +2,8 @@
 import { createSlice } from "@reduxjs/toolkit";
 
 const initialState = {
-	wizard: {}
+	wizard: {},
+	completedBuild: {}
 };
 
 const checkTable = (newItem, oldItem) => {
@@ -86,15 +87,48 @@ const wizardSlice = createSlice({
 			}
 		},
 
+		addToCompletedBuild: (state, action) => {
+			const item = action.payload;
+			const CID = mapCID(item);
+			if (state.completedBuild[CID]) {
+				const sameTable = checkTable(item, state.completedBuild[CID]);
+				if (sameTable) {
+					state.completedBuild[CID] = { ...item };
+				}
+			} else {
+				state.completedBuild[CID] = { ...item };
+			}
+		},
+
 		removeFromWizard: (state, action) => {
 			delete state.wizard[action.payload];
 		},
 
+		removeFromCompletedBuild: (state, action) => {
+			delete state.completedBuild[action.payload];
+		},
+
 		clearWizard: (state) => {
 			state.wizard = {};
+		},
+
+		clearCompletedBuild: (state) => {
+			state.completedBuild = {};
+		},
+
+		syncWizardToCompleted: (state) => {
+			state.completedBuild = { ...state.wizard };
 		}
 	}
 });
 
-export const { addToWizard, removeFromWizard, clearWizard } = wizardSlice.actions;
+export const {
+	addToWizard,
+	addToCompletedBuild,
+	removeFromWizard,
+	removeFromCompletedBuild,
+	clearWizard,
+	clearCompletedBuild,
+	syncWizardToCompleted
+} = wizardSlice.actions;
 export default wizardSlice.reducer;

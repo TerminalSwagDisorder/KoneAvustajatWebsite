@@ -1,33 +1,49 @@
 import React from "react";
 import { useSelector, useDispatch } from "react-redux";
 import { Container, Button, Image, CloseButton, ListGroup } from "react-bootstrap";
-import { addToWizard, removeFromWizard, clearWizard } from "../redux/wizardSlice";
+import { addToWizard, removeFromWizard, clearWizard, addToCompletedBuild, removeFromCompletedBuild, clearCompletedBuild } from "../redux/wizardSlice";
+import { addToShoppingCart } from "../redux/shoppingCartSlice";
 
 const ComputerWizardBuild = () => {
     const wizard = useSelector((state) => state.wizard.wizard);
+    const completedBuild = useSelector((state) => state.wizard.completedBuild);
+    const shoppingCart = useSelector((state) => state.shoppingCart.shoppingCart);
     const dispatch = useDispatch();
-    const wizardItems = Object.values(wizard);
-    const wizardEntries = Object.entries(wizard);
+    const completedBuildItems = Object.values(completedBuild);
+    const completedBuildEntries = Object.entries(completedBuild);
         
-    const totalPrice = wizardItems.reduce((acc, item) => {
+    const totalPrice = completedBuildItems.reduce((acc, item) => {
         return acc + (parseFloat(item.Price) || 0);
     }, 0).toFixed(2);
 
-    const handleAddToWizard = (item) => {
+	const handleAddToCart = () => {
+        if (completedBuildEntries.length > 0) {
+            const newItem = {
+                ...completedBuildEntries,
+                table: "completedBuild",
+                totalPrice: totalPrice
+            };
+            dispatch(addToShoppingCart(newItem));
+        } else {
+            console.error("Unable to add a completed build with no parts!");
+        }
+	};
+
+    const handleAddToCompletedBuild = (item) => {
         const newItem = {
             ...item,
             table: "part",
             quantity: 1 // Set default quantity to 1
         };
-        dispatch(addToWizard(newItem));
+        dispatch(addToCompletedBuild(newItem));
     };
 
-    const handleRemoveFromWizard = (itemId) => {
-        dispatch(removeFromWizard(itemId));
+    const handleRemoveFromCompletedBuild = (itemId) => {
+        dispatch(removeFromCompletedBuild(itemId));
     };
 
-    const handleClearWizard = () => {
-        dispatch(clearWizard());
+    const handleClearCompletedBuild = () => {
+        dispatch(clearCompletedBuild());
     };
 
     const renderNestedObject = (nestedObj) => {
@@ -45,15 +61,15 @@ const ComputerWizardBuild = () => {
         );
     };
 
-    const renderWizardItems = () => {
-        if (wizardEntries && wizardEntries.length > 0) {
+    const renderCompletedBuildItems = () => {
+        if (completedBuildEntries && completedBuildEntries.length > 0) {
             return (
-                <ListGroup className="wizard-details">
-                    {wizardEntries.map(([partKey, partVal]) => (
-                        <ListGroup.Item>
+                <ListGroup className="completedBuild-details">
+                    {completedBuildEntries.map(([partKey, partVal]) => (
+                        <ListGroup.Item key={partKey}>
                             <p>
                                 {partKey}: <b>{partVal.Name}</b> | <b>{parseFloat(partVal.Price).toFixed(2)}</b> €
-                                <Button className="user-select-button" onClick={() => handleRemoveFromWizard(partKey)}>
+                                <Button className="user-select-button" onClick={() => handleRemoveFromCompletedBuild(partKey)}>
                                     <span>Remove</span>
                                 </Button>
                             </p>
@@ -72,7 +88,7 @@ const ComputerWizardBuild = () => {
             );
         } else {
             return (
-            <ListGroup className="wizard-details">
+            <ListGroup className="completedBuild-details">
                 <ListGroup.Item>
                     <p>No parts chosen!</p>
                 </ListGroup.Item>
@@ -84,13 +100,16 @@ const ComputerWizardBuild = () => {
     return (
         <div>
             <h3>Computer build</h3>
-            <Button className="user-select-button" onClick={() => handleClearWizard()}>
-                Clear Wizard
+            <Button className="user-select-button" onClick={() => handleClearCompletedBuild()}>
+                Clear Build
+            </Button>
+            <Button className="user-select-button" onClick={() => handleAddToCart()}>
+                Add to cart
             </Button>
             <br />
             <br />
             <br />
-            {renderWizardItems()}
+            {renderCompletedBuildItems()}
         </div>
     );
 };

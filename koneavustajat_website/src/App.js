@@ -12,7 +12,7 @@ import UsersAdmin from "./components/UsersAdmin";
 import PartsDisplay from "./components/PartsDisplay";
 import ComputerWizard from './components/ComputerWizard';
 import ComputerWizardBrowse from './components/ComputerWizardBrowse';
-import ComputerWizardPurchase from './components/ComputerWizardPurchase';
+import ComputerWizardWizard from './components/ComputerWizardWizard';
 import ComputerWizardBuild from './components/ComputerWizardBuild';
 import UsedParts from './components/UsedParts';
 import UsedPartsBrowse from './components/UsedPartsBrowse';
@@ -30,20 +30,24 @@ function App() {
 
 	const shoppingCart = useSelector((state) => state.shoppingCart.shoppingCart);
 	const wizard = useSelector((state) => state.wizard.wizard);
+	const completedBuild = useSelector((state) => state.wizard.completedBuild);
 	const dispatch = useDispatch();
 	const cartItems = Object.values(shoppingCart);
 	const wizardItems = Object.values(wizard);
-  	const totalCartItems = cartItems.reduce((total, item) => total + item.quantity, 0);
+	const completedBuildItems = Object.values(completedBuild);
+  	const totalCartItems = cartItems.reduce((total, item) => total + item.quantity || 1, 0);
   	const totalWizardItems = wizardItems.length;
+  	const totalCompletedBuildItems = completedBuildItems.length;
 
 	//console.log("shoppingCart ", shoppingCart);
-	//console.log("cartItems ", cartItems);
+	console.log("cartItems ", cartItems);
 
 	//console.log("wizard ", wizard);
 	//console.log("wizardItems ", wizardItems);
 
 	console.log("totalCartItems ", totalCartItems);
 	console.log("totalWizardItems ", totalWizardItems);
+	console.log("totalCompletedBuildItems ", totalCompletedBuildItems);
 
 	// Check if the user is signed in on page load
 	const fetchUserStatus = async () => {
@@ -105,7 +109,7 @@ function App() {
 		)}
 			<Route path="computerwizard" element={<ComputerWizard />}>
 				<Route path="browse" element={<ComputerWizardBrowse fetchDynamicData={fetchDynamicData} fetchDataAmount={fetchDataAmount} />} />
-				<Route path="purchase" element={<ComputerWizardPurchase />} />
+				<Route path="wizard" element={<ComputerWizardWizard />} />
 				<Route path="build" element={<ComputerWizardBuild />} />
 			</Route>
 			<Route path="usedparts" element={<UsedPartsBrowse fetchDynamicData={fetchDynamicData} fetchDataAmount={fetchDataAmount} />} />

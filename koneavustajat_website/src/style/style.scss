@@ -276,7 +276,7 @@ $dark_user_select_button: #697ef5;
 		text-decoration: unset !important;
 		cursor: pointer;
 	}
-	.wizard-details {
+	.wizard-details, .completedBuild-details {
 		.list-group-item {
 			background-color: $even_row;
 			color: $box_text;

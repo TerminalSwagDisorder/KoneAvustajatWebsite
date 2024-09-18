@@ -16,7 +16,7 @@ import { CiDesktopMouse1 } from "react-icons/ci";
 import { FaUserEdit } from "react-icons/fa";
 import { useSelector, useDispatch } from "react-redux";
 import { addToShoppingCart, removeFromShoppingCart, clearShoppingCart } from "../redux/shoppingCartSlice";
-import { addToWizard, removeFromWizard, clearWizard } from "../redux/wizardSlice";
+import { addToCompletedBuild, removeFromCompletedBuild, clearCompletedBuild } from "../redux/wizardSlice";
 
 const ComputerWizardBrowse = ({ fetchDynamicData, fetchDataAmount }) => {
 	const [parts, setParts] = useState([]);
@@ -31,7 +31,7 @@ const ComputerWizardBrowse = ({ fetchDynamicData, fetchDataAmount }) => {
 	const [selectedPart, setSelectedPart] = useState("");
 	const [inputValue, setInputValue] = useState("");
 	const shoppingCart = useSelector((state) => state.shoppingCart.shoppingCart);
-	const wizard = useSelector((state) => state.wizard.wizard);
+	const completedBuild = useSelector((state) => state.wizard.completedBuild);
 	const dispatch = useDispatch();
 
 	// On initial page load
@@ -59,12 +59,13 @@ const ComputerWizardBrowse = ({ fetchDynamicData, fetchDataAmount }) => {
 		dispatch(addToShoppingCart(newItem));
 	};
 
-	const handleAddToWizard = (item) => {
+	const handleAddToCompletedBuild = (item) => {
 		const newItem = {
 			...item,
 			table: partName.key,
 		};
-		dispatch(addToWizard(newItem));
+		console.log(newItem);
+		dispatch(addToCompletedBuild(newItem));
 	};
 
 	const closeForm = () => {
@@ -207,8 +208,8 @@ const ComputerWizardBrowse = ({ fetchDynamicData, fetchDataAmount }) => {
 								<Button className="user-select-button" onClick={() => handleAddToCart(part)}>
 									Add to Cart
 								</Button>
-								<Button className="user-select-button" onClick={() => handleAddToWizard(part)}>
-									Add to Wizard
+								<Button className="user-select-button" onClick={() => handleAddToCompletedBuild(part)}>
+									Add to Build
 								</Button>
 							</td>
 						</tr>
@@ -252,8 +253,8 @@ const ComputerWizardBrowse = ({ fetchDynamicData, fetchDataAmount }) => {
 						<Button className="user-select-button" onClick={() => handleAddToCart(selectedPart)}>
 							Add to Cart
 						</Button>
-						<Button className="user-select-button" onClick={() => handleAddToWizard(selectedPart)}>
-							Add to Wizard
+						<Button className="user-select-button" onClick={() => handleAddToCompletedBuild(selectedPart)}>
+							Add to Build
 						</Button>
 					</Form>
 				</div>

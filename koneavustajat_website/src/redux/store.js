@@ -9,6 +9,7 @@ import { combineReducers } from "redux";
 // Configuration for redux-persist
 const persistConfig = {
 	key: "root", // Key for the persist storage
+	version: 3,
 	storage, // Storage method (localStorage in this case)
 	whitelist: ["shoppingCart", "wizard"] // Specify which reducers to persist
 };
@@ -16,7 +17,7 @@ const persistConfig = {
 // Combine all reducers
 const rootReducer = combineReducers({
 	shoppingCart: shoppingCartReducer,
-	wizard: wizardReducer
+	wizard: wizardReducer,
 });
 
 // Create a persisted reducer

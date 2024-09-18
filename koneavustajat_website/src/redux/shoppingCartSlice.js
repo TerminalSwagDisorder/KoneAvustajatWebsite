@@ -5,17 +5,23 @@ const initialState = {
 	shoppingCart: {}
 };
 
+
 const shoppingCartSlice = createSlice({
 	name: "shoppingCart",
 	initialState,
 	reducers: {
 		addToShoppingCart: (state, action) => {
 			const item = action.payload;
-			const CID = `${item.table}_${item.ID || item.PartID}`;
-			if (state.shoppingCart[CID]) {
-				state.shoppingCart[CID].quantity += item.quantity;
+			if (item.table === "completedBuild") {
+				const CID = item.table;
+				state.shoppingCart[CID] = { ...item };
 			} else {
-				state.shoppingCart[CID] = { ...item, quantity: item.quantity || 1 };
+				const CID = `${item.table}_${item.ID || item.PartID}`;
+				if (state.shoppingCart[CID]) {
+					state.shoppingCart[CID].quantity += item.quantity;
+				} else {
+					state.shoppingCart[CID] = { ...item, quantity: item.quantity || 1 };
+				}
 			}
 		},
 

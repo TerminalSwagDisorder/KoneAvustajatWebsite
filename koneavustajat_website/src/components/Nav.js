@@ -13,7 +13,7 @@ const NavBar = ({ currentUser, handleUserChange, handleSignout, ThemeContext }) 
 	const shoppingCart = useSelector((state) => state.shoppingCart.shoppingCart);
 	const dispatch = useDispatch();
 	const cartItems = Object.values(shoppingCart);
-  	const totalCartItems = cartItems.reduce((total, item) => total + item.quantity, 0);
+  	const totalCartItems = cartItems.reduce((total, item) => total + item.quantity || 1, 0);
 
 	useEffect(() => {
 		const onScroll = () => {
@@ -139,7 +139,7 @@ const NavBar = ({ currentUser, handleUserChange, handleSignout, ThemeContext }) 
 								[
 									"/computerwizard",
 									"/computerwizard/browse",
-									"/computerwizard/purchase",
+									"/computerwizard/wizard",
 									"/computerwizard/build"
 								].includes(activeLink)
 									? "active-navbar-link"
@@ -161,12 +161,12 @@ const NavBar = ({ currentUser, handleUserChange, handleSignout, ThemeContext }) 
 							</NavDropdown.Item>
 							<NavDropdown.Item
 								as={Link}
-								to="/computerwizard/purchase"
+								to="/computerwizard/wizard"
 								className={
-									activeLink === "/computerwizard/purchase" ? "active-navbar-link" : "navbar-link"
+									activeLink === "/computerwizard/wizard" ? "active-navbar-link" : "navbar-link"
 								}
-								onClick={() => onUpdateActiveLink("/computerwizard/purchase")}>
-								Purchase
+								onClick={() => onUpdateActiveLink("/computerwizard/wizard")}>
+								Wizard
 							</NavDropdown.Item>
 							<NavDropdown.Item
 								as={Link}

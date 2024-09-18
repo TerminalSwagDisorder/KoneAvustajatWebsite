@@ -1,6 +1,6 @@
 import React from 'react';
 
-const ComputerWizardPurchase = () => {
+const ComputerWizardWizard = () => {
   return (
     <div>
       <h2>Purchase</h2>
@@ -8,4 +8,4 @@ const ComputerWizardPurchase = () => {
   );
 };
 
-export default ComputerWizardPurchase;
+export default ComputerWizardWizard;
