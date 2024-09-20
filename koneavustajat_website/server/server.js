@@ -48,31 +48,31 @@ app.use(express.json());
 // Cors options to allow the use of user cookies
 const corsOptions = {
 	origin: "http://localhost:3000", // replace with your applications origin
-	credentials: true, // allows the Access-Control-Allow-Credentials: true header
+	credentials: true // allows the Access-Control-Allow-Credentials: true header
 };
 
 app.use(cors(corsOptions));
 app.use(cookieParser());
 
 // Helmet for security
-app.use(helmet({
-    contentSecurityPolicy: {
-        directives: {
-            defaultSrc: ["'self'", "http://localhost:8080", "http://localhost:3000"],
-			scriptSrc: ["'self'", "'unsafe-inline'", "http://localhost:3000"],
-			// imgSrc: ["'self'", "data:"], // If we need image uploading
-        }
-    },
-    frameguard: {
-        action: 'deny'
-    },
-	crossOriginEmbedderPolicy: false
-}));
+app.use(
+	helmet({
+		contentSecurityPolicy: {
+			directives: {
+				defaultSrc: ["'self'", "http://localhost:8080", "http://localhost:3000"],
+				scriptSrc: ["'self'", "'unsafe-inline'", "http://localhost:3000"]
+				// imgSrc: ["'self'", "data:"], // If we need image uploading
+			}
+		},
+		frameguard: {
+			action: "deny"
+		},
+		crossOriginEmbedderPolicy: false
+	})
+);
 ////////////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////
-
-
 
 // Database connections
 
@@ -97,8 +97,6 @@ const promisePool = db.promise();
 ////////////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////
 
-
-
 // User authentication middleware
 
 ////////////////////////////////////////////////////////////////////
@@ -107,13 +105,12 @@ const promisePool = db.promise();
 // Jwt
 // Middleware for checking if user is logged in
 const authenticateJWT = (req, res, next) => {
-	// Check if cookie exists and retrieve the value, if it does not exist set accessToken to null 
+	// Check if cookie exists and retrieve the value, if it does not exist set accessToken to null
 	const token = req.cookies ? req.cookies.accessToken : null;
 	//console.log(req.headers)
 	//console.log(token)
 	if (!token) {
 		return res.status(401).json({ message: "Could not verify JWT token" });
-
 	}
 	// Verify the token to the jwtSecret
 	jwt.verify(token, jwtSecret, (error, user) => {
@@ -128,13 +125,15 @@ const authenticateJWT = (req, res, next) => {
 
 // Express-session
 // Cookie settings
-app.use(session({
-	name: "session-id",
-	secret: sessionSecret,
-	resave: false,
-	saveUninitialized: false, // Can be useful, creates a cookie even when user is not logged in to track behaviour. This can be taxing though.
-	cookie: { httpOnly: true, sameSite: "lax", maxAge: 3600000 }
-}));
+app.use(
+	session({
+		name: "session-id",
+		secret: sessionSecret,
+		resave: false,
+		saveUninitialized: false, // Can be useful, creates a cookie even when user is not logged in to track behaviour. This can be taxing though.
+		cookie: { httpOnly: true, sameSite: "lax", maxAge: 3600000 }
+	})
+);
 
 // Middleware for checking if user is logged in
 const authenticateSession = (req, res, next) => {
@@ -151,9 +150,6 @@ const authenticateSession = (req, res, next) => {
 ////////////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////
-
-
-
 
 // General middleware
 
@@ -177,14 +173,10 @@ const storage = multer.diskStorage({
 		cb(null, "public/images");
 	},
 	filename: function (req, file, cb) {
-		const uniqueSuffix =
-			Date.now() + "-" + Math.round(Math.random() * 1e9);
+		const uniqueSuffix = Date.now() + "-" + Math.round(Math.random() * 1e9);
 		const extension = path.extname(file.originalname);
-		cb(
-			null,
-			"ProfileImage" + "-" + uniqueSuffix + extension
-		);
-	},
+		cb(null, "ProfileImage" + "-" + uniqueSuffix + extension);
+	}
 });
 
 const profileImgUpload = multer({ storage: storage, fileFilter: imageFileFilter });
@@ -192,7 +184,7 @@ const otherFileUpload = multer({ storage: storage });
 
 // Middleware for pagination
 const routePagination = (req, res, next) => {
-    const numPage = parseInt(req.query.page, 10);
+	const numPage = parseInt(req.query.page, 10);
 	const numItems = parseInt(req.query.items, 10);
 	const page = isNaN(numPage) ? 1 : numPage;
 	const items = isNaN(numItems) ? 100 : numItems;
@@ -205,9 +197,9 @@ const routePagination = (req, res, next) => {
 		return res.status(400).json({ message: "Number of items must be a positive integer" });
 	}
 
-    if (items >= 1000) {
-        return res.status(400).json({ message: "Please limit items to under 1000" });
-    }
+	if (items >= 1000) {
+		return res.status(400).json({ message: "Please limit items to under 1000" });
+	}
 
 	let offset = 0;
 	if (page && page !== 1) {
@@ -216,46 +208,228 @@ const routePagination = (req, res, next) => {
 
 	if (offset < 0) {
 		//return res.status(400).json({ message: "Offset cannot be below 1" });
-		console.error("Offset cannot be under 0!")
+		console.error("Offset cannot be under 0!");
 	}
 
 	// If successful, attach page and items to the req object to be used in the routes
-    req.pagination = { page, items, offset };
-    next();
-}
+	req.pagination = { page, items, offset };
+	next();
+};
+
+const searchSanitization = (key, value, term) => {
+
+	const mappedColumnNames = {
+		chassis: [
+			"ID",
+			"Url",
+			"Price",
+			"Name",
+			"Manufacturer",
+			"Image",
+			"Image_Url",
+			"Chassis_type",
+			"Dimensions",
+			"Color",
+			"Compatibility"
+		],
+		cpu: [
+			"ID",
+			"Url",
+			"Price",
+			"Name",
+			"Manufacturer",
+			"Image",
+			"Image_Url",
+			"Core_Count",
+			"Thread_Count",
+			"Base_Clock",
+			"Cache",
+			"Socket",
+			"Cpu_Cooler",
+			"TDP",
+			"Integrated_GPU"
+		],
+		cpu_cooler: [
+			"ID",
+			"Url",
+			"Price",
+			"Name",
+			"Manufacturer",
+			"Image",
+			"Image_Url",
+			"Compatibility",
+			"Cooling_Potential",
+			"Fan_RPM",
+			"Noise_Level",
+			"Dimensions"
+		],
+		gpu: [
+			"ID",
+			"Url",
+			"Price",
+			"Name",
+			"Manufacturer",
+			"Image",
+			"Image_Url",
+			"Cores",
+			"Core_Clock",
+			"Memory",
+			"Interface",
+			"Dimensions",
+			"TDP"
+		],
+		memory: [
+			"ID",
+			"Url",
+			"Price",
+			"Name",
+			"Manufacturer",
+			"Image",
+			"Image_Url",
+			"Type",
+			"Amount",
+			"Speed",
+			"Latency"
+		],
+		motherboard: [
+			"ID",
+			"Url",
+			"Price",
+			"Name",
+			"Manufacturer",
+			"Image",
+			"Image_Url",
+			"Chipset",
+			"Form_Factor",
+			"Memory_Compatibility"
+		],
+		psu: [
+			"ID",
+			"Url",
+			"Price",
+			"Name",
+			"Manufacturer",
+			"Image",
+			"Image_Url",
+			"Is_ATX12V",
+			"Efficiency",
+			"Modular",
+			"Dimensions"
+		],
+		storage: [
+			"ID",
+			"Url",
+			"Price",
+			"Name",
+			"Manufacturer",
+			"Image",
+			"Image_Url",
+			"Capacity",
+			"Form_Factor",
+			"Interface",
+			"Cache",
+			"Flash",
+			"TBW"
+		]
+	};
+
+	/*
+	for (const [col, val] of Object.entries(mappedColumnNames)) {
+		if (col.toLowerCase() === key.toLowerCase()) {
+			if (term !== "strict" && !val.map((v) => v.toLowerCase()).includes(term.toLowerCase())) {
+				return { error: `Search for '${term}' is not allowed!` };
+			}
+		}
+	}
+	*/
+
+	if (value === undefined || value === null || value === "") {
+		return { error: "Search cannot be empty" };
+	}
+
+	if (term.toLowerCase() !== "strict") {
+		const validColumns = mappedColumnNames[key.toLowerCase()];
+		if (!validColumns || !validColumns.map((col) => col.toLowerCase()).includes(term.toLowerCase())) {
+			return { error: `Search for '${term}' is not allowed in part '${key}'!` };
+		}
+	}
+
+	if (term.toLowerCase() === "strict" && (value.toString().toLowerCase() !== "true" && value.toString().toLowerCase() !== "false")) {
+		return { error: "Value for strict must be a boolean ('true' or 'false')" };
+	}
+
+	if (typeof value === "string") {
+		value = value.trim();
+	}
+
+	if (!isNaN(parseInt(value, 10))) {
+		value = parseInt(value, 10);
+	}
+
+	return value;
+};
+
+// Middleware for strict searches
+const partSearch = (req, res, next) => {
+	let searchTerms = {};
+	const partName = req.query.partName || "cpu";
+
+	for (let term in req.query) {
+		if (term !== "items" && term !== "page" && term !== "partName") {
+			let value = req.query[term];
+
+			// Add more sanitization
+			console.log(partName, value, term);
+			value = searchSanitization(partName, value, term);
+			if (value.error) {
+				console.error(value.error);
+				return res.status(400).json({ message: value.error });
+			}
+
+			searchTerms[term] = value;
+		}
+	}
+
+	// If successful, attach searchTerms to the req object to be used in the routes
+	req.searchTerms = searchTerms;
+	next();
+};
 
 // Middleware for regex validation
 const checkRegex = (req, res, next) => {
 	const passwordRegex = /^(?=.*[A-Z])(?=.*\d)[A-Za-z\d]{9,}$/; // At least 1 upper character, at least 1 digit/number, at least 9 chars long
-	const emailRegex = /^[-A-Za-z0-9!#$%&'*+/=?^_`{|}~]+(?:\.[-A-Za-z0-9!#$%&'*+/=?^_`{|}~]+)*@(?:[A-Za-z0-9](?:[-A-Za-z0-9]*[A-Za-z0-9])?\.)+[A-Za-z0-9](?:[-A-Za-z0-9]*[A-Za-z0-9])?$/; // Email according to the RFC 5322 standard
+	const emailRegex =
+		/^[-A-Za-z0-9!#$%&'*+/=?^_`{|}~]+(?:\.[-A-Za-z0-9!#$%&'*+/=?^_`{|}~]+)*@(?:[A-Za-z0-9](?:[-A-Za-z0-9]*[A-Za-z0-9])?\.)+[A-Za-z0-9](?:[-A-Za-z0-9]*[A-Za-z0-9])?$/; // Email according to the RFC 5322 standard
 
 	let email;
 	let password;
 	const { formFields } = req.body;
-    if (formFields) {
-        ({ email, password } = JSON.parse(formFields));
-    } else {
-        ({ email, password } = req.body);
-    }
+	if (formFields) {
+		({ email, password } = JSON.parse(formFields));
+	} else {
+		({ email, password } = req.body);
+	}
 
 	// Validate email
 	if (typeof email !== "undefined" && email !== "" && !emailRegex.test(email)) {
-		return res.status(400).json({ message: "Invalid email format. Please enter a valid email address in the format: example@domain.com" });
+		return res.status(400).json({
+			message: "Invalid email format. Please enter a valid email address in the format: example@domain.com"
+		});
 	}
 
 	// Validate password
 	if (typeof password !== "undefined" && password !== "" && !passwordRegex.test(password)) {
-			return res.status(400).json({ message: "Invalid password format. Password must be at least 8 characters long, include 1 capital letter, and 1 number." });
+		return res.status(400).json({
+			message:
+				"Invalid password format. Password must be at least 8 characters long, include 1 capital letter, and 1 number."
+		});
 	}
 
-
-    next();
+	next();
 };
 ////////////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////
-
-
 
 // Server routes
 ////////////////////////////////////////////////////////////////////
@@ -263,10 +437,9 @@ const checkRegex = (req, res, next) => {
 ////////////////////////////////////////////////////////////////////
 
 app.get("/", async (req, res) => {
-	console.log("Index accessed")
+	console.log("Index accessed");
 	return res.status(400).send("Index page. Navigate elsewhere.");
-})
-
+});
 
 // User routes
 
@@ -283,7 +456,7 @@ app.get("/api/count", async (req, res) => {
 	const tableName = req.query.tableName; // Get the table name from the query
 	const numItems = parseInt(req.query.items, 10);
 	const items = isNaN(numItems) ? 50 : numItems;
-	
+
 	if (items <= 0) {
 		return res.status(400).json({ message: "Number of items cannot be below 1" });
 	}
@@ -304,7 +477,7 @@ app.get("/api/count", async (req, res) => {
 
 // Route for viewing regular users
 app.get("/api/users", routePagination, async (req, res) => {
-	console.log("API users accessed")
+	console.log("API users accessed");
 
 	const { items, offset } = req.pagination;
 
@@ -312,7 +485,7 @@ app.get("/api/users", routePagination, async (req, res) => {
 	try {
 		const [users] = await promisePool.query(sql, [items, offset]);
 		// Process each user to add isAdmin property
-		const processedUsers = users.map(user => {
+		const processedUsers = users.map((user) => {
 			const isAdmin = user.RoleID === 4;
 
 			// Exclude sensitive information like hashed password
@@ -321,16 +494,16 @@ app.get("/api/users", routePagination, async (req, res) => {
 		});
 		return res.status(200).json(processedUsers);
 	} catch (error) {
-        console.error(error);
+		console.error(error);
 		// If there is a status message or data then use that, otherwise the defaults
 		const message = error.response ? error.response.data : "Internal Server Error";
-        const status = error.response ? error.response.status : 500;
+		const status = error.response ? error.response.status : 500;
 		return res.status(status).json({ message: message });
 	}
 });
 
 app.get("/api/users/id", async (req, res) => {
-	console.log("API search users by id accessed")
+	console.log("API search users by id accessed");
 
 	const numId = parseInt(req.query.id, 10);
 	const id = isNaN(numId) ? 1 : numId;
@@ -342,79 +515,78 @@ app.get("/api/users/id", async (req, res) => {
 			return res.status(404).json({ message: "User not found" });
 		}
 
-		const processedUsers = users.map(user => {
+		const processedUsers = users.map((user) => {
 			const isAdmin = user.RoleID === 4;
 
 			// Exclude sensitive information like hashed password
 			const { Password, ...userData } = user;
 			return { ...userData, isAdmin };
 		});
-	
+
 		return res.status(200).json(processedUsers);
 	} catch (error) {
-        console.error(error);
+		console.error(error);
 		// If there is a status message or data then use that, otherwise the defaults
 		const message = error.response ? error.response.data : "Internal Server Error";
-        const status = error.response ? error.response.status : 500;
+		const status = error.response ? error.response.status : 500;
 		return res.status(status).json({ message: message });
 	}
 });
 
 // Signing up
 app.post("/api/users/signup", checkRegex, async (req, res) => {
-    console.log("API user signup accessed");
+	console.log("API user signup accessed");
 
-    const { formFields } = req.body;
-	const jsonFormFields = JSON.parse(formFields)
+	const { formFields } = req.body;
+	const jsonFormFields = JSON.parse(formFields);
 	const { name, email, password } = jsonFormFields;
 
-    try {
+	try {
 		// Check if email exists
-        const emailCheckSql = "SELECT email FROM users WHERE Email = ?";
-        const [user] = await promisePool.query(emailCheckSql, [email]);
-        if (user.length > 0) {
-            return res.status(409).json({ message: "One or more fields already in use" });
-        }
+		const emailCheckSql = "SELECT email FROM users WHERE Email = ?";
+		const [user] = await promisePool.query(emailCheckSql, [email]);
+		if (user.length > 0) {
+			return res.status(409).json({ message: "One or more fields already in use" });
+		}
 
 		// Hash password & insert data into db
-        const hashedPassword = await bcrypt.hash(password, 10);
-        const insertSql = "INSERT INTO users (name, email, password) VALUES (?, ?, ?)";
-        const [result] = await promisePool.query(insertSql, [name, email, hashedPassword]);
-        return res.status(200).json({message: "User registered successfully", id: result.insertId });
-
-    } catch (error) {
-        console.error(error);
+		const hashedPassword = await bcrypt.hash(password, 10);
+		const insertSql = "INSERT INTO users (name, email, password) VALUES (?, ?, ?)";
+		const [result] = await promisePool.query(insertSql, [name, email, hashedPassword]);
+		return res.status(200).json({ message: "User registered successfully", id: result.insertId });
+	} catch (error) {
+		console.error(error);
 		// If there is a status message or data then use that, otherwise the defaults
 		const message = error.response ? error.response.data : "Internal Server Error";
-        const status = error.response ? error.response.status : 500;
-        return res.status(status).json({ message: message });
-    }
+		const status = error.response ? error.response.status : 500;
+		return res.status(status).json({ message: message });
+	}
 });
 
 app.post("/api/users/login", async (req, res) => {
-    console.log("API users login accessed");
-    const { formFields, userType } = req.body;
-	const jsonFormFields = JSON.parse(formFields)	
-	
-	const { email, password } = jsonFormFields;
-    const sql = "SELECT * FROM users WHERE Email = ?";
-    
-    try {
-		// [[user]] takes the first user in the array wile [user] returns the whole array and you need to specify user[0] each time otherwise
-        const [[user], fields] = await promisePool.query(sql, [email]);
+	console.log("API users login accessed");
+	const { formFields, userType } = req.body;
+	const jsonFormFields = JSON.parse(formFields);
 
-        if (!user) {
-            return res.status(404).json({ message: "Email or password is incorrect" });
-        }
+	const { email, password } = jsonFormFields;
+	const sql = "SELECT * FROM users WHERE Email = ?";
+
+	try {
+		// [[user]] takes the first user in the array wile [user] returns the whole array and you need to specify user[0] each time otherwise
+		const [[user], fields] = await promisePool.query(sql, [email]);
+
+		if (!user) {
+			return res.status(404).json({ message: "Email or password is incorrect" });
+		}
 
 		// If the email is not an exact match
 		if (user.Email !== email) {
 			return res.status(404).json({ message: "Email or password is incorrect" });
 		}
-        
-        const match = await bcrypt.compare(password, user.Password);
-        if (match) {
-            const isAdmin = user.RoleID === 4;
+
+		const match = await bcrypt.compare(password, user.Password);
+		if (match) {
+			const isAdmin = user.RoleID === 4;
 			req.session.user = { ...user, isAdmin };
 
 			/*
@@ -430,52 +602,51 @@ app.post("/api/users/login", async (req, res) => {
             */
 
 			return res.status(200).json({ message: "Logged in successfully", user: req.session.user });
-        } else {
-            return res.status(401).json({ message: "Email or password is incorrect" });
-        }
-    } catch (error) {
-        console.error(error);
+		} else {
+			return res.status(401).json({ message: "Email or password is incorrect" });
+		}
+	} catch (error) {
+		console.error(error);
 		// If there is a status message or data then use that, otherwise the defaults
 		const message = error.response ? error.response.data : "Internal Server Error";
-        const status = error.response ? error.response.status : 500;
+		const status = error.response ? error.response.status : 500;
 		return res.status(status).json({ message: message });
-    }
+	}
 });
 
 app.post("/api/logout", (req, res) => {
-    console.log("API logout accessed")
-    req.session.destroy(error => {
-        if (error) {
-            return res.status(500).json({ message: "Could not log out, please try again" });
-        } else {
-            res.clearCookie("session-id")
-            return res.status(200).json({ message: "Logged out successfully" });
-        }
-    });
-}); 
-
+	console.log("API logout accessed");
+	req.session.destroy((error) => {
+		if (error) {
+			return res.status(500).json({ message: "Could not log out, please try again" });
+		} else {
+			res.clearCookie("session-id");
+			return res.status(200).json({ message: "Logged out successfully" });
+		}
+	});
+});
 
 // Check if the user is logged in
 app.get("/api/profile", authenticateSession, (req, res) => {
-	console.log("API profile accessed")
+	console.log("API profile accessed");
 	// const userData = { userData: req.user };
 	res.json({
 		message: "Authenticated",
-		userData: req.user,
+		userData: req.user
 	});
 });
 
 // Logout route (Frontend will handle removing the token with JWT)
 app.post("/api/logout", (req, res) => {
-	console.log("API logout accessed")
-    req.session.destroy(error => {
-        if (error) {
-            return res.status(500).json({ message: "Could not log out, please try again" });
-        } else {
-            res.clearCookie("session-id")
-            return res.status(200).json({ message: "Logged out successfully" });
-        }
-    });
+	console.log("API logout accessed");
+	req.session.destroy((error) => {
+		if (error) {
+			return res.status(500).json({ message: "Could not log out, please try again" });
+		} else {
+			res.clearCookie("session-id");
+			return res.status(200).json({ message: "Logged out successfully" });
+		}
+	});
 });
 
 /*
@@ -488,7 +659,7 @@ app.post("/api/logout", (req, res) => {
 
 // Profile refresh if userdata gets updated
 app.get("/api/profile/refresh", authenticateSession, async (req, res) => {
-	console.log("API profile refresh accessed")
+	console.log("API profile refresh accessed");
 	const userId = req.user.UserID;
 	const sql = "SELECT * FROM users WHERE UserID = ?";
 	try {
@@ -499,120 +670,140 @@ app.get("/api/profile/refresh", authenticateSession, async (req, res) => {
 		const isAdmin = user.RoleID === 4;
 		// Exclude sensitive information like hashed password before sending the user data
 		const { ...userData } = user;
-		return res.status(200).json( {userData: { ...userData, isAdmin: isAdmin}});
-
+		return res.status(200).json({ userData: { ...userData, isAdmin: isAdmin } });
 	} catch (error) {
-        console.error(error);
+		console.error(error);
 		// If there is a status message or data then use that, otherwise the defaults
 		const message = error.response ? error.response.data : "Internal Server Error";
-        const status = error.response ? error.response.status : 500;
+		const status = error.response ? error.response.status : 500;
 		return res.status(status).json({ message: message });
 	}
 });
 
 // Update own user credentials
-app.patch("/api/profile", authenticateSession, checkRegex, profileImgUpload.single("profileImage"), async (req, res) => {
-	console.log("API update own credentials accessed");
-	console.log(req.user);
-	const userId = req.user.UserID;
-	const { formFields } = req.body; // Updated credentials  from request body
-	const jsonFormFields = JSON.parse(formFields);
-	const ProfileImage = req.file; // Profile image
+app.patch(
+	"/api/profile",
+	authenticateSession,
+	checkRegex,
+	profileImgUpload.single("profileImage"),
+	async (req, res) => {
+		console.log("API update own credentials accessed");
+		console.log(req.user);
+		const userId = req.user.UserID;
+		const { formFields } = req.body; // Updated credentials  from request body
+		const jsonFormFields = JSON.parse(formFields);
+		const ProfileImage = req.file; // Profile image
 
-	try {
+		try {
+			const match = await bcrypt.compare(jsonFormFields.currentPassword, req.user.Password);
+			if (!match) {
+				return res.status(403).json({ message: "Current password is incorrect" });
+			}
 
-		const match = await bcrypt.compare(jsonFormFields.currentPassword, req.user.Password)
-		if (!match) {
-			return res.status(403).json({ message: "Current password is incorrect" });
-		}
+			let hashedPassword = null;
+			const allowedFields = ["name", "email", "password", "gender", "profileImage"];
 
-		let hashedPassword = null;
-		const allowedFields = ["name", "email", "password", "gender", "profileImage"];
+			// SQL query to update user data
+			// updateQuery allows for multiple fields to be updated simultaneously
+			let updateQuery = "UPDATE users SET ";
+			let queryParams = [];
 
-		// SQL query to update user data
-		// updateQuery allows for multiple fields to be updated simultaneously
-		let updateQuery = "UPDATE users SET ";
-		let queryParams = [];
- 
-		// More dynamic way of updating users
-		for (const key in jsonFormFields) {
-			console.log(key)
-			if (allowedFields.includes(key)) {
-				if (jsonFormFields.hasOwnProperty(key)) {
-					if (jsonFormFields[key] !== "") {
-						updateQuery += key.charAt(0).toUpperCase() + key.slice(1) + " = ?, "; // Since the first letters are capitalized in the db
-						if (key === "password") {
-							// Hash the new password before storing it
-							hashedPassword = await bcrypt.hash(jsonFormFields[key], 10);
-							queryParams.push(hashedPassword);
-
-						} else {	
-							queryParams.push(jsonFormFields[key]);
+			// More dynamic way of updating users
+			for (const key in jsonFormFields) {
+				console.log(key);
+				if (allowedFields.includes(key)) {
+					if (jsonFormFields.hasOwnProperty(key)) {
+						if (jsonFormFields[key] !== "") {
+							updateQuery += key.charAt(0).toUpperCase() + key.slice(1) + " = ?, "; // Since the first letters are capitalized in the db
+							if (key === "password") {
+								// Hash the new password before storing it
+								hashedPassword = await bcrypt.hash(jsonFormFields[key], 10);
+								queryParams.push(hashedPassword);
+							} else {
+								queryParams.push(jsonFormFields[key]);
+							}
 						}
 					}
 				}
 			}
-		}
 
+			if (ProfileImage) {
+				const ProfileImage_name = ProfileImage.filename;
+				updateQuery += "ProfileImage = ?, ";
+				queryParams.push(ProfileImage_name);
+			}
 
-		if (ProfileImage) {
-			const ProfileImage_name = ProfileImage.filename;
-			updateQuery += "ProfileImage = ?, ";
-			queryParams.push(ProfileImage_name);
-		}
+			// Remove trailing comma and space
+			if (queryParams.length > 0) {
+				updateQuery = updateQuery.slice(0, -2);
+			}
 
-		// Remove trailing comma and space
-		if (queryParams.length > 0) {
-			updateQuery = updateQuery.slice(0, -2);
-		}
+			updateQuery += " WHERE UserID = ?";
+			queryParams.push(userId);
 
-		updateQuery += " WHERE UserID = ?";
-		queryParams.push(userId);
+			const [result] = await promisePool.query(updateQuery, queryParams);
+			if (result.affectedRows === 0) {
+				return res.status(404).json({ message: "Item not found" });
+			}
 
-		const [result] = await promisePool.query(updateQuery, queryParams);
-		if (result.affectedRows === 0) {
-			return res.status(404).json({ message: "Item not found" });
-		}
-
-		return res.status(200).json({ message: "User updated successfully" });
-	} catch (error) {
-        console.error(error);
-		// If there is a status message or data then use that, otherwise the defaults
-		const message = error.response ? error.response.data : "Internal Server Error";
-        const status = error.response ? error.response.status : 500;
-		return res.status(status).json({ message: message });
-		/*		
+			return res.status(200).json({ message: "User updated successfully" });
+		} catch (error) {
+			console.error(error);
+			// If there is a status message or data then use that, otherwise the defaults
+			const message = error.response ? error.response.data : "Internal Server Error";
+			const status = error.response ? error.response.status : 500;
+			return res.status(status).json({ message: message });
+			/*		
 		const message = error.message || "Internal Server Error";
         const status = 500;
 		return res.status(status).json({ message: message });
 		*/
+		}
 	}
-});
+);
 
 // Route for viewing parts
-app.get("/api/part", routePagination, async (req, res) => {
+app.get("/api/part", routePagination, partSearch, async (req, res) => {
 	console.log("API parts accessed");
 
 	const partName = req.query.partName ? req.query.partName : "cpu"; // Get the table name from the query
 	const { items, offset } = req.pagination;
+	const searchTerms = req.searchTerms;
+	let sql;
+	let sqlParams = [];
 
 	const allowedPartNames = ["chassis", "cpu", "cpu_cooler", "gpu", "memory", "motherboard", "psu", "storage"];
 	if (!allowedPartNames.includes(partName) || partName === "") {
 		console.error(`partName "${partName}" is not allowed!`);
-		throw new Error(`partName "${partName}" is not allowed!`);
+		return res.status(400).json({ message: `partName "${partName}" is not allowed!` });
 	}
 
-	const sql = `SELECT * FROM ${partName} LIMIT ? OFFSET ?`;
+	let searchQuery = " WHERE 1=1";
+	for (let [column, value] of Object.entries(searchTerms)) {
+		if (column !== "strict") {
+			if (searchTerms.strict && searchTerms.strict === "true") {
+				searchQuery += ` AND ${column} = ?`;
+			} else {
+				value = `%${value}%`;
+				searchQuery += ` AND ${column} LIKE ?`;
+			}
+			sqlParams.push(value); // Push values to sqlParams array
+		}
+	}
+
+	sql = `SELECT * FROM ${partName} ${searchQuery} LIMIT ? OFFSET ?`;
+	sqlParams.push(items, offset); // Push pagination params after search params
+
 	try {
-		const [parts] = await promisePool.query(sql, [items, offset]);
+		const [parts] = await promisePool.query(sql, sqlParams);
 		// Process each user to add isAdmin property
 
 		return res.status(200).json(parts);
 	} catch (error) {
-        console.error(error);
+		console.error(error);
 		// If there is a status message or data then use that, otherwise the defaults
 		const message = error.response ? error.response.data : "Internal Server Error";
-        const status = error.response ? error.response.status : 500;
+		const status = error.response ? error.response.status : 500;
 		return res.status(status).json({ message: message });
 	}
 });
@@ -627,7 +818,7 @@ app.get("/api/part/id", async (req, res) => {
 	const allowedPartNames = ["chassis", "cpu", "cpu_cooler", "gpu", "memory", "motherboard", "psu", "storage"];
 	if (!allowedPartNames.includes(partName) || partName === "") {
 		console.error(`partName "${partName}" is not allowed!`);
-		throw new Error(`partName "${partName}" is not allowed!`);
+		return res.status(400).json({ message: `partName "${partName}" is not allowed!` });
 	}
 
 	const sql = `SELECT * FROM ${partName} WHERE ID = ?`;
@@ -636,13 +827,13 @@ app.get("/api/part/id", async (req, res) => {
 		if (!part.length) {
 			return res.status(404).json({ message: "Part not found" });
 		}
-	
+
 		return res.status(200).json(part);
 	} catch (error) {
-        console.error(error);
+		console.error(error);
 		// If there is a status message or data then use that, otherwise the defaults
 		const message = error.response ? error.response.data : "Internal Server Error";
-        const status = error.response ? error.response.status : 500;
+		const status = error.response ? error.response.status : 500;
 		return res.status(status).json({ message: message });
 	}
 });
@@ -656,9 +847,9 @@ app.get("/api/inventory", routePagination, async (req, res) => {
 	const sql = "SELECT * FROM part_inventory LIMIT ? OFFSET ?";
 	try {
 		const [partInventory] = await promisePool.query(sql, [items, offset]);
-		
+
 		// AdditionalDetails needs to be parsed
-		const parseInventory = partInventory.map(item => ({
+		const parseInventory = partInventory.map((item) => ({
 			...item,
 			AdditionalDetails: item.AdditionalDetails ? JSON.parse(item.AdditionalDetails) : null
 		}));
@@ -667,10 +858,10 @@ app.get("/api/inventory", routePagination, async (req, res) => {
 
 		return res.status(200).json(parseInventory);
 	} catch (error) {
-        console.error(error);
+		console.error(error);
 		// If there is a status message or data then use that, otherwise the defaults
 		const message = error.response ? error.response.data : "Internal Server Error";
-        const status = error.response ? error.response.status : 500;
+		const status = error.response ? error.response.status : 500;
 		return res.status(status).json({ message: message });
 	}
 });
@@ -689,17 +880,17 @@ app.get("/api/inventory/id", async (req, res) => {
 		}
 
 		// AdditionalDetails needs to be parsed
-		const parseInventory = partInventory.map(item => ({
+		const parseInventory = partInventory.map((item) => ({
 			...item,
 			AdditionalDetails: item.AdditionalDetails ? JSON.parse(item.AdditionalDetails) : null
 		}));
-	
+
 		return res.status(200).json(parseInventory);
 	} catch (error) {
-        console.error(error);
+		console.error(error);
 		// If there is a status message or data then use that, otherwise the defaults
 		const message = error.response ? error.response.data : "Internal Server Error";
-        const status = error.response ? error.response.status : 500;
+		const status = error.response ? error.response.status : 500;
 		return res.status(status).json({ message: message });
 	}
 });
@@ -713,19 +904,19 @@ app.get("/api/orders", routePagination, async (req, res) => {
 	const sql = "SELECT * FROM orders LIMIT ? OFFSET ?";
 	try {
 		const [orders] = await promisePool.query(sql, [items, offset]);
-		
+
 		// Items needs to be parsed
-		const parseInventory = orders.map(item => ({
+		const parseInventory = orders.map((item) => ({
 			...item,
 			Items: item.Items ? JSON.parse(item.Items) : null
 		}));
 
 		return res.status(200).json(parseInventory);
 	} catch (error) {
-        console.error(error);
+		console.error(error);
 		// If there is a status message or data then use that, otherwise the defaults
 		const message = error.response ? error.response.data : "Internal Server Error";
-        const status = error.response ? error.response.status : 500;
+		const status = error.response ? error.response.status : 500;
 		return res.status(status).json({ message: message });
 	}
 });
@@ -744,17 +935,17 @@ app.get("/api/orders/id", async (req, res) => {
 		}
 
 		// Items needs to be parsed
-		const parseInventory = orders.map(item => ({
+		const parseInventory = orders.map((item) => ({
 			...item,
 			Items: item.Items ? JSON.parse(item.Items) : null
 		}));
-	
+
 		return res.status(200).json(parseInventory);
 	} catch (error) {
-        console.error(error);
+		console.error(error);
 		// If there is a status message or data then use that, otherwise the defaults
 		const message = error.response ? error.response.data : "Internal Server Error";
-        const status = error.response ? error.response.status : 500;
+		const status = error.response ? error.response.status : 500;
 		return res.status(status).json({ message: message });
 	}
 });
@@ -770,14 +961,28 @@ app.get("/api/users/customers", routePagination, async (req, res) => {
 		const [customers] = await promisePool.query(sql, [items, offset]);
 
 		// Separate userdata from customer data
-		const parseCustomers = customers.map(item => { 
-			const { Name, Gender, ProfileImage, RoleID, Email, Password, AddressID, AddressTypeID, Street, City, State, PostalCode, Country, ...customerData } = item;
+		const parseCustomers = customers.map((item) => {
+			const {
+				Name,
+				Gender,
+				ProfileImage,
+				RoleID,
+				Email,
+				Password,
+				AddressID,
+				AddressTypeID,
+				Street,
+				City,
+				State,
+				PostalCode,
+				Country,
+				...customerData
+			} = item;
 			return {
 				...customerData,
 				UserData: { Name, Gender, ProfileImage, RoleID, Email, Password },
 				AddressData: { AddressID, AddressTypeID, Street, City, State, PostalCode, Country }
 			};
-		
 		});
 
 		// More manual way to do this
@@ -798,10 +1003,10 @@ app.get("/api/users/customers", routePagination, async (req, res) => {
 
 		return res.status(200).json(parseCustomers);
 	} catch (error) {
-        console.error(error);
+		console.error(error);
 		// If there is a status message or data then use that, otherwise the defaults
 		const message = error.response ? error.response.data : "Internal Server Error";
-        const status = error.response ? error.response.status : 500;
+		const status = error.response ? error.response.status : 500;
 		return res.status(status).json({ message: message });
 	}
 });
@@ -819,22 +1024,36 @@ app.get("/api/users/customers/id", async (req, res) => {
 			return res.status(404).json({ message: "Customer not found" });
 		}
 
-		const parseCustomers = customers.map(item => { 
-			const { Name, Gender, ProfileImage, RoleID, Email, Password, AddressID, AddressTypeID, Street, City, State, PostalCode, Country, ...customerData } = item;
+		const parseCustomers = customers.map((item) => {
+			const {
+				Name,
+				Gender,
+				ProfileImage,
+				RoleID,
+				Email,
+				Password,
+				AddressID,
+				AddressTypeID,
+				Street,
+				City,
+				State,
+				PostalCode,
+				Country,
+				...customerData
+			} = item;
 			return {
 				...customerData,
 				UserData: { Name, Gender, ProfileImage, RoleID, Email, Password },
 				AddressData: { AddressID, AddressTypeID, Street, City, State, PostalCode, Country }
 			};
-		
 		});
 
 		return res.status(200).json(parseCustomers);
 	} catch (error) {
-        console.error(error);
+		console.error(error);
 		// If there is a status message or data then use that, otherwise the defaults
 		const message = error.response ? error.response.data : "Internal Server Error";
-        const status = error.response ? error.response.status : 500;
+		const status = error.response ? error.response.status : 500;
 		return res.status(status).json({ message: message });
 	}
 });
@@ -851,10 +1070,10 @@ app.get("/api/users/customers/addresses", routePagination, async (req, res) => {
 
 		return res.status(200).json(addresses);
 	} catch (error) {
-        console.error(error);
+		console.error(error);
 		// If there is a status message or data then use that, otherwise the defaults
 		const message = error.response ? error.response.data : "Internal Server Error";
-        const status = error.response ? error.response.status : 500;
+		const status = error.response ? error.response.status : 500;
 		return res.status(status).json({ message: message });
 	}
 });
@@ -874,21 +1093,17 @@ app.get("/api/users/customers/addresses/id", async (req, res) => {
 
 		return res.status(200).json(addresses);
 	} catch (error) {
-        console.error(error);
+		console.error(error);
 		// If there is a status message or data then use that, otherwise the defaults
 		const message = error.response ? error.response.data : "Internal Server Error";
-        const status = error.response ? error.response.status : 500;
+		const status = error.response ? error.response.status : 500;
 		return res.status(status).json({ message: message });
 	}
 });
 
-
-
 ////////////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////
-
-
 
 app.listen(port, () => {
 	console.log(`Server is running on port ${port}`);
