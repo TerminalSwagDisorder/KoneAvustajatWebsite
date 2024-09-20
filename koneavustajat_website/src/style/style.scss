@@ -275,14 +275,119 @@ $dark_user_select_button: #697ef5;
 		float: right;
 		text-decoration: unset !important;
 		cursor: pointer;
+		width: fit-content;
 	}
-	.wizard-details, .completedBuild-details {
+	.wizard-details,
+	.completedBuild-details {
 		.list-group-item {
 			background-color: $even_row;
 			color: $box_text;
 			&:hover {
 				background-color: lighten($even_row, 10%);
 			}
+		}
+	}
+
+	.wizardForm,
+	.adminForm {
+		background-color: $forms;
+		position: relative;
+		top: 2em;
+		left: 10%;
+		width: 80%;
+		overflow: auto;
+		display: block;
+		margin-bottom: 2em;
+		text-align: left;
+		padding: 20px;
+		border-radius: 5px;
+
+		label {
+			color: $box_text;
+			text-align: left !important;
+		}
+
+		.closeForm {
+			color: $box_text;
+			display: inline;
+			position: absolute;
+			left: 90%;
+			width: 2.5em;
+			height: 2.5em;
+			border: none;
+			border-radius: 25%;
+
+			&:hover {
+				background-color: darken(#8d2325, 5%) !important;
+			}
+		}
+
+		input,
+		select {
+			background-color: #b3121200;
+			height: 35px;
+			color: $box_text;
+			margin-top: 5px;
+			margin-bottom: 5px;
+
+			&:disabled {
+				background-color: $disabled_input;
+			}
+		}
+
+		select {
+			& option:not(:checked) {
+				background-color: $box_text;
+				color: black;
+			}
+
+			& option:hover {
+				background-color: aqua !important;
+			}
+
+			& option:checked {
+				background-color: $active_elems;
+			}
+		}
+
+		input {
+			&::placeholder {
+				color: $box_text;
+			}
+
+			&:disabled {
+				&::placeholder {
+					color: darken($box_text, 50%);
+				}
+			}
+		}
+
+		button {
+			white-space: nowrap;
+			width: fit-content;
+		}
+	}
+
+	.userForm {
+		position: absolute;
+		top: 25%;
+		bottom: 25%;
+		left: 60%;
+		display: block;
+		overflow: auto;
+		padding: 25px;
+
+		label {
+			color: white;
+		}
+
+		input {
+			background-color: #b3121200;
+			width: 100%;
+			border: none;
+			border-bottom: 1px solid #0e002e !important;
+			height: 35px;
+			color: $box_text;
 		}
 	}
 }
@@ -486,16 +591,6 @@ button {
 		border-bottom: 1px solid;
 		text-decoration: unset !important;
 	}
-}
-
-#userform {
-	position: absolute;
-	z-index: 1;
-	width: 94%;
-	height: 80vh;
-	left: 50%;
-	transform: translate(-50%);
-	padding: 20px 0;
 }
 
 .paginationButtons {
