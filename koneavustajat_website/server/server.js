@@ -11,6 +11,8 @@ const bcrypt = require("bcrypt");
 const fs = require("fs");
 const cookieParser = require("cookie-parser");
 const multer = require("multer");
+const { check, validationResult } = require("express-validator");
+const Joi = require("joi");
 
 // User authentication exports
 const jwt = require("jsonwebtoken");
@@ -182,24 +184,20 @@ const storage = multer.diskStorage({
 const profileImgUpload = multer({ storage: storage, fileFilter: imageFileFilter });
 const otherFileUpload = multer({ storage: storage });
 
+const paginationSchema = Joi.object({
+	page: Joi.number().min(1).default(1),
+	items: Joi.number().min(1).max(1000).default(100),
+});
+
 // Middleware for pagination
 const routePagination = (req, res, next) => {
-	const numPage = parseInt(req.query.page, 10);
-	const numItems = parseInt(req.query.items, 10);
-	const page = isNaN(numPage) ? 1 : numPage;
-	const items = isNaN(numItems) ? 100 : numItems;
+	const validationResult = paginationSchema.validate({page: req.query.page, items: req.query.items});
 
-	if (page <= 0) {
-		return res.status(400).json({ message: "Page must be a positive integer" });
+	if (validationResult.error) {
+		return res.status(400).json({ message: validationResult.error.details[0].message });
 	}
 
-	if (items <= 0) {
-		return res.status(400).json({ message: "Number of items must be a positive integer" });
-	}
-
-	if (items >= 1000) {
-		return res.status(400).json({ message: "Please limit items to under 1000" });
-	}
+	const { page, items } = validationResult.value;
 
 	let offset = 0;
 	if (page && page !== 1) {
@@ -216,30 +214,74 @@ const routePagination = (req, res, next) => {
 	next();
 };
 
-const searchSanitization = (key, value, term) => {
+const queryValidationRules = [
+	check("ID").optional().isNumeric().withMessage("ID must be a number"),
+	check("Url").optional().isURL().withMessage("Url must be a valid URL"),
+	check("Price").optional().isNumeric().withMessage("Price must be a number"),
+	check("Name").optional().isString().withMessage("Name must be a string"),
+	check("strict").optional().isBoolean().withMessage("strict must be true or false")
+];
 
+const valueSchema = Joi.object({
+	id: Joi.number().optional(),
+	url: Joi.string().uri().optional(),
+	price: Joi.number().optional(),
+	pricerange: Joi.string().trim()
+		.pattern(/^\d+-\d+$/)
+		.optional()
+		.messages({
+			"string.pattern.base": "Invalid range format format. Range must include number hyphen (-) number.",
+		}),
+	pricemin: Joi.number().optional(),
+	pricemax: Joi.number().optional(),
+	name: Joi.string().trim().optional(),
+	manufacturer: Joi.string().trim().optional(),
+	image: Joi.string().optional(),
+	image_Url: Joi.string().uri().optional(),
+	chassis_type: Joi.string().trim().optional(),
+	dimensions: Joi.string().trim().optional(),
+	color: Joi.string().trim().optional(),
+	compatibility: Joi.string().trim().optional(),
+	cooling_Potential: Joi.string().trim().optional(),
+	fan_RPM: Joi.number().optional(),
+	noise_Level: Joi.string().trim().optional(),
+	cores: Joi.number().optional(),
+	core_Clock: Joi.string().trim().optional(),
+	memory: Joi.string().trim().optional(),
+	interface: Joi.string().trim().optional(),
+	tdp: Joi.string().trim().optional(),
+	type: Joi.string().trim().optional(),
+	amount: Joi.number().optional(),
+	speed: Joi.string().trim().optional(),
+	latency: Joi.string().trim().optional(),
+	chipset: Joi.string().trim().optional(),
+	form_Factor: Joi.string().trim().optional(),
+	memory_Compatibility: Joi.string().trim().optional(),
+	is_atx12v: Joi.string().trim().optional(),
+	efficiency: Joi.string().trim().optional(),
+	modular: Joi.string().trim().optional(),
+	capacity: Joi.string().trim().optional(),
+	cache: Joi.string().trim().optional(),
+	flash: Joi.string().trim().optional(),
+	tbw: Joi.string().trim().optional(),
+	core_Count: Joi.number().optional(),
+	thread_Count: Joi.number().optional(),
+	base_Clock: Joi.string().trim().optional(),
+	socket: Joi.string().trim().optional(),
+	cpu_cooler: Joi.string().trim().optional(),
+	integrated_gpu: Joi.string().trim().optional(),
+	strict: Joi.boolean().optional()
+});
+
+const searchSanitization = (key, value, term) => {
 	const mappedColumnNames = {
 		chassis: [
-			"ID",
-			"Url",
-			"Price",
-			"Name",
-			"Manufacturer",
-			"Image",
-			"Image_Url",
 			"Chassis_type",
 			"Dimensions",
 			"Color",
 			"Compatibility"
 		],
 		cpu: [
-			"ID",
-			"Url",
-			"Price",
-			"Name",
-			"Manufacturer",
-			"Image",
-			"Image_Url",
 			"Core_Count",
 			"Thread_Count",
 			"Base_Clock",
@@ -250,13 +292,6 @@ const searchSanitization = (key, value, term) => {
 			"Integrated_GPU"
 		],
 		cpu_cooler: [
-			"ID",
-			"Url",
-			"Price",
-			"Name",
-			"Manufacturer",
-			"Image",
-			"Image_Url",
 			"Compatibility",
 			"Cooling_Potential",
 			"Fan_RPM",
@@ -264,13 +299,6 @@ const searchSanitization = (key, value, term) => {
 			"Dimensions"
 		],
 		gpu: [
-			"ID",
-			"Url",
-			"Price",
-			"Name",
-			"Manufacturer",
-			"Image",
-			"Image_Url",
 			"Cores",
 			"Core_Clock",
 			"Memory",
@@ -279,51 +307,23 @@ const searchSanitization = (key, value, term) => {
 			"TDP"
 		],
 		memory: [
-			"ID",
-			"Url",
-			"Price",
-			"Name",
-			"Manufacturer",
-			"Image",
-			"Image_Url",
 			"Type",
 			"Amount",
 			"Speed",
 			"Latency"
 		],
 		motherboard: [
-			"ID",
-			"Url",
-			"Price",
-			"Name",
-			"Manufacturer",
-			"Image",
-			"Image_Url",
 			"Chipset",
 			"Form_Factor",
 			"Memory_Compatibility"
 		],
 		psu: [
-			"ID",
-			"Url",
-			"Price",
-			"Name",
-			"Manufacturer",
-			"Image",
-			"Image_Url",
 			"Is_ATX12V",
 			"Efficiency",
 			"Modular",
 			"Dimensions"
 		],
 		storage: [
-			"ID",
-			"Url",
-			"Price",
-			"Name",
-			"Manufacturer",
-			"Image",
-			"Image_Url",
 			"Capacity",
 			"Form_Factor",
 			"Interface",
@@ -331,7 +331,21 @@ const searchSanitization = (key, value, term) => {
 			"Flash",
 			"TBW"
 		]
+
 	};
+
+	const universalColumns = [
+		"ID",
+		"Url",
+		"Price",
+		"Name",
+		"Manufacturer",
+		"Image",
+		"Image_Url",
+		"priceMin",
+		"priceMax",
+		"priceRange"
+	];
 
 	/*
 	for (const [col, val] of Object.entries(mappedColumnNames)) {
@@ -347,14 +361,21 @@ const searchSanitization = (key, value, term) => {
 		return { error: "Search cannot be empty" };
 	}
 
-	if (term.toLowerCase() !== "strict") {
-		const validColumns = mappedColumnNames[key.toLowerCase()];
-		if (!validColumns || !validColumns.map((col) => col.toLowerCase()).includes(term.toLowerCase())) {
+	if (term !== "strict") {
+		const validColumns = mappedColumnNames[key] || [];
+		const allValidColumns = [...universalColumns, ...validColumns];
+
+		if (!allValidColumns || !allValidColumns.map((col) => col.toLowerCase()).includes(term)) {
 			return { error: `Search for '${term}' is not allowed in part '${key}'!` };
 		}
 	}
 
-	if (term.toLowerCase() === "strict" && (value.toString().toLowerCase() !== "true" && value.toString().toLowerCase() !== "false")) {
+	const validationResult = valueSchema.validate({ [term]: value });
+	if (validationResult.error) {
+		return { error: validationResult.error.details[0].message };
+	}
+	/*
+	if (term === "strict" && (value.toString().toLowerCase() !== "true" && value.toString().toLowerCase() !== "false")) {
 		return { error: "Value for strict must be a boolean ('true' or 'false')" };
 	}
 
@@ -365,8 +386,9 @@ const searchSanitization = (key, value, term) => {
 	if (!isNaN(parseInt(value, 10))) {
 		value = parseInt(value, 10);
 	}
-
 	return value;
+*/
+	return validationResult.value[term];
 };
 
 // Middleware for strict searches
@@ -379,14 +401,13 @@ const partSearch = (req, res, next) => {
 			let value = req.query[term];
 
 			// Add more sanitization
-			console.log(partName, value, term);
-			value = searchSanitization(partName, value, term);
+			value = searchSanitization(partName.toLowerCase(), value.toLowerCase(), term.toLowerCase());
 			if (value.error) {
 				console.error(value.error);
 				return res.status(400).json({ message: value.error });
 			}
-
 			searchTerms[term] = value;
+			console.log(searchTerms);
 		}
 	}
 
@@ -395,7 +416,170 @@ const partSearch = (req, res, next) => {
 	next();
 };
 
-// Middleware for regex validation
+const partNameSchema = Joi.string()
+	.valid("chassis", "cpu", "cpu_cooler", "gpu", "memory", "motherboard", "psu", "storage")
+	.default("cpu");
+
+const validatePartName = (req, res, next) => {
+	// Validate partName from query and apply default if missing
+	const { value, error } = partNameSchema.validate(req.query.partName);
+
+	if (error) {
+		return res.status(400).json({ message: `partName '${req.query.partName}' is not allowed!` });
+	}
+
+	req.query.partName = value; // Assign default or validated value back to req.query
+	next();
+};
+
+const loginSchema = Joi.object({
+	email: Joi.string().trim()
+		.required()
+		.email()
+		.messages({
+			"string.email": "Invalid email format. Please enter a valid email address in the format: example@domain.com",
+			"string.empty": "Email cannot be empty",
+			"any.required": "Email is required"
+		}),
+	password: Joi.string().trim()
+		.required()
+		.pattern(/^(?=.*[A-Z])(?=.*\d)[A-Za-z\d]{9,}$/)
+		.messages({
+			"string.pattern.base": "Invalid password format. Password must be at least 8 characters long, include 1 capital letter, and 1 number.",
+			"string.empty": "Password cannot be empty",
+			"any.required": "Password is required"
+		})
+});
+
+const userSchema = Joi.object({
+	name: Joi.string().trim().min(3).max(50).required().messages({
+		"string.base": "Name must be a string",
+		"string.empty": "Name cannot be empty",
+		"string.min": "Name must be at least 3 characters long",
+		"string.max": "Name cannot exceed 50 characters",
+		"any.required": "Name is required"
+	}),
+	email: Joi.string().trim()
+		.required()
+		.email() // Built in regex
+		.messages({
+			"string.email": "Invalid email format. Please enter a valid email address in the format: example@domain.com",
+			"string.empty": "Email cannot be empty",
+			"any.required": "Email is required"
+		}),
+	password: Joi.string().trim()
+		.required()
+		.pattern(/^(?=.*[A-Z])(?=.*\d)[A-Za-z\d]{9,}$/)
+		.messages({
+			"string.pattern.base": "Invalid password format. Password must be at least 8 characters long, include 1 capital letter, and 1 number.",
+			"string.empty": "Password cannot be empty",
+			"any.required": "Password is required"
+		})
+});
+
+const userUpdateSchema = Joi.object({
+	name: Joi.string().trim().min(3).max(50).optional().messages({
+		"string.base": "Name must be a string",
+		"string.empty": "Name cannot be empty",
+		"string.min": "Name must be at least 3 characters long",
+		"string.max": "Name cannot exceed 50 characters"
+	}),
+	email: Joi.string().trim()
+		.email()
+		.optional()
+		.messages({
+			"string.email": "Invalid email format. Please enter a valid email address in the format: example@domain.com",
+			"string.empty": "Email cannot be empty"
+		}),
+	password: Joi.string().trim()
+		.pattern(/^(?=.*[A-Z])(?=.*\d)[A-Za-z\d]{9,}$/)
+		.optional()
+		.messages({
+			"string.pattern.base": "Invalid password format. Password must be at least 8 characters long, include 1 capital letter, and 1 number.",
+			"string.empty": "Password cannot be empty",
+			"any.required": "Password is required"
+		}),
+	currentPassword: Joi.string().trim()
+		.pattern(/^(?=.*[A-Z])(?=.*\d)[A-Za-z\d]{9,}$/)
+		.required()
+		.messages({
+			"string.pattern.base": "Invalid password format. Password must be at least 8 characters long, include 1 capital letter, and 1 number.",
+			"string.empty": "Password cannot be empty",
+			"any.required": "Password is required"
+		}),
+	gender: Joi.string().trim().valid("male", "female").optional().messages({
+		"string.base": "Gender must be a string",
+		"any.only": "Gender must be one of either 'male' or 'female'"
+	}),
+	profileImage: Joi.string().trim()
+		.optional()
+		.messages({
+			"string.base": "Profile image must be a valid filename",
+		})
+});
+
+const userValidate = (schema) => {
+	return (req, res, next) => {
+		let { formFields } = req.body;
+		
+		if (typeof formFields === "string") {
+			try {
+				formFields = JSON.parse(formFields);
+			} catch (error) {
+				return res.status(400).json({ message: "Invalid form data format" });
+			}
+		}
+
+/*
+		let { formFields } = req.body;
+		if (!formFields || formFields === undefined || formFields === null) {
+			formFields = req.body;
+		} else {
+			try {
+				formFields = JSON.parse(formFields);
+			} catch (error) {
+				return res.status(400).json({ message: "Invalid form data format" });
+			}
+		}
+*/
+		const { value, error } = schema.validate(formFields);
+
+		if (error) {
+			return res.status(400).json({ message: error.details[0].message });
+		}
+
+		formFields = value; // Assign default or validated value back to req.query
+		next();
+	};
+};
+
+const userFieldsSchema = Joi.string()
+	.valid("name", "email", "password", "currentPassword", "gender", "profileImage");
+
+const validateUserFields = (req, res, next) => {
+	let { formFields } = req.body;
+
+	if (typeof formFields === "string") {
+		try {
+			formFields = JSON.parse(formFields);
+		} catch (error) {
+			return res.status(400).json({ message: "Invalid form data format" });
+		}
+	}
+
+	for (const item in formFields) {
+		const { error } = userFieldsSchema.validate(item);
+
+		if (error) {
+			return res.status(400).json({ message: `User field '${item}' is not allowed!` });
+		}
+	}
+
+	// Proceed to the next middleware if all fields are valid
+	next();
+};
+
+// Middleware for regex validation, kind of unnecessary with joi
 const checkRegex = (req, res, next) => {
 	const passwordRegex = /^(?=.*[A-Z])(?=.*\d)[A-Za-z\d]{9,}$/; // At least 1 upper character, at least 1 digit/number, at least 9 chars long
 	const emailRegex =
@@ -534,7 +718,7 @@ app.get("/api/users/id", async (req, res) => {
 });
 
 // Signing up
-app.post("/api/users/signup", checkRegex, async (req, res) => {
+app.post("/api/users/signup", checkRegex, userValidate(userSchema), validateUserFields, async (req, res) => {
 	console.log("API user signup accessed");
 
 	const { formFields } = req.body;
@@ -563,7 +747,7 @@ app.post("/api/users/signup", checkRegex, async (req, res) => {
 	}
 });
 
-app.post("/api/users/login", async (req, res) => {
+app.post("/api/users/login", userValidate(loginSchema), validateUserFields, async (req, res) => {
 	console.log("API users login accessed");
 	const { formFields, userType } = req.body;
 	const jsonFormFields = JSON.parse(formFields);
@@ -681,12 +865,7 @@ app.get("/api/profile/refresh", authenticateSession, async (req, res) => {
 });
 
 // Update own user credentials
-app.patch(
-	"/api/profile",
-	authenticateSession,
-	checkRegex,
-	profileImgUpload.single("profileImage"),
-	async (req, res) => {
+app.patch( "/api/profile", authenticateSession, checkRegex, userValidate(userUpdateSchema), validateUserFields, profileImgUpload.single("profileImage"), async (req, res) => {
 		console.log("API update own credentials accessed");
 		console.log(req.user);
 		const userId = req.user.UserID;
@@ -763,25 +942,39 @@ app.patch(
 );
 
 // Route for viewing parts
-app.get("/api/part", routePagination, partSearch, async (req, res) => {
+app.get("/api/part", routePagination, partSearch, validatePartName, async (req, res) => {
 	console.log("API parts accessed");
 
-	const partName = req.query.partName ? req.query.partName : "cpu"; // Get the table name from the query
+	const partName = req.query.partName; // Get the table name from the query
 	const { items, offset } = req.pagination;
 	const searchTerms = req.searchTerms;
 	let sql;
 	let sqlParams = [];
 
-	const allowedPartNames = ["chassis", "cpu", "cpu_cooler", "gpu", "memory", "motherboard", "psu", "storage"];
-	if (!allowedPartNames.includes(partName) || partName === "") {
-		console.error(`partName "${partName}" is not allowed!`);
-		return res.status(400).json({ message: `partName "${partName}" is not allowed!` });
+	let searchQuery = " WHERE 1=1";
+
+	if (searchTerms.priceMin) {
+		searchQuery += " AND Price >= ?";
+		sqlParams.push(searchTerms.priceMin);
+	}
+	if (searchTerms.priceMax) {
+		searchQuery += " AND Price <= ?";
+		sqlParams.push(searchTerms.priceMax);
 	}
 
-	let searchQuery = " WHERE 1=1";
+	if (searchTerms.priceRange) {
+		const [minPrice, maxPrice] = searchTerms.priceRange.split("-");
+		searchQuery += " AND Price BETWEEN ? AND ?";
+		sqlParams.push(minPrice, maxPrice);
+	}
+
+	const ignoreColumns = ["strict", "priceMin", "priceMax", "priceRange"];
+	if (searchTerms.priceMin || searchTerms.priceMax || searchTerms.priceRange) {
+		ignoreColumns.push("price");
+	}
 	for (let [column, value] of Object.entries(searchTerms)) {
-		if (column !== "strict") {
-			if (searchTerms.strict && searchTerms.strict === "true") {
+		if (!ignoreColumns.includes(column)) {
+			if (searchTerms.strict && searchTerms.strict === true) {
 				searchQuery += ` AND ${column} = ?`;
 			} else {
 				value = `%${value}%`;
@@ -808,18 +1001,12 @@ app.get("/api/part", routePagination, partSearch, async (req, res) => {
 	}
 });
 
-app.get("/api/part/id", async (req, res) => {
+app.get("/api/part/id", validatePartName, async (req, res) => {
 	console.log("API search parts by id accessed");
 
 	const numId = parseInt(req.query.id, 10);
 	const id = isNaN(numId) ? 1 : numId;
-	const partName = req.query.partName ? req.query.partName : "cpu"; // Get the table name from the query
-
-	const allowedPartNames = ["chassis", "cpu", "cpu_cooler", "gpu", "memory", "motherboard", "psu", "storage"];
-	if (!allowedPartNames.includes(partName) || partName === "") {
-		console.error(`partName "${partName}" is not allowed!`);
-		return res.status(400).json({ message: `partName "${partName}" is not allowed!` });
-	}
+	const partName = req.query.partName; // Get the table name from the query
 
 	const sql = `SELECT * FROM ${partName} WHERE ID = ?`;
 	try {
