@@ -222,7 +222,7 @@ const queryValidationRules = [
 	check("strict").optional().isBoolean().withMessage("strict must be true or false")
 ];
 
-const valueSchema = Joi.object({
+const partSchema = Joi.object({
 	id: Joi.number().optional(),
 	url: Joi.string().uri().optional(),
 	price: Joi.number().optional(),
@@ -273,164 +273,19 @@ const valueSchema = Joi.object({
 	strict: Joi.boolean().optional()
 });
 
-const searchSanitization = (key, value, term) => {
-	const mappedColumnNames = {
-		chassis: [
-			"Chassis_type",
-			"Dimensions",
-			"Color",
-			"Compatibility"
-		],
-		cpu: [
-			"Core_Count",
-			"Thread_Count",
-			"Base_Clock",
-			"Cache",
-			"Socket",
-			"Cpu_Cooler",
-			"TDP",
-			"Integrated_GPU"
-		],
-		cpu_cooler: [
-			"Compatibility",
-			"Cooling_Potential",
-			"Fan_RPM",
-			"Noise_Level",
-			"Dimensions"
-		],
-		gpu: [
-			"Cores",
-			"Core_Clock",
-			"Memory",
-			"Interface",
-			"Dimensions",
-			"TDP"
-		],
-		memory: [
-			"Type",
-			"Amount",
-			"Speed",
-			"Latency"
-		],
-		motherboard: [
-			"Chipset",
-			"Form_Factor",
-			"Memory_Compatibility"
-		],
-		psu: [
-			"Is_ATX12V",
-			"Efficiency",
-			"Modular",
-			"Dimensions"
-		],
-		storage: [
-			"Capacity",
-			"Form_Factor",
-			"Interface",
-			"Cache",
-			"Flash",
-			"TBW"
-		]
 
-	};
-
-	const universalColumns = [
-		"ID",
-		"Url",
-		"Price",
-		"Name",
-		"Manufacturer",
-		"Image",
-		"Image_Url",
-		"priceMin",
-		"priceMax",
-		"priceRange"
-	];
-
-	/*
-	for (const [col, val] of Object.entries(mappedColumnNames)) {
-		if (col.toLowerCase() === key.toLowerCase()) {
-			if (term !== "strict" && !val.map((v) => v.toLowerCase()).includes(term.toLowerCase())) {
-				return { error: `Search for '${term}' is not allowed!` };
-			}
-		}
-	}
-	*/
-
-	if (value === undefined || value === null || value === "") {
-		return { error: "Search cannot be empty" };
-	}
-
-	if (term !== "strict") {
-		const validColumns = mappedColumnNames[key] || [];
-		const allValidColumns = [...universalColumns, ...validColumns];
-
-		if (!allValidColumns || !allValidColumns.map((col) => col.toLowerCase()).includes(term)) {
-			return { error: `Search for '${term}' is not allowed in part '${key}'!` };
-		}
-	}
-
-	const validationResult = valueSchema.validate({ [term]: value });
-	if (validationResult.error) {
-		return { error: validationResult.error.details[0].message };
-	}
-	/*
-	if (term === "strict" && (value.toString().toLowerCase() !== "true" && value.toString().toLowerCase() !== "false")) {
-		return { error: "Value for strict must be a boolean ('true' or 'false')" };
-	}
-
-	if (typeof value === "string") {
-		value = value.trim();
-	}
-
-	if (!isNaN(parseInt(value, 10))) {
-		value = parseInt(value, 10);
-	}
-	return value;
-*/
-	return validationResult.value[term];
-};
-
-// Middleware for strict searches
-const partSearch = (req, res, next) => {
-	let searchTerms = {};
-	const partName = req.query.partName || "cpu";
-
-	for (let term in req.query) {
-		if (term !== "items" && term !== "page" && term !== "partName") {
-			let value = req.query[term];
-
-			// Add more sanitization
-			value = searchSanitization(partName.toLowerCase(), value.toLowerCase(), term.toLowerCase());
-			if (value.error) {
-				console.error(value.error);
-				return res.status(400).json({ message: value.error });
-			}
-			searchTerms[term] = value;
-			console.log(searchTerms);
-		}
-	}
-
-	// If successful, attach searchTerms to the req object to be used in the routes
-	req.searchTerms = searchTerms;
-	next();
-};
+const idSchema = Joi.object({
+	id: Joi.number().min(1).default(1),
+});
 
 const partNameSchema = Joi.string()
 	.valid("chassis", "cpu", "cpu_cooler", "gpu", "memory", "motherboard", "psu", "storage")
 	.default("cpu");
 
-const validatePartName = (req, res, next) => {
-	// Validate partName from query and apply default if missing
-	const { value, error } = partNameSchema.validate(req.query.partName);
+const tableNameSchema = Joi.string()
+	.valid("chassis", "cpu", "cpu_cooler", "gpu", "memory", "motherboard", "psu", "storage", "addresses", "address_types", "admins", "customers", "orders", "order_types", "part_inventory", "part_types", "users")
+	.default("cpu");
 
-	if (error) {
-		return res.status(400).json({ message: `partName '${req.query.partName}' is not allowed!` });
-	}
-
-	req.query.partName = value; // Assign default or validated value back to req.query
-	next();
-};
 
 const loginSchema = Joi.object({
 	email: Joi.string().trim()
@@ -518,7 +373,128 @@ const userUpdateSchema = Joi.object({
 		})
 });
 
-const userValidate = (schema) => {
+
+const searchSanitization = (key, value, term) => {
+	const mappedColumnNames = {
+		chassis: [
+			"Chassis_type",
+			"Dimensions",
+			"Color",
+			"Compatibility"
+		],
+		cpu: [
+			"Core_Count",
+			"Thread_Count",
+			"Base_Clock",
+			"Cache",
+			"Socket",
+			"Cpu_Cooler",
+			"TDP",
+			"Integrated_GPU"
+		],
+		cpu_cooler: [
+			"Compatibility",
+			"Cooling_Potential",
+			"Fan_RPM",
+			"Noise_Level",
+			"Dimensions"
+		],
+		gpu: [
+			"Cores",
+			"Core_Clock",
+			"Memory",
+			"Interface",
+			"Dimensions",
+			"TDP"
+		],
+		memory: [
+			"Type",
+			"Amount",
+			"Speed",
+			"Latency"
+		],
+		motherboard: [
+			"Chipset",
+			"Form_Factor",
+			"Memory_Compatibility"
+		],
+		psu: [
+			"Is_ATX12V",
+			"Efficiency",
+			"Modular",
+			"Dimensions"
+		],
+		storage: [
+			"Capacity",
+			"Form_Factor",
+			"Interface",
+			"Cache",
+			"Flash",
+			"TBW"
+		]
+
+	};
+
+	const universalColumns = [
+		"ID",
+		"Url",
+		"Price",
+		"Name",
+		"Manufacturer",
+		"Image",
+		"Image_Url",
+		"priceMin",
+		"priceMax",
+		"priceRange",
+		"strict"
+	];
+
+	if (value === undefined || value === null || value === "") {
+		return { error: "Search cannot be empty" };
+	}
+
+	const validColumns = mappedColumnNames[key] || [];
+	const allValidColumns = [...universalColumns, ...validColumns];
+
+	if (!allValidColumns || !allValidColumns.map((col) => col.toLowerCase()).includes(term)) {
+		return { error: `Search for '${term}' is not allowed in part '${key}'!` };
+	}
+	
+
+	const validationResult = partSchema.validate({ [term]: value });
+	if (validationResult.error) {
+		return { error: validationResult.error.details[0].message };
+	}
+
+	return validationResult.value[term];
+};
+
+// Middleware for searches
+const partSearch = (req, res, next) => {
+	let searchTerms = {};
+	const partName = req.query.partName || "cpu";
+
+	for (let term in req.query) {
+		if (term !== "items" && term !== "page" && term !== "partName") {
+			let value = req.query[term];
+
+			// Add more sanitization
+			value = searchSanitization(partName.toLowerCase(), value.toLowerCase(), term.toLowerCase());
+			if (value.error) {
+				console.error(value.error);
+				return res.status(400).json({ message: value.error });
+			}
+			searchTerms[term] = value;
+			console.log(searchTerms);
+		}
+	}
+
+	// If successful, attach searchTerms to the req object to be used in the routes
+	req.searchTerms = searchTerms;
+	next();
+};
+
+const userValidator = (schema) => {
 	return (req, res, next) => {
 		let { formFields } = req.body;
 		
@@ -556,7 +532,7 @@ const userValidate = (schema) => {
 const userFieldsSchema = Joi.string()
 	.valid("name", "email", "password", "currentPassword", "gender", "profileImage");
 
-const validateUserFields = (req, res, next) => {
+const userFieldsValidator = (req, res, next) => {
 	let { formFields } = req.body;
 
 	if (typeof formFields === "string") {
@@ -611,6 +587,43 @@ const checkRegex = (req, res, next) => {
 
 	next();
 };
+
+// Middleware for pagination
+const idValidator = (req, res, next) => {
+	const { value, error } = idSchema.validate({id: req.query.id});
+
+	if (error) {
+		return res.status(400).json({ message: error.details[0].message });
+	}
+
+	req.query.id = value.id;
+	next();
+};
+
+const tableValidator = (schema, queryName) => {
+	return (req, res, next) => {
+		const { value, error } = schema.validate(req.query[queryName]);
+
+		if (error) {
+			return res.status(400).json({ message: error.details[0].message });
+		}
+
+		req.query[queryName] = value;
+		next();
+	};
+};
+
+const getAllRoutes = (app) => {
+	return app._router.stack
+		.filter((r) => r.route && r.route.path) // Filter out non-route handlers
+		.map((r) => {
+			return {
+				method: Object.keys(r.route.methods)[0].toUpperCase(),
+				path: r.route.path
+			};
+		});
+};
+
 ////////////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////
@@ -622,7 +635,25 @@ const checkRegex = (req, res, next) => {
 
 app.get("/", async (req, res) => {
 	console.log("Index accessed");
-	return res.status(400).send("Index page. Navigate elsewhere.");
+	const routes = getAllRoutes(app);
+	let links = routes
+		.filter((route) => route.method === "GET")
+		.map((route) => `<li style="list-style-type: none;"><a style="color: blue;" href="${route.path}">${route.path}</a></li>`)
+		.join("");
+
+	const html = `
+		<html style="background-color: #121212;">
+			<head>
+				<title>Server Routes</title>
+			</head>
+			<body>
+				<br></br>
+				<ul>${links}</ul>
+			</body>
+		</html>
+	`;
+
+	return res.status(200).send(html);
 });
 
 // User routes
@@ -634,12 +665,11 @@ app.get("/", async (req, res) => {
 // MySQL & Express session
 
 // Route for frontend pagination in MySQL
-app.get("/api/count", async (req, res) => {
+app.get("/api/count", routePagination, tableValidator(tableNameSchema, "tableName"), async (req, res) => {
 	console.log("MySQL pagination accessed");
 
 	const tableName = req.query.tableName; // Get the table name from the query
-	const numItems = parseInt(req.query.items, 10);
-	const items = isNaN(numItems) ? 50 : numItems;
+	const { items } = req.pagination;
 
 	if (items <= 0) {
 		return res.status(400).json({ message: "Number of items cannot be below 1" });
@@ -686,11 +716,10 @@ app.get("/api/users", routePagination, async (req, res) => {
 	}
 });
 
-app.get("/api/users/id", async (req, res) => {
+app.get("/api/users/id", idValidator, async (req, res) => {
 	console.log("API search users by id accessed");
 
-	const numId = parseInt(req.query.id, 10);
-	const id = isNaN(numId) ? 1 : numId;
+	const id = req.query.id;
 
 	const sql = "SELECT * FROM users WHERE UserID = ?";
 	try {
@@ -718,7 +747,7 @@ app.get("/api/users/id", async (req, res) => {
 });
 
 // Signing up
-app.post("/api/users/signup", checkRegex, userValidate(userSchema), validateUserFields, async (req, res) => {
+app.post("/api/users/signup", checkRegex, userValidator(userSchema), userFieldsValidator, async (req, res) => {
 	console.log("API user signup accessed");
 
 	const { formFields } = req.body;
@@ -747,7 +776,7 @@ app.post("/api/users/signup", checkRegex, userValidate(userSchema), validateUser
 	}
 });
 
-app.post("/api/users/login", userValidate(loginSchema), validateUserFields, async (req, res) => {
+app.post("/api/users/login", userValidator(loginSchema), userFieldsValidator, async (req, res) => {
 	console.log("API users login accessed");
 	const { formFields, userType } = req.body;
 	const jsonFormFields = JSON.parse(formFields);
@@ -865,7 +894,7 @@ app.get("/api/profile/refresh", authenticateSession, async (req, res) => {
 });
 
 // Update own user credentials
-app.patch( "/api/profile", authenticateSession, checkRegex, userValidate(userUpdateSchema), validateUserFields, profileImgUpload.single("profileImage"), async (req, res) => {
+app.patch( "/api/profile", authenticateSession, checkRegex, userValidator(userUpdateSchema), userFieldsValidator, profileImgUpload.single("profileImage"), async (req, res) => {
 		console.log("API update own credentials accessed");
 		console.log(req.user);
 		const userId = req.user.UserID;
@@ -942,7 +971,7 @@ app.patch( "/api/profile", authenticateSession, checkRegex, userValidate(userUpd
 );
 
 // Route for viewing parts
-app.get("/api/part", routePagination, partSearch, validatePartName, async (req, res) => {
+app.get("/api/part", routePagination, tableValidator(partNameSchema, "partName"), partSearch, async (req, res) => {
 	console.log("API parts accessed");
 
 	const partName = req.query.partName; // Get the table name from the query
@@ -1001,11 +1030,10 @@ app.get("/api/part", routePagination, partSearch, validatePartName, async (req, 
 	}
 });
 
-app.get("/api/part/id", validatePartName, async (req, res) => {
+app.get("/api/part/id", tableValidator(partNameSchema, "partName"), idValidator, async (req, res) => {
 	console.log("API search parts by id accessed");
 
-	const numId = parseInt(req.query.id, 10);
-	const id = isNaN(numId) ? 1 : numId;
+	const id = req.query.id;
 	const partName = req.query.partName; // Get the table name from the query
 
 	const sql = `SELECT * FROM ${partName} WHERE ID = ?`;
@@ -1053,11 +1081,10 @@ app.get("/api/inventory", routePagination, async (req, res) => {
 	}
 });
 
-app.get("/api/inventory/id", async (req, res) => {
+app.get("/api/inventory/id", idValidator, async (req, res) => {
 	console.log("API search parts by id accessed");
 
-	const numId = parseInt(req.query.id, 10);
-	const id = isNaN(numId) ? 1 : numId;
+	const id = req.query.id;
 
 	const sql = "SELECT * FROM part_inventory WHERE PartID = ?";
 	try {
@@ -1108,11 +1135,10 @@ app.get("/api/orders", routePagination, async (req, res) => {
 	}
 });
 
-app.get("/api/orders/id", async (req, res) => {
+app.get("/api/orders/id", idValidator, async (req, res) => {
 	console.log("API search parts by id accessed");
 
-	const numId = parseInt(req.query.id, 10);
-	const id = isNaN(numId) ? 1 : numId;
+	const id = req.query.id;
 
 	const sql = "SELECT * FROM orders WHERE PartID = ?";
 	try {
@@ -1198,11 +1224,10 @@ app.get("/api/users/customers", routePagination, async (req, res) => {
 	}
 });
 
-app.get("/api/users/customers/id", async (req, res) => {
+app.get("/api/users/customers/id", idValidator, async (req, res) => {
 	console.log("API search parts by id accessed");
 
-	const numId = parseInt(req.query.id, 10);
-	const id = isNaN(numId) ? 1 : numId;
+	const id = req.query.id;
 
 	const sql = `SELECT c.*, u.*, a.* FROM customers c JOIN users u ON c.UserID = u.UserID JOIN addresses a ON c.CustomerID = a.CustomerID WHERE c.CustomerID = ? `;
 	try {
@@ -1265,11 +1290,10 @@ app.get("/api/users/customers/addresses", routePagination, async (req, res) => {
 	}
 });
 
-app.get("/api/users/customers/addresses/id", async (req, res) => {
+app.get("/api/users/customers/addresses/id", idValidator, async (req, res) => {
 	console.log("API search parts by id accessed");
 
-	const numId = parseInt(req.query.id, 10);
-	const id = isNaN(numId) ? 1 : numId;
+	const id = req.query.id;
 
 	const sql = "SELECT * FROM addresses WHERE AddressID = ?";
 	try {
