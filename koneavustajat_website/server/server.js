@@ -222,6 +222,7 @@ const queryValidationRules = [
 	check("strict").optional().isBoolean().withMessage("strict must be true or false")
 ];
 
+// Joi schemas
 const partSchema = Joi.object({
 	id: Joi.number().optional(),
 	url: Joi.string().uri().optional(),
@@ -270,7 +271,8 @@ const partSchema = Joi.object({
 	socket: Joi.string().trim().optional(),
 	cpu_cooler: Joi.string().trim().optional(),
 	integrated_gpu: Joi.string().trim().optional(),
-	strict: Joi.boolean().optional()
+	strict: Joi.boolean().optional(),
+	inverted: Joi.boolean().optional()
 });
 
 
@@ -286,6 +288,8 @@ const tableNameSchema = Joi.string()
 	.valid("chassis", "cpu", "cpu_cooler", "gpu", "memory", "motherboard", "psu", "storage", "addresses", "address_types", "admins", "customers", "orders", "order_types", "part_inventory", "part_types", "users")
 	.default("cpu");
 
+const userFieldsSchema = Joi.string()
+	.valid("name", "email", "password", "currentPassword", "gender", "profileImage");
 
 const loginSchema = Joi.object({
 	email: Joi.string().trim()
@@ -300,7 +304,7 @@ const loginSchema = Joi.object({
 		.required()
 		.pattern(/^(?=.*[A-Z])(?=.*\d)[A-Za-z\d]{9,}$/)
 		.messages({
-			"string.pattern.base": "Invalid password format. Password must be at least 8 characters long, include 1 capital letter, and 1 number.",
+			"string.pattern.base": "Invalid password format. Password must be at least 9 characters long, include 1 capital letter, and 1 number.",
 			"string.empty": "Password cannot be empty",
 			"any.required": "Password is required"
 		})
@@ -326,7 +330,7 @@ const userSchema = Joi.object({
 		.required()
 		.pattern(/^(?=.*[A-Z])(?=.*\d)[A-Za-z\d]{9,}$/)
 		.messages({
-			"string.pattern.base": "Invalid password format. Password must be at least 8 characters long, include 1 capital letter, and 1 number.",
+			"string.pattern.base": "Invalid password format. Password must be at least 9 characters long, include 1 capital letter, and 1 number.",
 			"string.empty": "Password cannot be empty",
 			"any.required": "Password is required"
 		})
@@ -350,7 +354,7 @@ const userUpdateSchema = Joi.object({
 		.pattern(/^(?=.*[A-Z])(?=.*\d)[A-Za-z\d]{9,}$/)
 		.optional()
 		.messages({
-			"string.pattern.base": "Invalid password format. Password must be at least 8 characters long, include 1 capital letter, and 1 number.",
+			"string.pattern.base": "Invalid password format. Password must be at least 9 characters long, include 1 capital letter, and 1 number.",
 			"string.empty": "Password cannot be empty",
 			"any.required": "Password is required"
 		}),
@@ -358,7 +362,7 @@ const userUpdateSchema = Joi.object({
 		.pattern(/^(?=.*[A-Z])(?=.*\d)[A-Za-z\d]{9,}$/)
 		.required()
 		.messages({
-			"string.pattern.base": "Invalid password format. Password must be at least 8 characters long, include 1 capital letter, and 1 number.",
+			"string.pattern.base": "Invalid password format. Password must be at least 9 characters long, include 1 capital letter, and 1 number.",
 			"string.empty": "Password cannot be empty",
 			"any.required": "Password is required"
 		}),
@@ -373,7 +377,37 @@ const userUpdateSchema = Joi.object({
 		})
 });
 
+const inventorySchema = Joi.object({
+	partid: Joi.number().optional(),
+	parttypeid: Joi.number().optional(),
+	modelnumber: Joi.string().trim().optional(),
+	serialnumber: Joi.string().trim().optional(),
+	available: Joi.number().optional(),
+	dateadded: Joi.string().trim().optional(),
+	additionaldetails: Joi.string().trim().optional(),
+	price: Joi.number().optional(),
+	pricerange: Joi.string().trim()
+		.pattern(/^\d+-\d+$/)
+		.optional()
+		.messages({
+			"string.pattern.base": "Invalid range format format. Range must include number hyphen (-) number.",
+		}),
+	availablerange: Joi.string().trim()
+		.pattern(/^\d+-\d+$/)
+		.optional()
+		.messages({
+			"string.pattern.base": "Invalid range format format. Range must include number hyphen (-) number.",
+		}),
+	pricemin: Joi.number().optional(),
+	availablemin: Joi.number().optional(),
+	pricemax: Joi.number().optional(),
+	availablemax: Joi.number().optional(),
+	name: Joi.string().trim().optional(),
+	manufacturer: Joi.string().trim().optional(),
 
+});
+
+// Validators & searches
 const searchSanitization = (key, value, term) => {
 	const mappedColumnNames = {
 		chassis: [
@@ -431,67 +465,72 @@ const searchSanitization = (key, value, term) => {
 			"Cache",
 			"Flash",
 			"TBW"
+		],
+		inventory: [
+			"PartID",
+			"PartTypeID",
+			"ModelNumber",
+			"SerialNumber",
+			"Available",
+			"availableMin",
+			"availableMax",
+			"availableRange",
+			"DateAdded",
+			"AdditionalDetails"
 		]
 
 	};
 
-	const universalColumns = [
-		"ID",
-		"Url",
-		"Price",
-		"Name",
-		"Manufacturer",
-		"Image",
-		"Image_Url",
-		"priceMin",
-		"priceMax",
-		"priceRange",
-		"strict"
-	];
+
+	const universalPartColumns = ["ID", "Url", "Image", "Image_Url"];
+	const universalColumns = ["Price", "Name", "Manufacturer", "priceMin", "priceMax", "priceRange", "strict", "inverted"];
+	const tableTypeColumns = key !== "inventory" ? [...universalPartColumns, ...universalColumns] : universalColumns;
 
 	if (value === undefined || value === null || value === "") {
 		return { error: "Search cannot be empty" };
 	}
 
 	const validColumns = mappedColumnNames[key] || [];
-	const allValidColumns = [...universalColumns, ...validColumns];
+	const allValidColumns = [...tableTypeColumns, ...validColumns];
 
 	if (!allValidColumns || !allValidColumns.map((col) => col.toLowerCase()).includes(term)) {
 		return { error: `Search for '${term}' is not allowed in part '${key}'!` };
 	}
 	
-
-	const validationResult = partSchema.validate({ [term]: value });
-	if (validationResult.error) {
-		return { error: validationResult.error.details[0].message };
+	try {
+		const currentSchema = key !== "inventory" ? partSchema : inventorySchema;
+		const validationResult = Joi.attempt({ [term]: value }, currentSchema);
+		return validationResult[term];
+	} catch (error) {
+		return { error: error.details[0].message };
 	}
-
-	return validationResult.value[term];
 };
 
-// Middleware for searches
-const partSearch = (req, res, next) => {
-	let searchTerms = {};
-	const partName = req.query.partName || "cpu";
+const tableSearch = (searchContext = "cpu") => { // Default value if not defined
+	return (req, res, next) => {
+		let searchTerms = {};
+		const partName = req.query.partName || searchContext;
 
-	for (let term in req.query) {
-		if (term !== "items" && term !== "page" && term !== "partName") {
-			let value = req.query[term];
+		for (let term in req.query) {
+			const excludedParams = ["items", "page", "partName"];
+			if (!excludedParams.includes(term)) {
+				let value = req.query[term];
 
-			// Add more sanitization
-			value = searchSanitization(partName.toLowerCase(), value.toLowerCase(), term.toLowerCase());
-			if (value.error) {
-				console.error(value.error);
-				return res.status(400).json({ message: value.error });
+				// Add more sanitization based on the search context
+				value = searchSanitization(partName.toLowerCase(), value.toLowerCase(), term.toLowerCase());
+				if (value.error) {
+					console.error(value.error);
+					return res.status(400).json({ message: value.error });
+				}
+				searchTerms[term] = value;
+				console.log(searchTerms);
 			}
-			searchTerms[term] = value;
-			console.log(searchTerms);
 		}
-	}
 
-	// If successful, attach searchTerms to the req object to be used in the routes
-	req.searchTerms = searchTerms;
-	next();
+		// If successful, attach searchTerms to the req object to be used in the routes
+		req.searchTerms = searchTerms;
+		next();
+	};
 };
 
 const userValidator = (schema) => {
@@ -506,31 +545,16 @@ const userValidator = (schema) => {
 			}
 		}
 
-/*
-		let { formFields } = req.body;
-		if (!formFields || formFields === undefined || formFields === null) {
-			formFields = req.body;
-		} else {
-			try {
-				formFields = JSON.parse(formFields);
-			} catch (error) {
-				return res.status(400).json({ message: "Invalid form data format" });
-			}
-		}
-*/
-		const { value, error } = schema.validate(formFields);
-
-		if (error) {
+		try {
+			const value = Joi.attempt(formFields, schema);
+			req.body = value;
+			next();
+		} catch (error) {
 			return res.status(400).json({ message: error.details[0].message });
 		}
-
-		formFields = value; // Assign default or validated value back to req.query
-		next();
 	};
 };
 
-const userFieldsSchema = Joi.string()
-	.valid("name", "email", "password", "currentPassword", "gender", "profileImage");
 
 const userFieldsValidator = (req, res, next) => {
 	let { formFields } = req.body;
@@ -543,16 +567,36 @@ const userFieldsValidator = (req, res, next) => {
 		}
 	}
 
-	for (const item in formFields) {
-		const { error } = userFieldsSchema.validate(item);
-
-		if (error) {
-			return res.status(400).json({ message: `User field '${item}' is not allowed!` });
+	try {
+		for (const item in formFields) {
+			Joi.attempt(item, userFieldsSchema);
 		}
+		next();
+	} catch (error) {
+		return res.status(400).json({ message: `User field '${error._original}' is not allowed!` });
 	}
+};
 
-	// Proceed to the next middleware if all fields are valid
-	next();
+const idValidator = (req, res, next) => {
+	try {
+		const value = Joi.attempt({ id: req.query.id }, idSchema);
+		req.query.id = value.id;
+		next();
+	} catch (error) {
+		return res.status(400).json({ message: error.details[0].message });
+	}
+};
+
+const tableValidator = (schema, queryName) => {
+	return (req, res, next) => {
+		try {
+			const value = Joi.attempt(req.query[queryName], schema);
+			req.query[queryName] = value;
+			next();
+		} catch (error) {
+			return res.status(400).json({ message: error.details[0].message });
+		}
+	};
 };
 
 // Middleware for regex validation, kind of unnecessary with joi
@@ -581,36 +625,11 @@ const checkRegex = (req, res, next) => {
 	if (typeof password !== "undefined" && password !== "" && !passwordRegex.test(password)) {
 		return res.status(400).json({
 			message:
-				"Invalid password format. Password must be at least 8 characters long, include 1 capital letter, and 1 number."
+				"Invalid password format. Password must be at least 9 characters long, include 1 capital letter, and 1 number."
 		});
 	}
 
 	next();
-};
-
-// Middleware for pagination
-const idValidator = (req, res, next) => {
-	const { value, error } = idSchema.validate({id: req.query.id});
-
-	if (error) {
-		return res.status(400).json({ message: error.details[0].message });
-	}
-
-	req.query.id = value.id;
-	next();
-};
-
-const tableValidator = (schema, queryName) => {
-	return (req, res, next) => {
-		const { value, error } = schema.validate(req.query[queryName]);
-
-		if (error) {
-			return res.status(400).json({ message: error.details[0].message });
-		}
-
-		req.query[queryName] = value;
-		next();
-	};
 };
 
 const getAllRoutes = (app) => {
@@ -747,7 +766,7 @@ app.get("/api/users/id", idValidator, async (req, res) => {
 });
 
 // Signing up
-app.post("/api/users/signup", checkRegex, userValidator(userSchema), userFieldsValidator, async (req, res) => {
+app.post("/api/users/signup", userValidator(userSchema), userFieldsValidator, async (req, res) => {
 	console.log("API user signup accessed");
 
 	const { formFields } = req.body;
@@ -894,7 +913,7 @@ app.get("/api/profile/refresh", authenticateSession, async (req, res) => {
 });
 
 // Update own user credentials
-app.patch( "/api/profile", authenticateSession, checkRegex, userValidator(userUpdateSchema), userFieldsValidator, profileImgUpload.single("profileImage"), async (req, res) => {
+app.patch( "/api/profile", authenticateSession, userValidator(userUpdateSchema), userFieldsValidator, profileImgUpload.single("profileImage"), async (req, res) => {
 		console.log("API update own credentials accessed");
 		console.log(req.user);
 		const userId = req.user.UserID;
@@ -971,13 +990,14 @@ app.patch( "/api/profile", authenticateSession, checkRegex, userValidator(userUp
 );
 
 // Route for viewing parts
-app.get("/api/part", routePagination, tableValidator(partNameSchema, "partName"), partSearch, async (req, res) => {
+app.get("/api/part", routePagination, tableValidator(partNameSchema, "partName"), tableSearch(), async (req, res) => {
 	console.log("API parts accessed");
 
 	const partName = req.query.partName; // Get the table name from the query
 	const { items, offset } = req.pagination;
 	const searchTerms = req.searchTerms;
 	let sql;
+	let notOperator = "";
 	let sqlParams = [];
 
 	let searchQuery = " WHERE 1=1";
@@ -996,18 +1016,22 @@ app.get("/api/part", routePagination, tableValidator(partNameSchema, "partName")
 		searchQuery += " AND Price BETWEEN ? AND ?";
 		sqlParams.push(minPrice, maxPrice);
 	}
+	
+	if (searchTerms.inverted) {
+		notOperator = searchTerms.strict === true ? "!=" : "NOT ";
+	}
 
-	const ignoreColumns = ["strict", "priceMin", "priceMax", "priceRange"];
+	const ignoreColumns = ["strict", "priceMin", "priceMax", "priceRange", "inverted"];
 	if (searchTerms.priceMin || searchTerms.priceMax || searchTerms.priceRange) {
 		ignoreColumns.push("price");
 	}
 	for (let [column, value] of Object.entries(searchTerms)) {
 		if (!ignoreColumns.includes(column)) {
 			if (searchTerms.strict && searchTerms.strict === true) {
-				searchQuery += ` AND ${column} = ?`;
+				searchQuery += ` AND ${column} ${notOperator}= ?`;
 			} else {
 				value = `%${value}%`;
-				searchQuery += ` AND ${column} LIKE ?`;
+				searchQuery += ` AND ${column} ${notOperator}LIKE ?`;
 			}
 			sqlParams.push(value); // Push values to sqlParams array
 		}
@@ -1054,14 +1078,74 @@ app.get("/api/part/id", tableValidator(partNameSchema, "partName"), idValidator,
 });
 
 // Route for viewing inventory
-app.get("/api/inventory", routePagination, async (req, res) => {
+app.get("/api/inventory", routePagination, tableSearch("inventory"), async (req, res) => {
 	console.log("API inventory accessed");
 
 	const { items, offset } = req.pagination;
+	const searchTerms = req.searchTerms;
+	let sql;
+	let notOperator = "";
+	let sqlParams = [];
 
-	const sql = "SELECT * FROM part_inventory LIMIT ? OFFSET ?";
+	let searchQuery = " WHERE 1=1";
+
+	if (searchTerms.priceMin) {
+		searchQuery += " AND Price >= ?";
+		sqlParams.push(searchTerms.priceMin);
+	}
+
+	if (searchTerms.priceMax) {
+		searchQuery += " AND Price <= ?";
+		sqlParams.push(searchTerms.priceMax);
+	}
+
+	if (searchTerms.priceRange) {
+		const [minPrice, maxPrice] = searchTerms.priceRange.split("-");
+		searchQuery += " AND Price BETWEEN ? AND ?";
+		sqlParams.push(minPrice, maxPrice);
+	}
+
+	if (searchTerms.availableMin) {
+		searchQuery += " AND Available >= ?";
+		sqlParams.push(searchTerms.availableMin);
+	}
+
+	if (searchTerms.availableMax) {
+		searchQuery += " AND Available <= ?";
+		sqlParams.push(searchTerms.availableMax);
+	}
+
+	if (searchTerms.availableRange) {
+		const [minAvailable, maxAvailable] = searchTerms.availableRange.split("-");
+		searchQuery += " AND Available BETWEEN ? AND ?";
+		sqlParams.push(minAvailable, maxAvailable);
+	}
+
+	if (searchTerms.inverted) {
+		notOperator = searchTerms.strict === true ? "!=" : "NOT ";
+	}
+
+	const ignoreColumns = ["strict", "priceMin", "priceMax", "priceRange", "inverted", "availableMin", "availableMax", "availableRange"];
+	if (searchTerms.priceMin || searchTerms.priceMax || searchTerms.priceRange) {
+		ignoreColumns.push("price");
+	}
+	for (let [column, value] of Object.entries(searchTerms)) {
+		if (!ignoreColumns.includes(column)) {
+			if (searchTerms.strict && searchTerms.strict === true) {
+				searchQuery += ` AND ${column} ${notOperator}= ?`;
+			} else {
+				value = `%${value}%`;
+				searchQuery += ` AND ${column} ${notOperator}LIKE ?`;
+			}
+			sqlParams.push(value); // Push values to sqlParams array
+		}
+	}
+
+	sql = `SELECT * FROM part_inventory ${searchQuery} LIMIT ? OFFSET ?`;
+	sqlParams.push(items, offset); // Push pagination params after search params
+
 	try {
-		const [partInventory] = await promisePool.query(sql, [items, offset]);
+		const [partInventory] = await promisePool.query(sql, sqlParams);
 
 		// AdditionalDetails needs to be parsed
 		const parseInventory = partInventory.map((item) => ({
