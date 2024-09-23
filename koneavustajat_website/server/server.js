@@ -555,7 +555,6 @@ const userValidator = (schema) => {
 	};
 };
 
-
 const userFieldsValidator = (req, res, next) => {
 	let { formFields } = req.body;
 
@@ -705,6 +704,33 @@ app.get("/api/count", routePagination, tableValidator(tableNameSchema, "tableNam
 	} catch (error) {
 		console.error(error);
 		return res.status(500).json({ message: "Internal Server Error", details: error.message });
+	}
+});
+
+app.get("/api/routes", async (req, res) => {
+	console.log("API routes accessed");
+	const getRoutesArray = [];
+	const postRoutesArray = [];
+	const otherRoutesArray = [];
+	try {
+		const routes = getAllRoutes(app);
+
+		for (const route of routes) {
+			if (route.method === "GET") {
+				getRoutesArray.push(route);
+			} else if (route.method === "POST") {
+				postRoutesArray.push(route);
+			} else {
+				otherRoutesArray.push(route);
+			}
+		}
+
+		const routeObj = { getRoutes: getRoutesArray, postRoutes: postRoutesArray, otherRoutes: otherRoutesArray };
+		return res.status(200).json(routeObj);
+	} catch (error) {
+		const message = error.response ? error.response.data : "Internal Server Error";
+		const status = error.response ? error.response.status : 500;
+		return res.status(status).json({ message: message });
 	}
 });
 
