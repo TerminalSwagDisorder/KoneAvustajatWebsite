@@ -3,6 +3,7 @@
 // Desc: File containing code for api functionality
 
 import React, { useEffect, useState, createContext, useContext } from "react";
+import { checkAllowedTableNames, checkAllowedPartNames, checkSearchTerms, buildQuery } from "./helpers";
 import "../style/style.scss";
 
 
@@ -63,20 +64,20 @@ export const fetchUsers = async (page) => {
 
 // Fetch different types of data from pages
 export const fetchDynamicData = async (page, tableName, partName) => {
-	// Only allow the specified tableNames
-	const allowedTableNames = ["other/users", "users", "part", "inventory"]
-	if (!tableName || !allowedTableNames.includes(tableName) || tableName === "") {
-		console.error(`tableName "${tableName}" is not allowed!`)
-		throw new Error(`tableName "${tableName}" is not allowed!`)
-	}
-	const allowedPartNames = ["chassis", "cpu", "cpu_cooler", "gpu", "memory", "motherboard", "psu", "storage"];
-	if (partName && (!allowedPartNames.includes(partName) || partName === "")) {
-		console.error(`partName "${partName}" is not allowed!`);
-		throw new Error(`partName "${partName}" is not allowed!`);
-	}
-
 	try {
-		const response = await fetch(`http://localhost:4000/api/${tableName}?partName=${partName}&page=${page}&items=50`, {
+		await checkAllowedTableNames(["getroutes"], tableName);
+		
+		if (partName) {
+			await checkAllowedPartNames(partName);
+		} else {
+			console.log("partName has no value. This might be intentional, but double check to be sure.");
+		}
+
+		const correctSearchTerms = await checkSearchTerms({page: page, partName: partName});
+
+		const query = await buildQuery(correctSearchTerms, true);
+		
+		const response = await fetch(`http://localhost:4000/api/${tableName}?${query}`, {
 			method: "GET",
 			credentials: "include", // Important, because we're using cookies
 		});
@@ -100,16 +101,14 @@ export const fetchDynamicData = async (page, tableName, partName) => {
 
 
 // Search function for users/otherusers
-export const fetchSearchData = async (searchTerm, tableName) => {
-	// Only allow the specified tableNames
-	const allowedTableNames = ["other/users", "users", "part"]
-	if (!allowedTableNames.includes(tableName) || tableName === "") {
-		console.error(`tableName "${tableName}" is not allowed!`)
-		throw new Error(`tableName "${tableName}" is not allowed!`)
-	}
-	console.log(searchTerm)
+export const fetchSearchData = async (searchTerms, tableName) => {
 	try {
-		const response = await fetch(`http://localhost:4000/api/${tableName}/search?email=${searchTerm}`, {
+		await checkAllowedTableNames(["getroutes"], tableName);
+		const correctSearchTerms = await checkSearchTerms(searchTerms);
+		
+		const query = await buildQuery(correctSearchTerms, false);
+
+		const response = await fetch(`http://localhost:4000/api/${tableName}/search?${query}`, {
 			method: "GET",
 			credentials: "include", // Important, because we're using cookies
 		});
@@ -133,22 +132,16 @@ export const fetchSearchData = async (searchTerm, tableName) => {
 
 
 // Search function for users/otherusers using id
-export const fetchSearchIdData = async (ID, tableName, partName) => {
-	console.log(ID, tableName)
-	// Only allow the specified tableNames
-	const allowedTableNames = ["other/users", "users", "part/id"]
-	if (!allowedTableNames.includes(tableName) || tableName === "") {
-		console.error(`tableName "${tableName}" is not allowed!`)
-		throw new Error(`tableName "${tableName}" is not allowed!`)
-	}
-	const allowedPartNames = ["chassis", "cpu", "cpu_cooler", "gpu", "memory", "motherboard", "psu", "storage"];
-	if (!allowedPartNames.includes(partName) || partName === "") {
-		console.error(`partName "${partName}" is not allowed!`);
-		throw new Error(`partName "${partName}" is not allowed!`);
-	}
-
+export const fetchSearchIdData = async (id, tableName, partName) => {
+	console.log(id, tableName);
 	try {
-		const response = await fetch(`http://localhost:4000/api/${tableName}?partName=${partName}&id=${ID}`, {
+		await checkAllowedTableNames(["getroutes"], tableName);
+		await checkAllowedPartNames(partName);
+		
+		const correctSearchTerms = await checkSearchTerms([partName, id]);
+		const query = await buildQuery(correctSearchTerms, true);
+		
+		const response = await fetch(`http://localhost:4000/api/${tableName}?${query}`, {
 			method: "GET",
 			credentials: "include", // Important, because we're using cookies
 		});
@@ -174,8 +167,13 @@ export const fetchSearchIdData = async (ID, tableName, partName) => {
 
 // For pagination
 export const fetchDataAmount = async (tableName) => {
-	try {	
-		const response = await fetch(`http://localhost:4000/api/count?tableName=${tableName}&items=50`, {
+	try {
+		await checkAllowedPartNames(tableName);
+
+		const correctSearchTerms = await checkSearchTerms(tableName);
+		const query = await buildQuery(correctSearchTerms, true);
+
+		const response = await fetch(`http://localhost:4000/api/count?${query}`, {
 			method: "GET",
 			credentials: "include", // Important, because we're using cookies
 		});
@@ -193,7 +191,25 @@ export const fetchDataAmount = async (tableName) => {
     
 };
 
+export const fetchServerRoutes = async () => {
+	try {	
+		const response = await fetch("http://localhost:4000/api/routes", {
+			method: "GET",
+			credentials: "include", // Important, because we're using cookies
+		});
 
+        if (!response.ok) {
+			alert(`HTTP error ${response.status}: ${response.message}`);
+            throw new Error(`HTTP error ${response.status}: ${response.message}`);
+        }
+
+		const routes = await response.json();
+		return routes;
+	} catch (error) {
+		console.error("Error while getting pagination:", error);
+	}
+    
+};
 
 // Do all of the user data handling async
 // Signin
