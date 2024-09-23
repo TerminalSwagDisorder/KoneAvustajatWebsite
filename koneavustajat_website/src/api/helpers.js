@@ -109,7 +109,7 @@ export const buildQuery = async (correctSearchTerms, itemsBool, page = null) => 
     }
 
     if (typeof itemsBool !== "boolean") {
-        throw new Error(`Invalid function parameter 2. Expected a boolean but received: ${typeof correctSearchTerms}`);
+        throw new Error(`Invalid function parameter 2. Expected a boolean but received: ${typeof itemsBool}`);
     }
 
     const params = new URLSearchParams();

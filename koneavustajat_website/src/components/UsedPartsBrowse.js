@@ -3,7 +3,7 @@ import { Link } from 'react-router-dom';
 import { Button, Container, Table, Form } from 'react-bootstrap';
 import { useSelector, useDispatch } from "react-redux";
 import { addToShoppingCart, removeFromShoppingCart, clearShoppingCart } from "../redux/shoppingCartSlice";
-import { addToWizard, removeFromWizard, clearWizard } from "../redux/wizardSlice";
+import { addToCompletedBuild, removeFromCompletedBuild, clearCompletedBuild } from "../redux/wizardSlice";
 
 const UsedPartsBrowse = ({ fetchDynamicData, fetchDataAmount }) => {
 	const [parts, setParts] = useState([]);
@@ -14,7 +14,7 @@ const UsedPartsBrowse = ({ fetchDynamicData, fetchDataAmount }) => {
 	const [page, setPage] = useState(1);
 	const [selectedPart, setSelectedPart] = useState("");
 	const shoppingCart = useSelector((state) => state.shoppingCart.shoppingCart);
-	const wizard = useSelector((state) => state.wizard.wizard);
+	const completedBuild = useSelector((state) => state.wizard.completedBuild);
 	const dispatch = useDispatch();
 
 	const partTypeMapping = {
@@ -61,12 +61,12 @@ const UsedPartsBrowse = ({ fetchDynamicData, fetchDataAmount }) => {
 		dispatch(addToShoppingCart(newItem));
 	};
 
-	const handleAddToWizard = (item) => {
+	const handleAddToCompletedBuild = (item) => {
 		const newItem = {
 			...item,
 			table: "usedParts",
 		};
-		dispatch(addToWizard(newItem));
+		dispatch(addToCompletedBuild(newItem));
 	};
 
 	const handlePagination = async () => {
@@ -171,8 +171,8 @@ const UsedPartsBrowse = ({ fetchDynamicData, fetchDataAmount }) => {
 								<Button className="user-select-button" onClick={() => handleAddToCart(part)}>
 									Add to Cart
 								</Button>
-								<Button className="user-select-button" onClick={() => handleAddToWizard(part)}>
-									Add to Wizard
+								<Button className="user-select-button" onClick={() => handleAddToCompletedBuild(part)}>
+									Add to Build
 								</Button>
 							</td>
 						</tr>
