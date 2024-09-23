@@ -525,7 +525,6 @@ const tableSearch = (searchContext = "cpu") => { // Default value if not defined
 					return res.status(400).json({ message: value.error });
 				}
 				searchTerms[term] = value;
-				console.log(searchTerms);
 			}
 		}
 
@@ -1171,9 +1170,7 @@ app.get("/api/inventory", routePagination, tableSearch("inventory"), async (req,
 
 	sql = `SELECT * FROM part_inventory ${searchQuery} LIMIT ? OFFSET ?`;
 	sqlParams.push(items, offset); // Push pagination params after search params
-	console.log(sql);
-	console.log(sqlParams);
-	console.log(searchQuery);
+
 	try {
 		const [partInventory] = await promisePool.query(sql, sqlParams);
 
