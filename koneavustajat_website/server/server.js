@@ -404,6 +404,8 @@ const inventorySchema = Joi.object({
 	availablemax: Joi.number().optional(),
 	name: Joi.string().trim().optional(),
 	manufacturer: Joi.string().trim().optional(),
+	strict: Joi.boolean().optional(),
+	inverted: Joi.boolean().optional()
 
 });
 
@@ -1044,7 +1046,7 @@ app.get("/api/part", routePagination, tableValidator(partNameSchema, "partName")
 	}
 	
 	if (searchTerms.inverted) {
-		notOperator = searchTerms.strict === true ? "!=" : "NOT ";
+		notOperator = searchTerms.strict === true ? "!" : "NOT ";
 	}
 
 	const ignoreColumns = ["strict", "priceMin", "priceMax", "priceRange", "inverted"];
@@ -1148,7 +1150,7 @@ app.get("/api/inventory", routePagination, tableSearch("inventory"), async (req,
 	}
 
 	if (searchTerms.inverted) {
-		notOperator = searchTerms.strict === true ? "!=" : "NOT ";
+		notOperator = searchTerms.strict === true ? "!" : "NOT ";
 	}
 
 	const ignoreColumns = ["strict", "priceMin", "priceMax", "priceRange", "inverted", "availableMin", "availableMax", "availableRange"];
@@ -1169,7 +1171,9 @@ app.get("/api/inventory", routePagination, tableSearch("inventory"), async (req,
 
 	sql = `SELECT * FROM part_inventory ${searchQuery} LIMIT ? OFFSET ?`;
 	sqlParams.push(items, offset); // Push pagination params after search params
-
+	console.log(sql);
+	console.log(sqlParams);
+	console.log(searchQuery);
 	try {
 		const [partInventory] = await promisePool.query(sql, sqlParams);
 
