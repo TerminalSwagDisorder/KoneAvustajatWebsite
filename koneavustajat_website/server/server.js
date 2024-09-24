@@ -1429,6 +1429,8 @@ app.get("/api/algorithm", async (req, res) => {
 	 
 if i were to do a combination of fuzzy searching (fuse.js) (i feel like searching the database like this would be beneficial), constraints (dont exceed price), scoring (if usecase is gaming, weigh gpu higher), rulesets (if performancepreference is gpu, make sure it is higher end/allocate more buget to it or something similar), hierarchy (constraints -> rulesets -> scoring) (for example price is 1000€, perfprec is cpu, usecase is gaming (where the weighing/hierarchy would go like this: gpu -> cpu -> ram -> ssd etc), so due to the hierarchy, allocate more buget to the cpu, but still see that some amount is left for the gpu). Im also considering on when choosing the appropriate parts, if there should be a set of them, within similar weighing, and one would be chosen by random (if there is only one within an acceptable weigh range then that one is chosen by default). Also, if there are no preferences (price is always mandatory though), how it should be weighed, and would the weighing be changed based on price (for example, at very low prices a gpu could be omitted for an igpu, but after a threshold it becomes mandatory (unless user sets preferences against it). How does this sound?
 	 
+
+Also add the wizard object plus any completed build to the database (i guess in "wizardSettings" and "completedBuilds" tables)
 	  */
 
 	return res.status(200).json({message: "This will be the wizard algorithm"});
