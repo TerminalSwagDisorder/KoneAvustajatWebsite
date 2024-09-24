@@ -32,6 +32,18 @@ export const ThemeProvider = ({ children }) => {
     );
 };
 
+export const wizardAlgorithm = async (wizard) => {
+	console.log("This will be used for the wizard algorithm");
+	/*
+	const response = await fetch(`http://localhost:4000/api/algorithm`, {
+		method: "GET",
+		credentials: "include", // Important, because we're using cookies
+	});
+	 
+	 */
+	
+};
+
 
 // All of the user data handling
 // Fetch users using pagination
