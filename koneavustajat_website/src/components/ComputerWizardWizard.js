@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from "react";
+import { useSelector, useDispatch } from "react-redux";
 import { addToWizard, removeFromWizard, clearWizard } from "../redux/wizardSlice";
-import { Form, Button, InputGroup, Dropdown, DropdownButton, Container, Row, Col } from "react-bootstrap";
+import { Form, Button, InputGroup, Dropdown, DropdownButton, Container, Row, Col, Image, CloseButton, ListGroup } from "react-bootstrap";
 
 const ComputerWizardWizard = () => {
 	const [currentOperation, setCurrentOperation] = useState("wizard");
@@ -18,6 +19,38 @@ const ComputerWizardWizard = () => {
 		storageBias: "noPreference",
 		additionalStorage: "noPreference"
 	});
+
+    const wizard = useSelector((state) => state.wizard.wizard);
+    const dispatch = useDispatch();
+
+    const wizardItems = Object.values(wizard);
+    const wizardEntries = Object.entries(wizard);
+	console.log(wizardItems);
+	console.log(wizardEntries);
+
+    const totalPrice = wizardItems.reduce((acc, item) => {
+        return acc + (parseFloat(item.Price) || 0);
+    }, 0).toFixed(2);
+
+	const handleAddToWizard = (formFields) => {
+        if (formFields) {
+            const newItem = {
+                ...formFields,
+                table: "wizard",
+            };
+            dispatch(addToWizard(newItem));
+        } else {
+            console.error("Unable to add to wizard!");
+        }
+	};
+	
+    const handleRemoveFromWizard = (itemId) => {
+        dispatch(removeFromWizard(itemId));
+    };
+
+    const handleClearWizard= () => {
+        dispatch(clearWizard());
+    };
 
 	const closeForm = () => {
 		setCurrentOperation("");
@@ -52,12 +85,50 @@ const ComputerWizardWizard = () => {
 		}
 
 		try {
+			handleAddToWizard(formFields);
 			console.log(formFields);
 		} catch (error) {
 			console.error("Error updating credentials:", error);
 			alert("Error updating credentials.");
 		}
 	};
+	
+	const clearWizardButton = () => {
+		if (wizardEntries && wizardEntries.length > 0) {
+			return (
+				<Button onClick={() => handleClearWizard()}>Clear</Button>
+			)
+			
+		}
+	}
+
+    const renderWizardItems = () => {
+    	if (wizardEntries && wizardEntries.length > 0) {
+    		return (
+    			<ListGroup className="wizard-details">
+    				<h3>Wizard build</h3>
+    				{wizardEntries.map(([wizardKey, wizardVal]) => (
+    					<ListGroup.Item key={wizardKey}>
+    						<p>
+    							{Object.keys(wizardVal).map((key, idx) =>
+									key !== "table" && (
+										<ListGroup.Item key={key}>
+											{key}: {wizardVal[key] || "None"}
+										</ListGroup.Item>
+									)
+    							)}
+    							<Button
+    								className="user-select-button"
+    								onClick={() => handleRemoveFromWizard(wizardKey)}>
+    								<span>Remove</span>
+    							</Button>
+    						</p>
+    					</ListGroup.Item>
+    				))}
+    			</ListGroup>
+    		);
+    	}
+    };
 
 	const renderAdvancedButton = () => {
 		if (currentOperation === "wizardAdvanced") {
@@ -314,7 +385,13 @@ const ComputerWizardWizard = () => {
 		}
 	};
 
-	return <div>{renderComputerWizard()}</div>;
+	return (
+		<div>
+			{clearWizardButton()}
+			{renderComputerWizard()}
+			{renderWizardItems()}
+		</div>
+	);
 };
 
 export default ComputerWizardWizard;

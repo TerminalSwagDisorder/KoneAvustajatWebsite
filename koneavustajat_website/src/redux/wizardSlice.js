@@ -9,7 +9,6 @@ const initialState = {
 const checkTable = (newItem, oldItem) => {
 	let oldPartTable = oldItem.table;
 	let newPartTable = newItem.table;
-	console.log(oldPartTable, newPartTable);
 
 	const partTypeMapping = {
 		1: "chassis",
@@ -76,7 +75,7 @@ const wizardSlice = createSlice({
 	reducers: {
 		addToWizard: (state, action) => {
 			const item = action.payload;
-			const CID = mapCID(item);
+			const CID = "wizard";
 			if (state.wizard[CID]) {
 				const sameTable = checkTable(item, state.wizard[CID]);
 				if (sameTable) {
