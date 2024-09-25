@@ -11,8 +11,10 @@ const bcrypt = require("bcrypt");
 const fs = require("fs");
 const cookieParser = require("cookie-parser");
 const multer = require("multer");
+const axios = require("axios");
 const { check, validationResult } = require("express-validator");
 const Joi = require("joi");
+const { Client } = require('@opensearch-project/opensearch');
 
 // User authentication exports
 const jwt = require("jsonwebtoken");
@@ -28,12 +30,17 @@ require("dotenv").config();
 // Also jwt secret for possible jwt
 const sessionSecret = process.env.SESSION_SECRET;
 const jwtSecret = process.env.JWT_SECRET;
+const opensearch = process.env.OPENSEARCH_URL;
 if (!sessionSecret) {
 	console.error("Missing SESSION_SECRET environment variable. Exiting...\nHave you run env_generator.js yet?");
 	process.exit(1);
 }
 if (!jwtSecret) {
 	console.error("Missing JWT_SECRET environment variable. Exiting...\nHave you run env_generator.js yet?");
+	process.exit(1);
+}
+if (!opensearch) {
+	console.error("Missing OPENSEARCH_URL environment variable. Exiting...\nHave you run env_generator.js yet?");
 	process.exit(1);
 }
 
@@ -72,6 +79,8 @@ app.use(
 		crossOriginEmbedderPolicy: false
 	})
 );
+
+const client = new Client({ node: process.env.OPENSEARCH_URL });
 ////////////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////
@@ -158,6 +167,40 @@ const authenticateSession = (req, res, next) => {
 ////////////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////
+// Check the health status of the API
+const checkApiHealth = async () => {
+	let statusMessage;
+	try {
+		// Known good endpoint
+		const response = await axios.get(opensearch, { timeout: 5000 });
+
+		// If successful
+		statusMessage = `Connection to API server established: {${response.statusText}: ${response.status}}`;
+		console.log(statusMessage);
+		
+		return { status: response.status, statusText: response.statusText, statusMessage };
+
+
+	} catch (error) {
+		// For different http errors
+		if (error.response) {
+			statusMessage = `Connection to API server established, but there was an error: {${error.response.statusText}: ${error.response.status}}`;
+		} else if (error.request) {
+			statusMessage = "Request was made, but got no response from API.\n-This might be because of the opensearch security plugin.\n--Make sure that its either configured correctly or disabled for development.";
+			// console.error(`Request was made, but got no response from API: ${error.request}`);
+		} else {
+			statusMessage = `Something went horribly wrong: ${error.message}`;
+		}
+
+		console.log(statusMessage);
+				
+		return { status: error.response ? error.response?.status : 500, statusText: error.response ? error.response?.statusText : "Internal Server Error", statusMessage };
+		//process.exit(1); // Exits the program if no connection could be established
+	}
+};
+
+checkApiHealth();
+
 // Middleware for profile images
 // File filter for image validation
 const imageFileFilter = (req, file, cb) => {
