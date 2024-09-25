@@ -68,8 +68,8 @@ app.use(
 	helmet({
 		contentSecurityPolicy: {
 			directives: {
-				defaultSrc: ["'self'", "http://localhost:8080", "http://localhost:3000"],
-				scriptSrc: ["'self'", "'unsafe-inline'", "http://localhost:3000"]
+				defaultSrc: ["'self'", "http://localhost:8080", "http://localhost:3000", opensearch],
+				scriptSrc: ["'self'", "'unsafe-inline'", "http://localhost:3000", opensearch]
 				// imgSrc: ["'self'", "data:"], // If we need image uploading
 			}
 		},
@@ -175,7 +175,7 @@ const checkApiHealth = async () => {
 		const response = await axios.get(opensearch, { timeout: 5000 });
 
 		// If successful
-		statusMessage = `Connection to API server established: {${response.statusText}: ${response.status}}`;
+		statusMessage = `Connection to the opensearch instance established: {${response.statusText}: ${response.status}}`;
 		console.log(statusMessage);
 		
 		return { status: response.status, statusText: response.statusText, statusMessage };
@@ -184,10 +184,9 @@ const checkApiHealth = async () => {
 	} catch (error) {
 		// For different http errors
 		if (error.response) {
-			statusMessage = `Connection to API server established, but there was an error: {${error.response.statusText}: ${error.response.status}}`;
+			statusMessage = `Connection to the opensearch instance established, but there was an error: {${error.response.statusText}: ${error.response.status}}`;
 		} else if (error.request) {
-			statusMessage = "Request was made, but got no response from API.\n-This might be because of the opensearch security plugin.\n--Make sure that its either configured correctly or disabled for development.";
-			// console.error(`Request was made, but got no response from API: ${error.request}`);
+			statusMessage = "Request was made, but got no response from the opensearch instance.\n-This might be because of the opensearch security plugin.\n--Make sure that its either configured correctly or disabled for development.";
 		} else {
 			statusMessage = `Something went horribly wrong: ${error.message}`;
 		}
@@ -725,6 +724,25 @@ app.get("/", async (req, res) => {
 ////////////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////
 // MySQL & Express session
+
+// Route to check connection to the opensearch instance
+app.get("/api/health", async (req, res) => {
+	console.log("API health accessed");
+	const response = await checkApiHealth();
+	try {
+		// Success message & status, with defaults
+		const message = response.statusMessage || response.statusText;
+        const status = response.status || 500;
+
+		return res.status(status).json({ message: message });
+	} catch (error) {
+		// Non-success message & status, with defaults
+		const message = error.response ? error.response?.data : "Internal Server Error";
+        const status = error.response ? error.response?.status : 500;
+        return res.status(status).json({ message: message });
+		
+	}
+});
 
 // Route for frontend pagination in MySQL
 app.get("/api/count", routePagination, tableValidator(tableNameSchema, "tableName"), async (req, res) => {
@@ -1468,12 +1486,37 @@ app.get("/api/users/customers/addresses/id", idValidator, async (req, res) => {
 
 app.get("/api/algorithm", async (req, res) => {
 	console.log("API algorithm accessed");
+	const exampleData = {
+		"price": "1200",
+		"useCase": "gaming",
+		"performancePreference": "maxGpu",
+		"formFactor": "medium",
+		"colorPreference": "black",
+		"otherColor": "",
+		"rgbPreference": "noRgb",
+		"cpuManufacturer": "amdPreference",
+		"gpuManufacturer": "nvidiaPreference",
+		"psuBias": "noPreference",
+		"storageBias": "onlySsd",
+		"additionalStorage": "noPreference",
+		"table": "wizard"
+	};
+	
 	/*
 	 
 if i were to do a combination of fuzzy searching (fuse.js) (i feel like searching the database like this would be beneficial), constraints (dont exceed price), scoring (if usecase is gaming, weigh gpu higher), rulesets (if performancepreference is gpu, make sure it is higher end/allocate more buget to it or something similar), hierarchy (constraints -> rulesets -> scoring) (for example price is 1000€, perfprec is cpu, usecase is gaming (where the weighing/hierarchy would go like this: gpu -> cpu -> ram -> ssd etc), so due to the hierarchy, allocate more buget to the cpu, but still see that some amount is left for the gpu). Im also considering on when choosing the appropriate parts, if there should be a set of them, within similar weighing, and one would be chosen by random (if there is only one within an acceptable weigh range then that one is chosen by default). Also, if there are no preferences (price is always mandatory though), how it should be weighed, and would the weighing be changed based on price (for example, at very low prices a gpu could be omitted for an igpu, but after a threshold it becomes mandatory (unless user sets preferences against it). How does this sound?
 	 
 
 Also add the wizard object plus any completed build to the database (i guess in "wizardSettings" and "completedBuilds" tables)
+
+current plan:
+	opensearch
+	axios
+	json-rules-engine
+	lodash
+	possible:
+		fusejs
+		mathjs
 	  */
 
 	return res.status(200).json({message: "This will be the wizard algorithm"});
