@@ -80,7 +80,16 @@ app.use(
 	})
 );
 
-const client = new Client({ node: process.env.OPENSEARCH_URL });
+// const client = new Client({ node: process.env.OPENSEARCH_URL });
+const client = new Client({
+    node: process.env.OPENSEARCH_URL, 
+    auth: {
+        username: "admin",
+        password: "Mhavurt123"
+    }
+});
+
+const PARTS_INDEX = 'computer_parts';
 ////////////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////
@@ -197,8 +206,6 @@ const checkApiHealth = async () => {
 		//process.exit(1); // Exits the program if no connection could be established
 	}
 };
-
-checkApiHealth();
 
 // Middleware for profile images
 // File filter for image validation
@@ -317,9 +324,56 @@ const partSchema = Joi.object({
 	inverted: Joi.boolean().optional()
 });
 
-
 const idSchema = Joi.object({
 	id: Joi.number().min(1).default(1),
+});
+
+const opensearchSchemaBasic = Joi.object({
+	method: Joi.string().trim().required().valid("create", "insert", "purge", "delete"),
+	amount: Joi.string().trim().optional().valid("all", "single"),
+	type: Joi.string().trim().optional().valid("index", "template", "data", "document"), 
+	part: Joi.string().trim().optional().valid("chassis", "cpu", "cpu_cooler", "gpu", "memory", "motherboard", "psu", "storage", "part_inventory"),
+	id: Joi.number().optional(),
+});
+
+const opensearchSchema = Joi.object({
+	method: Joi.string().trim().required().valid("create", "insert", "purge", "delete"),
+	amount: Joi.string()
+		.trim()
+		.optional()
+		.valid("all", "single")
+		.when("method", {
+			is: Joi.valid("insert", "delete"),
+			then: Joi.required()
+		}),
+	type: Joi.string()
+		.trim()
+		.optional()
+		.valid("index", "template", "data", "document")
+		.when("method", {
+			is: Joi.valid("create", "delete"),
+			then: Joi.required()
+		}),
+	part: Joi.string()
+		.trim()
+		.optional()
+		.valid("chassis", "cpu", "cpu_cooler", "gpu", "memory", "motherboard", "psu", "storage", "part_inventory")
+		.when("method", {
+			is: Joi.valid("insert", "delete"),
+			then: Joi.when("amount", {
+				is: Joi.valid("single"),
+				then: Joi.required()
+			})
+		}),
+	id: Joi.number()
+		.optional()
+		.when("method", {
+			is: "delete",
+			then: Joi.when("amount", {
+				is: Joi.valid("single"),
+				then: Joi.required()
+			})
+		})
 });
 
 const partNameSchema = Joi.string()
@@ -453,6 +507,14 @@ const inventorySchema = Joi.object({
 
 // Validators & searches
 const searchSanitization = (key, value, term) => {
+	if (value === undefined || value === null || value === "") {
+		return { error: `Search for '${term}' cannot be empty` };
+	}
+
+	key = key ? key.toLowerCase() : key;
+	value = value ? value.toLowerCase() : value;
+	term = term ? term.toLowerCase() : term;
+
 	const mappedColumnNames = {
 		chassis: [
 			"Chassis_type",
@@ -521,18 +583,21 @@ const searchSanitization = (key, value, term) => {
 			"availableRange",
 			"DateAdded",
 			"AdditionalDetails"
+		],
+		opensearch: [
+			"method",
+			"amount",
+			"type",
+			"part",
+			"id",
 		]
 
 	};
 
-
 	const universalPartColumns = ["ID", "Url", "Image", "Image_Url"];
 	const universalColumns = ["Price", "Name", "Manufacturer", "priceMin", "priceMax", "priceRange", "strict", "inverted"];
-	const tableTypeColumns = key !== "inventory" ? [...universalPartColumns, ...universalColumns] : universalColumns;
-
-	if (value === undefined || value === null || value === "") {
-		return { error: "Search cannot be empty" };
-	}
+	const combinedColumns = key !== "inventory" ? [...universalPartColumns, ...universalColumns] : universalColumns;
+	const tableTypeColumns = key !== "opensearch" ? combinedColumns : [];
 
 	const validColumns = mappedColumnNames[key] || [];
 	const allValidColumns = [...tableTypeColumns, ...validColumns];
@@ -541,27 +606,21 @@ const searchSanitization = (key, value, term) => {
 		return { error: `Search for '${term}' is not allowed in part '${key}'!` };
 	}
 	
-	try {
-		const currentSchema = key !== "inventory" ? partSchema : inventorySchema;
-		const validationResult = Joi.attempt({ [term]: value }, currentSchema);
-		return validationResult[term];
-	} catch (error) {
-		return { error: error.details[0].message };
-	}
+	return value;
+
 };
 
-const tableSearch = (searchContext = "cpu") => { // Default value if not defined
+const tableSearch = (searchContext = "cpu") => {
+	// Default value if not defined
 	return (req, res, next) => {
 		let searchTerms = {};
-		const partName = req.query.partName || searchContext;
-
+		const partName = req.query.partName ? req.query.partName : (req.query.partName = searchContext);
 		for (let term in req.query) {
 			const excludedParams = ["items", "page", "partName"];
 			if (!excludedParams.includes(term)) {
 				let value = req.query[term];
 
-				// Add more sanitization based on the search context
-				value = searchSanitization(partName.toLowerCase(), value.toLowerCase(), term.toLowerCase());
+				value = searchSanitization(partName, value, term);
 				if (value.error) {
 					console.error(value.error);
 					return res.status(400).json({ message: value.error });
@@ -569,10 +628,21 @@ const tableSearch = (searchContext = "cpu") => { // Default value if not defined
 				searchTerms[term] = value;
 			}
 		}
+		try {
+			let currentSchema = partSchema;
+			if (partName === "inventory") {
+				currentSchema = inventorySchema;
+			}
+			if (partName === "opensearch") {
+				currentSchema = opensearchSchema;
+			}
+			const validationResult = Joi.attempt(searchTerms, currentSchema);
 
-		// If successful, attach searchTerms to the req object to be used in the routes
-		req.searchTerms = searchTerms;
-		next();
+			req.searchTerms = validationResult;
+			next();
+		} catch (error) {
+			return res.status(400).json({ message: error.details[0].message });
+		}
 	};
 };
 
@@ -641,6 +711,7 @@ const tableValidator = (schema, queryName) => {
 	};
 };
 
+
 // Middleware for regex validation, kind of unnecessary with joi
 const checkRegex = (req, res, next) => {
 	const passwordRegex = /^(?=.*[A-Z])(?=.*\d)[A-Za-z\d]{9,}$/; // At least 1 upper character, at least 1 digit/number, at least 9 chars long
@@ -684,6 +755,296 @@ const getAllRoutes = (app) => {
 			};
 		});
 };
+
+
+// OpenSearch functions
+const indexPartData = async (partData) => {
+    try {
+        const response = await client.index({
+            index: PARTS_INDEX,
+            body: partData,
+        });
+        console.log('Part data indexed:', response);
+    } catch (error) {
+        console.error('Error indexing part data:', error);
+    }
+};
+
+const createPartIndex = async () => {
+	try {
+		const partTypes = ["chassis", "cpu", "cpu_cooler", "gpu", "memory", "motherboard", "psu", "storage", "part_inventory"];
+		const excludedParams = ["price", "name", "manufacturer", "id", "partid", "image", "image_url", "url", "additionaldetails", "dateadded"];
+		let sql;
+		for (const part of partTypes) {
+			const sql = `SELECT * FROM ${part} LIMIT 1`;
+			const [[data]] = await promisePool.query(sql);
+
+			let resObj = {
+				index: part,
+				body: {
+					settings: {
+						number_of_shards: 2,
+						number_of_replicas: 1,
+						analysis: {
+							analyzer: {
+								custom_analyzer: {
+									type: "custom",
+									char_filter: ["html_strip"],
+									tokenizer: "standard",
+									filter: ["lowercase", "stop"]
+								}
+							}
+						}
+					},
+					mappings: {
+						dynamic_templates: [
+							{
+								strings_with_custom_analyzer: {
+									match_mapping_type: "string",
+									mapping: {
+										type: "text",
+										analyzer: "custom_analyzer"
+									}
+								}
+							}
+						],
+						properties: {
+							price: { type: "float" },
+							name: {
+								type: "text",
+								analyzer: "custom_analyzer"
+							},
+							manufacturer: {
+								type: "text",
+								analyzer: "custom_analyzer",
+								fields: {
+									raw: { type: "keyword" }
+								}
+							}
+						}
+					}
+				}
+			};
+
+			for (const key in data) {
+				if (!excludedParams.includes(key.toLowerCase())) {
+					resObj.body.mappings.properties[key] = {
+						type: "text",
+						analyzer: "custom_analyzer"
+					};
+				}
+				if (key.toLowerCase() === "additionaldetails") {
+					resObj.body.mappings.properties[key] = {
+						type: "object",
+						enabled: true,
+						dynamic: "true"
+					};
+				}
+				if (key.toLowerCase() === "dateadded") {
+					resObj.body.mappings.properties[key] = {
+						type: "date",
+					};
+				}
+				if (key.toLowerCase() === "partid" || key.toLowerCase() === "id") {
+					resObj.body.mappings.properties.id = {
+						type: "integer",
+					};
+				}
+			}
+
+			const response = await client.indices.create({
+				index: resObj.index,
+				body: resObj.body
+			});
+
+			console.log(`${part} index created:`, response);
+		}
+	} catch (error) {
+		console.error(`Error creating index:`, error);
+	}
+};
+
+const createIndexTemplate = async () => {
+	try {
+		const response = await client.indices.putTemplate({
+			name: "parts_template",
+			body: {
+				order: 1,
+				index_patterns: ["chassis*", "cpu*", "cpu_cooler*", "gpu*", "memory*", "motherboard*", "psu*", "storage*"],
+				priority: 100,
+				settings: {
+					number_of_shards: 2,
+					number_of_replicas: 1,
+					analysis: {
+						analyzer: {
+							custom_analyzer: {
+								type: "custom",
+								char_filter: ["html_strip"],
+								tokenizer: "standard",
+								filter: ["lowercase", "stop"]
+							}
+						}
+					}
+				},
+				mappings: {
+					properties: {
+						ID: { type: "integer" },
+						price: { type: "float" },
+						name: {
+							type: "text",
+							analyzer: "custom_analyzer"
+						},
+						manufacturer: {
+							type: "text",
+							analyzer: "custom_analyzer",
+							fields: {
+								raw: { type: "keyword" }
+							}
+						}
+					}
+				}
+			}
+		});
+		console.log("Index template created:", response);
+	} catch (error) {
+		console.error("Error creating index template:", error);
+	}
+};
+
+
+const insertToPartIndex = async (items = 250) => {
+	try {
+		const partTypes = ["chassis", "cpu", "cpu_cooler", "gpu", "memory", "motherboard", "psu", "storage", "part_inventory"];
+
+		for (const part of partTypes) {
+			const countSql = `SELECT COUNT(*) AS total FROM ??`;
+			const [[{ total }]] = await promisePool.query(countSql, part);
+			const pages = Math.ceil(total / items);
+
+			for (let page = 0; page < pages; page++) {
+				const offset = page * items;
+
+				const sql = `SELECT * FROM ${part} LIMIT ? OFFSET ?`;
+				const [rows] = await promisePool.query(sql, [items, offset]);
+
+				const bulkBody = [];
+				for (const row of rows) {
+					if (row.AdditionalDetails && typeof row.AdditionalDetails !== "object") {
+						try {
+							row.AdditionalDetails = JSON.parse(row.AdditionalDetails);
+						} catch (err) {
+							console.error(`Error parsing JSON for ID ${row.ID}:`, error);
+							row.AdditionalDetails = {};						
+						}
+					}
+					
+					bulkBody.push({
+						index: {
+							_index: part,
+							_id: row.ID || row.PartID
+						}
+					});
+					bulkBody.push(row);
+				}
+
+				const response = await client.bulk({ refresh: true, body: bulkBody });
+
+				if (response.body.errors) {
+					const failedItems = response.body.items.filter(item => item.index && item.index.error);
+					console.error(`Errors occurred during bulk indexing for ${part}`, failedItems[0].index.error);
+					throw new Error(`This error has caused problems: ${failedItems[0].index.error}`);
+				} else {
+					console.log(`Data successfully indexed to the ${part} index`);
+				}
+			}
+		}
+	} catch (error) {
+		console.error("Error inserting data:", error);
+	}
+};
+
+
+const insertSingleToPartIndex = async (part, data) => {
+	try {
+		const partTypes = ["chassis", "cpu", "cpu_cooler", "gpu", "memory", "motherboard", "psu", "storage", "part_inventory"];
+		if (!partTypes.includes(part.toLowerCase())) {
+			throw new Error(`${part} is not a valid part name!`);
+		}
+
+		const response = await client.index({
+			index: part,
+			body: data
+		});
+		console.log(`Data added to index ${part}:`, response);
+	} catch (error) {
+		console.error(`Error adding data to index ${part}:`, error);
+	}
+};
+
+const purgePartIndices = async (confirmation) => {
+	try {
+		if (String(confirmation).toLowerCase() !== "true") {
+			throw new Error('Confirmation required: You must provide the value "true" to purge all part indices!');
+		}
+		
+		const partTypes = ["chassis", "cpu", "cpu_cooler", "gpu", "memory", "motherboard", "psu", "storage", "part_inventory"];
+		
+		const deletePromises = partTypes.map(async (part) => {
+			const response = await client.indices.delete({ index: part });
+			console.log(`${part} index deleted:`, response);
+			return response;
+		});
+
+		const results = await Promise.all(deletePromises);
+
+		console.log("All part indices have been purged.");
+	} catch (error) {
+		console.error(`Error deleting indices:`, error);
+	}
+};
+
+const deleteAllFromPartIndex = async (part) => {
+	try {
+		const partTypes = ["chassis", "cpu", "cpu_cooler", "gpu", "memory", "motherboard", "psu", "storage", "part_inventory"];
+		if (!partTypes.includes(part.toLowerCase())) {
+			throw new Error(`${part} is not a valid part name!`);
+		}
+
+		// Delete all data from index without deleting the index
+		const response = await client.delete_by_query({
+			index: part,
+			body: {
+				query: {
+					match_all: {} // This deletes all data in the index
+				}
+			}
+		});
+
+		console.log(`All data deleted from ${part} index:`, response);
+	} catch (error) {
+		console.error(`Error deleting data from index ${part}:`, error);
+	}
+};
+
+const deleteSingleFromPartIndex = async (part, dataId) => {
+	try {
+		const partTypes = ["chassis", "cpu", "cpu_cooler", "gpu", "memory", "motherboard", "psu", "storage", "part_inventory"];
+		if (!partTypes.includes(part.toLowerCase())) {
+			throw new Error(`${part} is not a valid part name!`);
+		}
+
+		const response = await client.delete({
+			index: part,
+			id: dataId
+		});
+
+		console.log(`Data with ID ${dataId} deleted from index ${part}:`, response);
+	} catch (error) {
+		console.error(`Error deleting data from index ${part}:`, error);
+	}
+};
+
+
 
 ////////////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////
@@ -790,6 +1151,117 @@ app.get("/api/routes", async (req, res) => {
 		const routeObj = { getRoutes: getRoutesArray, postRoutes: postRoutesArray, otherRoutes: otherRoutesArray };
 		return res.status(200).json(routeObj);
 	} catch (error) {
+		const message = error.response ? error.response.data : "Internal Server Error";
+		const status = error.response ? error.response.status : 500;
+		return res.status(status).json({ message: message });
+	}
+});
+
+app.get("/api/opensearch", tableSearch("opensearch"), async (req, res) => {
+	console.log("API opensearch accessed");
+/*
+	method: Joi.string().trim().required().valid("create", "insert", "purge", "delete"),
+	amount: Joi.string().trim().optional().valid("all", "single"),
+	type: Joi.string().trim().optional().valid("index", "template", "data", "document"), 
+	part: Joi.string().trim().optional().valid("chassis", "cpu", "cpu_cooler", "gpu", "memory", "motherboard", "psu", "storage", "part_inventory"),
+	id: Joi.number().optional(),
+	
+	const createIndices = await createPartIndex();
+	const createTemplate = await createIndexTemplate();
+	const insertAll = await insertToPartIndex();
+	const insertSingle = await insertSingleToPartIndex(part, data);
+	const purge = await purgePartIndices(true);
+	const deleteAll = await deleteAllFromPartIndex(part);
+	const deleteSingle = await deleteSingleFromPartIndex(part, id);
+
+const opensearchSchema2 = Joi.object({
+	method: Joi.string().trim().required().valid("create", "insert", "purge", "delete"),
+	amount: Joi.string().trim().optional().valid("all", "single").when('method', {
+		is: "insert",
+		then: Joi.required(),
+	}),
+	type: Joi.string().trim().optional().valid("index", "template", "data", "document").when('method', {
+		is: "create",
+		then: Joi.required(),
+	}),
+	part: Joi.string().trim().optional().valid("chassis", "cpu", "cpu_cooler", "gpu", "memory", "motherboard", "psu", "storage", "part_inventory").when('method', {
+		is: ["insert", "delete"],
+		then: Joi.required(),
+	}),
+	id: Joi.number().optional().when('method', {
+		is: "delete",
+		then: Joi.required(),
+	}),
+});
+
+ */
+
+	try {
+		const { method, amount, type, part, id } = req.searchTerms;
+
+		if (method === "create") {
+			if (type === "index") {
+				await createPartIndex();
+				console.log("createPartIndex");
+			}
+			if (type === "template") {
+				await createIndexTemplate();
+				console.log("createIndexTemplate");
+			}
+		}
+
+		if (method === "insert") {
+			if (amount === "all") {
+				await insertToPartIndex();
+				console.log("insertToPartIndex");
+			} 
+			if (amount === "single" && (type === "document" || type === "data")) {
+				if (!part || !data) {
+					console.log("Missing part or data for single document insertion.");
+				}
+				await insertSingleToPartIndex(part, data);
+				console.log("insertSingleToPartIndex");
+			}
+		}
+
+		if (method === "purge") {
+			await purgePartIndices("true");
+			console.log("purgePartIndices");
+		}
+
+		if (method === "delete") {
+			if (amount === "all" && type === "data") {
+				await deleteAllFromPartIndex(part);
+				console.log("deleteAllFromPartIndex");
+			}
+			if (amount === "single" && type === "document") {
+				if (!part || !id) {
+					console.log("Missing part or ID for single document deletion.");
+				}
+				await deleteSingleFromPartIndex(part, id);
+				console.log("deleteSingleFromPartIndex");
+			}
+		}
+
+
+		return res.status(200).json({ message: "Operation completed successfully." });
+	} catch (error) {
+		const message = error.response ? error.response.data : "Internal Server Error";
+		const status = error.response ? error.response.status : 500;
+		return res.status(status).json({ message: message });
+	}
+});
+
+app.get("/api/opensearch/view", async (req, res) => {
+	const viewQuery = req.query.type || "indices";
+	try {
+	const response2 = await axios.get(`${opensearch}${viewQuery}`, { timeout: 5000 });
+	const response = await client.cat.indices({ format: 'json' });
+
+	return res.status(200).json(response);
+	} catch (error) {
+		console.error(error);
+		// If there is a status message or data then use that, otherwise the defaults
 		const message = error.response ? error.response.data : "Internal Server Error";
 		const status = error.response ? error.response.status : 500;
 		return res.status(status).json({ message: message });
@@ -1528,4 +2000,5 @@ current plan:
 
 app.listen(port, () => {
 	console.log(`Server is running on port ${port}`);
+	checkApiHealth();
 });
