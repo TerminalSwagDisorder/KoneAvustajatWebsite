@@ -582,7 +582,7 @@ const searchSanitization = (key, value, term) => {
 			"availableMax",
 			"availableRange",
 			"DateAdded",
-			"AdditionalDetails"
+			"additionaldetails"
 		],
 		opensearch: [
 			"method",
@@ -828,26 +828,26 @@ const createPartIndex = async () => {
 
 			for (const key in data) {
 				if (!excludedParams.includes(key.toLowerCase())) {
-					resObj.body.mappings.properties[key] = {
+					resObj.body.mappings.properties[key.toLowerCase()] = {
 						type: "text",
 						analyzer: "custom_analyzer"
 					};
 				}
 				if (key.toLowerCase() === "additionaldetails") {
-					resObj.body.mappings.properties[key] = {
+					resObj.body.mappings.properties[key.toLowerCase()] = {
 						type: "object",
 						enabled: true,
 						dynamic: "true"
 					};
 				}
 				if (key.toLowerCase() === "dateadded") {
-					resObj.body.mappings.properties[key] = {
+					resObj.body.mappings.properties[key.toLowerCase()] = {
 						type: "date",
 					};
 				}
 				if (key.toLowerCase() === "partid" || key.toLowerCase() === "id") {
 					resObj.body.mappings.properties.id = {
-						type: "integer",
+						type: "long",
 					};
 				}
 			}
@@ -915,6 +915,7 @@ const createIndexTemplate = async () => {
 const insertToPartIndex = async (items = 250) => {
 	try {
 		const partTypes = ["chassis", "cpu", "cpu_cooler", "gpu", "memory", "motherboard", "psu", "storage", "part_inventory"];
+		const excludedParams = ["image", "image_url", "url"];
 
 		for (const part of partTypes) {
 			const countSql = `SELECT COUNT(*) AS total FROM ??`;
@@ -929,22 +930,28 @@ const insertToPartIndex = async (items = 250) => {
 
 				const bulkBody = [];
 				for (const row of rows) {
-					if (row.AdditionalDetails && typeof row.AdditionalDetails !== "object") {
+					const normalizedRow = {};
+					for (const key in row) {
+						if (!excludedParams.includes(key.toLowerCase())) {
+							normalizedRow[key.toLowerCase()] = row[key];
+						}
+					}
+					if (normalizedRow.additionaldetails && typeof normalizedRow.additionaldetails !== "object") {
 						try {
-							row.AdditionalDetails = JSON.parse(row.AdditionalDetails);
+							normalizedRow.additionaldetails = JSON.parse(normalizedRow.additionaldetails);
 						} catch (err) {
-							console.error(`Error parsing JSON for ID ${row.ID}:`, error);
-							row.AdditionalDetails = {};						
+							console.error(`Error parsing JSON for ID ${normalizedRow.id}:`, error);
+							normalizedRow.additionaldetails = {};						
 						}
 					}
 					
 					bulkBody.push({
 						index: {
 							_index: part,
-							_id: row.ID || row.PartID
+							_id: normalizedRow.id || normalizedRow.partid
 						}
 					});
-					bulkBody.push(row);
+					bulkBody.push(normalizedRow);
 				}
 
 				const response = await client.bulk({ refresh: true, body: bulkBody });
@@ -969,6 +976,11 @@ const insertSingleToPartIndex = async (part, data) => {
 		const partTypes = ["chassis", "cpu", "cpu_cooler", "gpu", "memory", "motherboard", "psu", "storage", "part_inventory"];
 		if (!partTypes.includes(part.toLowerCase())) {
 			throw new Error(`${part} is not a valid part name!`);
+		}
+
+		const normalizedRow = {};
+		for (const key in data) {
+			normalizedRow[key.toLowerCase()] = data[key];
 		}
 
 		const response = await client.index({
@@ -1044,7 +1056,112 @@ const deleteSingleFromPartIndex = async (part, dataId) => {
 	}
 };
 
+const viewDataInIndex = async (index) => {
+	try {
+		const response = await client.search({
+			index: index,
+			body: {
+				size: 1,
+				query: {
+					match_all: {}
+				}
+			}
+		});
+		console.log("Data in index:", response.body.hits.hits.length);
+		return response.body.hits.hits;
+	} catch (error) {
+		console.error("Error viewing data:", error);
+	}
+};
+const searchInIndex = async (index, query) => {
+	try {
+		const response = await client.search({
+			index,
+			body: {
+				query: {
+					match: query
+				}
+			}
+		});
+		/*
+			{
+				// Searches across multiple fields using a single query
+				multi_match: {
+					query: "Ryzen",
+					fields: ["name", "manufacturer"]
+			  	}
+			}
 
+
+			body: {
+				query: {
+					bool: {
+						must: [
+							{ match: { name: query } }, // Fuzzy search
+							{ range: { price: { lte: maxPrice } } } // Price range
+						]
+					}
+				}
+			},
+			body: {
+				query: {
+					bool: {
+						should: [
+						  { fuzzy: { name: { value: query, fuzziness: "AUTO" } } },  // Fuzzy match on the name field
+						  { fuzzy: { manufacturer: { value: query, fuzziness: "AUTO" } } }  // Fuzzy match on the manufacturer field
+						]
+					}
+				}
+			}
+		});
+ */
+		console.log(response);
+		return response;
+	} catch (error) {
+		console.error("Error during search:", error);
+	}
+};
+
+const searchWithFilters = async (index) => {
+	try {
+		const response = await client.search({
+			index,
+			body: {
+				query: {
+					bool: {
+						must: [
+							{ match: { manufacturer: "AMD" } },
+							{ range: { price: { gte: 100, lte: 500 } } }
+						]
+					}
+				}
+			}
+		});
+		console.log(response.hits.hits);
+		return response.hits.hits;
+	} catch (error) {
+		console.error("Error during filtered search:", error);
+	}
+};
+
+const fullTextSearch = async (index, searchTerm) => {
+	try {
+		const response = await client.search({
+			index,
+			body: {
+				query: {
+					match: {
+						description: searchTerm
+					}
+				}
+			}
+		});
+		console.log(response.hits.hits);
+		return response.hits.hits;
+	} catch (error) {
+		console.error("Error during full-text search:", error);
+	}
+};
 
 ////////////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////
@@ -1198,53 +1315,54 @@ const opensearchSchema2 = Joi.object({
 
 	try {
 		const { method, amount, type, part, id } = req.searchTerms;
+		let operation = "Failed to run any operation!";
 
 		if (method === "create") {
 			if (type === "index") {
 				await createPartIndex();
-				console.log("createPartIndex");
+				operation = "createPartIndex completed successfully";
 			}
 			if (type === "template") {
 				await createIndexTemplate();
-				console.log("createIndexTemplate");
+				operation = "createIndexTemplate completed successfully";
 			}
 		}
 
 		if (method === "insert") {
 			if (amount === "all") {
 				await insertToPartIndex();
-				console.log("insertToPartIndex");
+				operation = "insertToPartIndex completed successfully";
 			} 
 			if (amount === "single" && (type === "document" || type === "data")) {
 				if (!part || !data) {
 					console.log("Missing part or data for single document insertion.");
 				}
 				await insertSingleToPartIndex(part, data);
-				console.log("insertSingleToPartIndex");
+				operation = `insertSingleToPartIndex with ${part} and ${data} completed successfully`;
 			}
 		}
 
 		if (method === "purge") {
 			await purgePartIndices("true");
-			console.log("purgePartIndices");
+			operation = "Ran purgePartIndices";
 		}
 
 		if (method === "delete") {
 			if (amount === "all" && type === "data") {
 				await deleteAllFromPartIndex(part);
-				console.log("deleteAllFromPartIndex");
+				operation = `deleteAllFromPartIndex with ${part} completed successfully`;
 			}
 			if (amount === "single" && type === "document") {
 				if (!part || !id) {
 					console.log("Missing part or ID for single document deletion.");
 				}
 				await deleteSingleFromPartIndex(part, id);
-				console.log("deleteSingleFromPartIndex");
+				operation = `deleteSingleFromPartIndex with ${part} and ${id} completed successfully`;
 			}
 		}
 
 
-		return res.status(200).json({ message: "Operation completed successfully." });
+		return res.status(200).json({ message: operation });
 	} catch (error) {
 		const message = error.response ? error.response.data : "Internal Server Error";
 		const status = error.response ? error.response.status : 500;
@@ -1255,8 +1373,25 @@ const opensearchSchema2 = Joi.object({
 app.get("/api/opensearch/view", async (req, res) => {
 	const viewQuery = req.query.type || "indices";
 	try {
-	const response2 = await axios.get(`${opensearch}${viewQuery}`, { timeout: 5000 });
-	const response = await client.cat.indices({ format: 'json' });
+	// const response2 = await axios.get(`${opensearch}/${viewQuery}`, { timeout: 5000 });
+	const response = await client.cat[viewQuery]({ format: 'json' });
+
+	return res.status(200).json(response);
+	} catch (error) {
+		console.error(error);
+		// If there is a status message or data then use that, otherwise the defaults
+		const message = error.response ? error.response.data : "Internal Server Error";
+		const status = error.response ? error.response.status : 500;
+		return res.status(status).json({ message: message });
+	}
+});
+
+app.get("/api/opensearch/search", async (req, res) => {
+	const index = req.query.index || "cpu";
+	req.query.memory = req.query.memory ? req.query.memory : "gddr5";
+	console.log({manufacturer: req.query.manufacturer});
+	try {
+	const response = await searchInIndex(index, {memory: req.query.memory});
 
 	return res.status(200).json(response);
 	} catch (error) {
@@ -1707,10 +1842,10 @@ app.get("/api/inventory", routePagination, tableSearch("inventory"), async (req,
 	try {
 		const [partInventory] = await promisePool.query(sql, sqlParams);
 
-		// AdditionalDetails needs to be parsed
+		// additionaldetails needs to be parsed
 		const parseInventory = partInventory.map((item) => ({
 			...item,
-			AdditionalDetails: item.AdditionalDetails ? JSON.parse(item.AdditionalDetails) : null
+			additionaldetails: item.additionaldetails ? JSON.parse(item.additionaldetails) : null
 		}));
 
 		// Process each user to add isAdmin property
@@ -1737,10 +1872,10 @@ app.get("/api/inventory/id", idValidator, async (req, res) => {
 			return res.status(404).json({ message: "Inventory item not found" });
 		}
 
-		// AdditionalDetails needs to be parsed
+		// additionaldetails needs to be parsed
 		const parseInventory = partInventory.map((item) => ({
 			...item,
-			AdditionalDetails: item.AdditionalDetails ? JSON.parse(item.AdditionalDetails) : null
+			additionaldetails: item.additionaldetails ? JSON.parse(item.additionaldetails) : null
 		}));
 
 		return res.status(200).json(parseInventory);
