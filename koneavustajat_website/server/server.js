@@ -774,6 +774,7 @@ const createPartIndex = async () => {
 	try {
 		const partTypes = ["chassis", "cpu", "cpu_cooler", "gpu", "memory", "motherboard", "psu", "storage", "part_inventory"];
 		const excludedParams = ["price", "name", "manufacturer", "id", "partid", "image", "image_url", "url", "additionaldetails", "dateadded"];
+		const toParseNum = ["cores", "core_clock", "memory", "thread_count", "core_count", "tdp", "cooling_potential", "amount", "base_clock", "cache", "capacity"];
 		let sql;
 		for (const part of partTypes) {
 			const sql = `SELECT * FROM ${part} LIMIT 1`;
@@ -830,8 +831,17 @@ const createPartIndex = async () => {
 				if (!excludedParams.includes(key.toLowerCase())) {
 					resObj.body.mappings.properties[key.toLowerCase()] = {
 						type: "text",
-						analyzer: "custom_analyzer"
+						analyzer: "custom_analyzer",
+						fields: {
+							raw: { type: "keyword" }
+						}
 					};
+					if (toParseNum.includes(key.toLowerCase())) {
+						resObj.body.mappings.properties[`${key.toLowerCase()}_parsed`] = {
+							type: "float",
+							"ignore_malformed": true // To handle type mismatches
+						};
+					}
 				}
 				if (key.toLowerCase() === "additionaldetails") {
 					resObj.body.mappings.properties[key.toLowerCase()] = {
@@ -954,12 +964,9 @@ const insertToPartIndex = async (items = 250) => {
 						normalizedRow.capacity = convert;
 					}
 					for (const val of toParseNum) {
-						if (typeof normalizedRow[val] !== "number" && normalizedRow[val] !== undefined && normalizedRow[val] !== null) {
+						if (normalizedRow[val] !== undefined && normalizedRow[val] !== null) {
 							const parsedValue = extractFirstNumbers(normalizedRow[val]);
 							normalizedRow[`${val}_parsed`] = parsedValue;
-						}
-						if (typeof normalizedRow[val] === "number" ) {
-							normalizedRow[`${val}_parsed`] = normalizedRow[val];
 						}
 					}
 					
@@ -983,6 +990,7 @@ const insertToPartIndex = async (items = 250) => {
 				}
 			}
 		}
+		console.log("All parts indexed succesfully!");
 	} catch (error) {
 		console.error("Error inserting data:", error);
 	}
@@ -1525,17 +1533,16 @@ const extractFirstNumbers = (num) => {
 		console.log("removeDdr2", match2);
 	}
 	*/
+	if (!num) {
+		return null;
+	}
 	let removeDdr = num.replace(/ddr(\d)?(-)?/i, "");
 
 	const match = removeDdr.match(/((\d+)([\.\,]\d+)?)/i);
 	if (match) {
 		const number = match[0].replace(",", ".");
-		if (number.includes(".")) {
-			return parseFloat(number, 10);
-		} else {
-			return parseInt(number, 10);
-			
-		}
+		return parseFloat(number, 10);
+
 	}
 	return null;
 };
