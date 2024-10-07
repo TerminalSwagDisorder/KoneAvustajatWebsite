@@ -1,3 +1,4 @@
+"use strict";
 // File name: server.js
 // Auth: Terminal Swag Disorder
 // Desc: File containing code for server-side, including express-session, jwt & mysql
@@ -82,7 +83,7 @@ app.use(
 
 // const client = new Client({ node: process.env.OPENSEARCH_URL });
 const client = new Client({
-    node: process.env.OPENSEARCH_URL, 
+    node: opensearch, 
     auth: {
         username: "admin",
         password: "Mhavurt123"
@@ -774,7 +775,7 @@ const createPartIndex = async () => {
 	try {
 		const partTypes = ["chassis", "cpu", "cpu_cooler", "gpu", "memory", "motherboard", "psu", "storage", "part_inventory"];
 		const excludedParams = ["price", "name", "manufacturer", "id", "partid", "image", "image_url", "url", "additionaldetails", "dateadded"];
-		const toParseNum = ["cores", "core_clock", "memory", "thread_count", "core_count", "tdp", "cooling_potential", "amount", "base_clock", "cache", "capacity"];
+		const toParseNum = ["cores", "core_clock", "memory", "thread_count", "core_count", "tdp", "cooling_potential", "amount", "base_clock", "cache", "capacity", "wattage", "speed"];
 		let sql;
 		for (const part of partTypes) {
 			const sql = `SELECT * FROM ${part} LIMIT 1`;
@@ -810,7 +811,10 @@ const createPartIndex = async () => {
 							}
 						],
 						properties: {
-							price: { type: "float" },
+							price: { 
+								type: "float", 
+								"ignore_malformed": true 
+							},
 							name: {
 								type: "text",
 								analyzer: "custom_analyzer"
@@ -926,7 +930,7 @@ const insertToPartIndex = async (items = 250) => {
 	try {
 		const partTypes = ["chassis", "cpu", "cpu_cooler", "gpu", "memory", "motherboard", "psu", "storage", "part_inventory"];
 		const excludedParams = ["image", "image_url", "url"];
-		const toParseNum = ["cores", "core_clock", "memory", "thread_count", "core_count", "tdp", "cooling_potential", "amount", "base_clock", "cache", "capacity"];
+		const toParseNum = ["cores", "core_clock", "memory", "thread_count", "core_count", "tdp", "cooling_potential", "amount", "base_clock", "cache", "capacity", "speed"];
 
 		for (const part of partTypes) {
 			const countSql = `SELECT COUNT(*) AS total FROM ??`;
@@ -951,7 +955,7 @@ const insertToPartIndex = async (items = 250) => {
 						try {
 							normalizedRow.additionaldetails = JSON.parse(normalizedRow.additionaldetails);
 						} catch (err) {
-							console.error(`Error parsing JSON for ID ${normalizedRow.id}:`, error);
+							console.error(`Error parsing JSON for ID ${normalizedRow.id}:`, err);
 							normalizedRow.additionaldetails = {};						
 						}
 					}
@@ -962,6 +966,14 @@ const insertToPartIndex = async (items = 250) => {
 					if (part === "storage") {
 						const convert = normalizedConversion(normalizedRow.capacity);
 						normalizedRow.capacity = convert;
+					}
+					if (part === "psu") {
+						const convert = wattageConversion(normalizedRow.name);
+						normalizedRow.wattage = convert;
+					}
+					if (part === "memory") {
+						const convert = extractMemorySpeed(normalizedRow.speed);
+						normalizedRow.speed_parsed = convert;
 					}
 					for (const val of toParseNum) {
 						if (normalizedRow[val] !== undefined && normalizedRow[val] !== null) {
@@ -1087,7 +1099,7 @@ const viewDataInIndex = async (index) => {
 		const response = await client.search({
 			index: index,
 			body: {
-				size: 1,
+				size: 5,
 				query: {
 					match_all: {}
 				}
@@ -1105,7 +1117,11 @@ const searchInIndex = async (index, query) => {
 			index,
 			body: {
 				query: {
-					 range: { approximate_performance: { gte: query } }
+					bool: {
+						must: [
+							{ range: { price: { gte: query } } } // Price range
+						]
+					}
 				}
 			}
 		});
@@ -1141,7 +1157,6 @@ const searchInIndex = async (index, query) => {
 			}
 		});
  */
-		console.log(response);
 		return response;
 	} catch (error) {
 		console.error("Error during search:", error);
@@ -1340,7 +1355,7 @@ const opensearchSchema2 = Joi.object({
  */
 
 	try {
-		const { method, amount, type, part, id } = req.searchTerms;
+		const { method, amount, type, part, id, data } = req.searchTerms;
 		let operation = "Failed to run any operation!";
 
 		if (method === "create") {
@@ -1414,10 +1429,9 @@ app.get("/api/opensearch/view", async (req, res) => {
 
 app.get("/api/opensearch/backup", async (req, res) => {
 	const index = req.query.index || "cpu";
-	req.query.approximate_performance = req.query.approximate_performance ? req.query.approximate_performance : "1";
-	console.log({manufacturer: req.query.manufacturer});
+	let query = req.query.query || "100";
 	try {
-	const response = await searchInIndex(index,  req.query.approximate_performance);
+	const response = await searchInIndex(index, query);
 
 	return res.status(200).json(response);
 	} catch (error) {
@@ -1459,14 +1473,12 @@ app.post("/api/users/signup", userValidator(userSchema), userFieldsValidator, as
 });
 
 const wizardSearch = async (index, query) => {
+	//console.log("\n\n\n");
+	//console.log(query);
 	try {
 		const response = await client.search({
 			index,
-			body: {
-				query: {
-					match: query
-				}
-			}
+			body: query
 		});
 		/*
 			{
@@ -1539,18 +1551,18 @@ const extractFirstNumbers = (num) => {
 	let removeDdr = num.replace(/ddr(\d)?(-)?/i, "");
 
 	const match = removeDdr.match(/((\d+)([\.\,]\d+)?)/i);
-	if (match) {
-		const number = match[0].replace(",", ".");
-		return parseFloat(number, 10);
-
+	if (!match) {
+		return null;
 	}
-	return null;
+	const number = match[0].replace(",", ".");
+	return parseFloat(number, 10);
+
 };
 
 const normalizedConversion = (value) => {
 	const match = value.match(/(\d+(\.\d+)?)(\s*)(tb|tt|gb|mt|mb|gt|kb|kt)/i);
 	if (!match) {
-		return 0;
+		return null;
 	}
 	const number = parseFloat(match[1]);
 	const unit = match[4].toLowerCase();
@@ -1569,9 +1581,30 @@ const normalizedConversion = (value) => {
 
 };
 
+const wattageConversion = (value) => {
+	const match = value.match(/(\d+)\s*w/i);
+	if (!match) {
+		return null;
+	}
+	const number = parseFloat(match[0]);
+	return number;
+
+};
+
 const extractNumber = (str) => {
 	let match = str.match(/\d+(\.\d+)?/i);
-	return match ? parseFloat(match[0]) : null; // Return the first number or null
+	if (!match) {
+		return null;
+	}
+	return parseFloat(match[0], 10); // Return the first number or null
+};
+
+const extractMemorySpeed = (value) => {
+	let match = value.match(/\d{3,5}/i);
+	if (!match) {
+		return null;
+	}
+	return parseFloat(match[0], 10); // Return the first number or null
 };
 
 const performanceCalculator = (part, partType = null) => {
@@ -1596,14 +1629,14 @@ const performanceCalculator = (part, partType = null) => {
 	return 0;
 };
 
-const buildWizardQuery = async (partType, formFields) => {
+const buildWizardQuery = async (queryBody, partType, formFields) => {
 	let scoring = {
 		// out of 100
 		cpu: 20,
 		gpu: 20,
 		cpu_cooler: 5,
-		mobo: 15,
-		ram: 10,
+		motherboard: 15,
+		memory: 10,
 		chassis: 10,
 		psu: 10,
 		storage: 10
@@ -1613,110 +1646,16 @@ const buildWizardQuery = async (partType, formFields) => {
 		cpu: 0,
 		gpu: 0,
 		cpu_cooler: 0,
-		mobo: 0,
-		ram: 0,
+		motherboard: 0,
+		memory: 0,
 		chassis: 0,
 		psu: 0,
 		storage: 0
 	};
 
-	let finalQuery = {};
+	let functionScore = [];
 
-	let queryBody = {
-		bool: {
-			must: [], // Mandatory clauses
-			filter: [], // Filters that must match
-			should: [], // Optional clauses to boost relevance
-			must_not: [] // Clauses that must not match
-		}
-	};
-
-	let functionScoreQuery = {
-		function_score: {
-		query: queryBody, // Base query
-		 "functions": [
-			{
-			  "script_score": {
-				"script": {
-				  "source": `
-					double coreCount = doc['core_count'].value;
-					double baseClock = doc['base_clock'].value;
-					double cache = doc['cache'].value;
-					return (coreCount * baseClock) + (cache / 2);
-				  `
-				}
-			  }
-			}
-		  ],
-			boost_mode: "sum", // How to combine scores (sum the scores)
-			score_mode: "sum" // Sum all the scores
-		}
-	};
-
-	const constraintMap = {
-		cpu: {
-			motherboard: (cpu) => ({ match: { socket: cpu.socket } }),
-			cpu_cooler: (cpu) => ({
-				bool: {
-					must: [
-						{ match: { compatibility: cpu.socket } },
-						{ range: { cooling_potential: { gte: extractFirstNumbers(cpu.tdp) } } } // Use range for cooling potential
-					]
-				}
-			})
-		},
-		gpu: {
-			psu: (gpu) => {
-				return {
-					bool: {
-						must: [{ range: { name: { gte: extractFirstNumbers(gpu.tdp) } } }]
-					}
-				};
-			}
-		},
-		memory: {
-			motherboard: (memory) => ({ match: { memory_compatibility: memory.type } })
-		},
-		motherboard: {
-			cpu: (motherboard) => ({ match: { socket: motherboard.socket } }),
-			ram: (motherboard) => ({ match: { memory_compatibility: motherboard.memory_compatibility } }),
-			chassis: (motherboard) => ({
-				match: { form_factor: motherboard.compatibility || motherboard.chassis_type }
-			})
-		},
-		cpu_cooler: {
-			cpu: (cpu_cooler) => ({
-				bool: {
-					must: [
-						{ match: { socket: cpu_cooler.compatibility } },
-						{ range: { tdp: { lte: extractFirstNumbers(cpu_cooler.cooling_potential) } } }
-					]
-				}
-			})
-		},
-		psu: {
-			gpu: (psu) => {
-				return {
-					bool: {
-						must: [{ range: { name: { gte: extractFirstNumbers(psu.tdp) } } }]
-					}
-				};
-			}
-		},
-		/*
-	  psu: {
-	    gpu: (psu) => ({
-	      range: {
-	        "psu_wattage": { gte: psu.tdp } // PSU must provide sufficient wattage for GPU
-	      }
-	    })
-	  },
-		*/
-		chassis: {
-			motherboard: (chassis) => ({ match: { compatibility: chassis.form_factor } })
-		}
-	};
-
+	let psuEfficiencyBoost = 2;
 	for (const [key, value] of Object.entries(formFields)) {
 		// RGB Preference Example
 		if (value !== "noPreference") {
@@ -1724,8 +1663,8 @@ const buildWizardQuery = async (partType, formFields) => {
 				if (value === "gaming") {
 					scoring.cpu = 25;
 					scoring.gpu = 25;
-					scoring.ram = 12;
-					scoring.mobo = 10;
+					scoring.memory = 12;
+					scoring.motherboard = 10;
 					scoring.chassis = 5;
 					scoring.psu = 8;
 				}
@@ -1736,67 +1675,117 @@ const buildWizardQuery = async (partType, formFields) => {
 				if (value === "streaming") {
 					scoring.cpu = 25;
 					scoring.gpu = 15;
-					scoring.ram = 15;
+					scoring.memory = 15;
 					scoring.chassis = 5;
 				}
 				if (value === "editing") {
 					scoring.cpu = 24;
 					scoring.gpu = 24;
-					scoring.ram = 15;
+					scoring.memory = 15;
 					scoring.chassis = 5;
-					scoring.mobo = 10;
+					scoring.motherboard = 10;
 					scoring.psu = 7;
 				}
 				if (value === "workstation") {
 					scoring.cpu = 25;
 					scoring.gpu = 25;
 					scoring.chassis = 5;
-					scoring.mobo = 10;
+					scoring.motherboard = 10;
 				}
 			}
 
 			if (key === "performancePreference") {
-				if (value === "maxGpu") {
-					scoring.gpu = scoring.gpu + 7;
-					scoring.cpu = scoring.cpu - 1;
-					scoring.cpu_cooler = scoring.cpu_cooler - 1;
-					scoring.mobo = scoring.mobo - 1;
-					scoring.ram = scoring.ram - 1;
-					scoring.chassis = scoring.chassis - 1;
-					scoring.psu = scoring.psu - 1;
-					scoring.storage = scoring.storage - 1;
+				if (partType === "gpu") {
+					if (value === "maxGpu") {
+						functionScore.push({
+							"field_value_factor": {
+								"field": "approximate_performance",
+								"factor": 0.75,
+								"modifier": "log1p",
+								"missing": 1
+							}
+						});
+						scoring.gpu = scoring.gpu + 7;
+						scoring.cpu = scoring.cpu - 1;
+						scoring.cpu_cooler = scoring.cpu_cooler - 1;
+						scoring.motherboard = scoring.motherboard - 1;
+						scoring.memory = scoring.memory - 1;
+						scoring.chassis = scoring.chassis - 1;
+						scoring.psu = scoring.psu - 1;
+						scoring.storage = scoring.storage - 1;
+					} else {
+						functionScore.push({
+							"field_value_factor": {
+								"field": "approximate_performance",
+								"factor": 0.25,
+								"modifier": "log1p",
+								"missing": 1
+							}
+						});
+					}
 				}
-				if (value === "maxCpu") {
+				if (partType === "cpu") {
+					if (value === "maxCpu") {
+						
+					functionScore.push({
+						"field_value_factor": {
+							"field": "approximate_performance",
+							"factor": 0.75,
+							"modifier": "sqrt",
+							"missing": 1
+						}
+					});
 					scoring.cpu = scoring.cpu + 7;
 					scoring.gpu = scoring.gpu - 1;
 					scoring.cpu_cooler = scoring.cpu_cooler - 1;
-					scoring.mobo = scoring.mobo - 1;
-					scoring.ram = scoring.ram - 1;
+					scoring.motherboard = scoring.motherboard - 1;
+					scoring.memory = scoring.memory - 1;
 					scoring.chassis = scoring.chassis - 1;
 					scoring.psu = scoring.psu - 1;
 					scoring.storage = scoring.storage - 1;
+					} else {
+						functionScore.push({
+							"field_value_factor": {
+								"field": "approximate_performance",
+								"factor": 0.25,
+								"modifier": "sqrt",
+								"missing": 1
+							}
+						});
+					}
 				}
-				if (value === "maxRamAmount") {
-					queryBody.should.push({ match: { "memory.amount": { boost: 2 } } });
+				if (value === "maxRamAmount" && partType === "memory") {
+					functionScore.push({
+						"field_value_factor": {
+							"field": "amount_parsed",
+							"factor": 0.5,
+							"modifier": "sqrt",
+							"missing": 1
+						}
+					});
 				}
-				if (value === "maxRamSpeed") {
-					queryBody.should.push({ match: { "memory.speed": { boost: 2 } } });
+				if (value === "maxRamSpeed"  && partType === "memory") {
+					functionScore.push({
+						"field_value_factor": {
+							"field": "speed_parsed",
+							"factor": 0.5,
+							"modifier": "log1p",
+							"missing": 1
+						}
+					});
 				}
 				if (value === "maxEfficiency") {
-					const efficiencyValues = ["80", "Bronze", "Gold", "Platinum", "Titanium"];
-					for (const val of efficiencyValues) {
-						queryBody.should.push({match: { "psu.efficiency": val, fuzziness: "AUTO", boost: 2 }});
-					}
+					psuEfficiencyBoost += 1;
 				}
 			}
 			// Manufacturer Preference Example
-			if (key === "cpuManufacturer" && value.endsWith("Preference")) {
+			if (key === "cpuManufacturer" && value.endsWith("Preference") && partType === "cpu") {
 				let manufacturer = value.replace("Preference", ""); // Extract the manufacturer (e.g., 'amd', 'intel')
-				queryBody.must.push({ match: { "cpu.manufacturer": manufacturer.toUpperCase() } });
+				queryBody.bool.must.push({ match: { "manufacturer": manufacturer.toLowerCase() } });
 			}
 
 			if ((key === "colorPreference" && value !== "other") || (key === "otherColor" && value !== "")) {
-				queryBody.should.push({
+				queryBody.bool.should.push({
 					multi_match: {
 						query: value,
 						fields: ["name", "color"], // List the fields you want to match
@@ -1807,7 +1796,7 @@ const buildWizardQuery = async (partType, formFields) => {
 
 			if (key === "rgbPreference") {
 				if (value === "noRgb") {
-					queryBody.must_not.push({
+					queryBody.bool.must_not.push({
 						multi_match: {
 							query: "rgb",
 							fields: ["name", "color"], // Replace with fields relevant to your document schema
@@ -1816,7 +1805,7 @@ const buildWizardQuery = async (partType, formFields) => {
 					});
 				} else {
 					const boost = value === "maximumRgb" ? 3 : value === "largeRgb" ? 2 : 1;
-					queryBody.should.push({
+					queryBody.bool.should.push({
 						multi_match: {
 							query: "rgb",
 							fields: ["name", "color"], // Replace with fields relevant to your document schema
@@ -1827,75 +1816,372 @@ const buildWizardQuery = async (partType, formFields) => {
 			}
 
 
-			if (key === "gpuManufacturer" && value.endsWith("Preference")) {
-				let manufacturer = value.replace("Preference", ""); // Extract the manufacturer (e.g., 'nvidia', 'amd')
-				queryBody.must.push({ match: { "gpu.manufacturer": manufacturer.toUpperCase() } });
-			}
-
-			if (key === "psuBias") {
-				if (value === "bestEfficiency") {
-					const efficiencyValues = ["80", "Bronze", "Gold", "Platinum", "Titanium"];
-					for (const val of efficiencyValues) {
-						queryBody.should.push({match: { "psu.efficiency": val, fuzziness: "AUTO", boost: 2 }});
+			if (key === "gpuManufacturer" && value.endsWith("Preference") && partType === "gpu") {
+				let manufacturer;
+				if (value === "nvidiaPreference") {
+					manufacturer = "geforce";
+				}
+				if (value === "amdPreference") {
+					manufacturer = "radeon";
+				}
+				queryBody.bool.must.push({
+					multi_match: {
+						query: manufacturer.toLowerCase(),
+						fields: ["manufacturer", "name"], // You can add more fields here if needed
+						fuzziness: "AUTO"
 					}
+				});
+			}
+			
+			if (key === "psuBias" && partType === "psu") {
+				if (value === "bestEfficiency") {
+					psuEfficiencyBoost += 1;
 				}
 				if (value === "highWattage") {
-					queryBody.should.push({ range: { "psu.name": { boost: 2 } } });
+					functionScore.push({
+						"field_value_factor": {
+							"field": "wattage",
+							"factor": 0.5,
+							"modifier": "log1p",
+							"missing": 1
+						}
+					});
 				}
 			}
-			if (key === "storageBias") {
+
+			if (key === "storageBias" && partType === "storage") {
+				// "onlyM2" preference
 				if (value === "onlyM2") {
-					const interfaces = ["nvme", "pcie"];
-					const formFactors = ["2280", "m.2", "2230"];
-					for (const val of interfaces) {
-						queryBody.must.push({ match: { "storage.interface": val, fuzziness: "AUTO", boost: 2 } });
-					}
-					for (const val of formFactors) {
-						queryBody.must.push({ match: { "storage.form_factor": val, fuzziness: "AUTO", boost: 2 } });
-					}
+					queryBody.bool.must.push({
+						multi_match: {
+							query: "nvme pcie",
+							fields: ["interface"],
+							fuzziness: "AUTO",
+							boost: 2
+						}
+					});
+					queryBody.bool.must.push({
+						multi_match: {
+							query: "2280 m.2 2230",
+							fields: ["form_factor"],
+							fuzziness: "AUTO",
+							boost: 2
+						}
+					});
 				}
+
+				// "onlySsd" preference
 				if (value === "onlySsd") {
-					const interfaces = ["nvme", "pcie", "sata"];
-					const formFactors = ["2280", "m.2", "2230", "2.5"];
-					const notFormFactors = ["3.5", "sas"];
-					for (const val of formFactors) {
-						queryBody.must.push({ match: { "storage.interface": val, fuzziness: "AUTO", boost: 2 } });
-					}
-					for (const val of formFactors) {
-						queryBody.must.push({ match: { "storage.form_factor": val, fuzziness: "AUTO", boost: 2 } });
-					}
-					for (const val of formFactors) {
-						queryBody.must_not.push({ match: { "storage.form_factor": val, fuzziness: "AUTO", boost: 2 } });
-					}
+					queryBody.bool.must.push({
+						multi_match: {
+							query: "nvme pcie sata",
+							fields: ["interface"],
+							fuzziness: "AUTO",
+							boost: 2
+						}
+					});
+					queryBody.bool.must.push({
+						multi_match: {
+							query: "2280 m.2 2230 2.5",
+							fields: ["form_factor"],
+							fuzziness: "AUTO",
+							boost: 2
+						}
+					});
+					queryBody.bool.must_not.push({
+						multi_match: {
+							query: "3.5 sas",
+							fields: ["form_factor"],
+							fuzziness: "AUTO",
+							boost: 2
+						}
+					});
 				}
+
+				// "bootSsd" preference
 				if (value === "bootSsd") {
-					const interfaces = ["nvme", "pcie", "sata"];
-					const formFactors = ["2280", "m.2", "2230", "2.5"];
-					for (const val of formFactors) {
-						queryBody.must.push({ match: { "storage.interface": val, fuzziness: "AUTO", boost: 2 } });
-					}
-					for (const val of formFactors) {
-						queryBody.must.push({ match: { "storage.form_factor": val, fuzziness: "AUTO", boost: 2 } });
-					}
-					queryBody.should.push({ match: { "storage.form_factor": "3.5" } });
+					queryBody.bool.must.push({
+						multi_match: {
+							query: "nvme pcie sata",
+							fields: ["interface"],
+							fuzziness: "AUTO",
+							boost: 2
+						}
+					});
+					queryBody.bool.must.push({
+						multi_match: {
+							query: "2280 m.2 2230 2.5",
+							fields: ["form_factor"],
+							fuzziness: "AUTO",
+							boost: 2
+						}
+					});
+					queryBody.bool.should.push({
+						match: {
+							"form_factor": "3.5"
+						}
+					});
 				}
+
+				// "onlyHdd" preference
 				if (value === "onlyHdd") {
-					queryBody.must.push({ match: { "storage.interface": "sata", fuzziness: "AUTO", boost: 2 } });
-					queryBody.must.push({ match: { "storage.form_factor": "3.5", fuzziness: "AUTO", boost: 2 } });
+					queryBody.bool.must.push({
+						multi_match: {
+							query: "sata",
+							fields: ["interface"],
+							fuzziness: "AUTO",
+							boost: 2
+						}
+					});
+					queryBody.bool.must.push({
+						multi_match: {
+							query: "3.5",
+							fields: ["form_factor"],
+							fuzziness: "AUTO",
+							boost: 2
+						}
+					});
 				}
 			}
 		}
 	}
 
+	if (psuEfficiencyBoost > 2 && partType === "psu") {
+		const efficiencyValues = ["80", "Bronze", "Gold", "Platinum", "Titanium"];
+		queryBody.bool.should.push({
+			multi_match: {
+				query: "80 Bronze Gold Platinum Titanium",
+				fields: ["efficiency"],
+				fuzziness: "AUTO",
+				boost: psuEfficiencyBoost
+			}
+		});
+	}
+
 	for (let key in prices) {
-		prices[key] = scoring[key] * 0.01 * formFields.price;
-		queryBody.must.push({ range: { [`${key}.price`]: { gte: prices[key], boost: 10 } } });
+		if (key === partType) {
+			prices[key] = scoring[key] * 0.01 * formFields.price;
+			//queryBody.bool.must.push({ range: { [`price`]: { gte: prices[key], boost: 10 } } });
+			queryBody.bool.must.push({
+				range: {
+					price: { lte: prices[key]},
+				}
+			});
+			
+		}
+	}
+
+	if (functionScore.length > 0) {
+		queryBody = {
+			"function_score": {
+				"query": queryBody, // Base query
+				"functions": functionScore, // Add the boost functions here
+				"boost_mode": "multiply", // Multiply the original score with the boost
+				"score_mode": "sum" // Sum up the function scores
+			}
+		};
 	}
 
 	// Return the built query
 	return { queryBody: queryBody, prices: prices };
 };
 
+const constraintComparator = async (queryBody, partType, formFields, currentData) => {
+	const constraintMap = {
+		cpu: {
+			motherboard: (cpu) => ({ match: { socket: cpu.socket } }),
+			cpu_cooler: (cpu) => ({
+				bool: {
+					must: [
+						{ match: { compatibility: cpu.socket } },
+						{ range: { cooling_potential: { gte: cpu.tdp_parsed } } } // Use range for cooling potential
+					]
+				}
+			})
+		},
+		motherboard: {
+			memory: (motherboard) => ({ match: { type: motherboard.memory_compatibility } })
+		},
+		memory: {
+			motherboard: (memory) => ({ match: { memory_compatibility: memory.type } })
+		},
+		gpu: {
+			psu: (gpu, formFields) => {
+				const constraints = {
+					bool: {
+						must: [{ range: { wattage: { gte: gpu.tdp_parsed * 1.75 } } }]
+					}
+				};
+
+				if (formFields.psuBias === "highWattage") {
+					constraints.bool.should = [
+						{
+							range: {
+								wattage: { gte: gpu.tdp_parsed * 2.5 }, boost: 2
+							}
+						}
+					];
+					constraints.bool.minimum_should_match = 1;
+				}
+
+				return constraints;
+			}
+/*
+			psu: (gpu) => {
+				return {
+					bool: {
+						must: [{ range: { wattage: { gte: gpu.tdp_parsed * 1.75 } } }]
+					}
+				};
+			}
+*/
+		},
+		psu: {
+			gpu: (psu) => {
+				return {
+					bool: {
+						must: [{ range: { tdp_parsed: { lte: psu.wattage } } }]
+					}
+				};
+			}
+		},
+		chassis: {
+			motherboard: (chassis) => ({
+				match: { form_factor: chassis.compatibility || chassis.chassis_type }
+			}),
+			chassis: (motherboard) => ({
+				match: { compatibility: motherboard.form_factor }
+			})
+		},
+		cpu_cooler: {
+			cpu: (cpu_cooler) => ({
+				bool: {
+					must: [
+						{ match: { socket: cpu_cooler.compatibility } },
+						{ range: { tdp: { lte: cpu_cooler.cooling_potential_parsed } } }
+					]
+				}
+			})
+		},
+
+		/*
+		  psu: {
+		    gpu: (psu) => ({
+		      range: {
+		        "psu_wattage": { gte: psu.tdp_parsed } // PSU must provide sufficient wattage for GPU
+		      }
+		    })
+		  },
+			*/
+	};
+/*
+	if (constraintMap[partType]) {
+		for (const relatedPart in constraintMap[partType]) {
+			const constraintFn = constraintMap[partType][relatedPart];
+			const constraint = constraintFn(partType, formFields);
+
+			if (constraint) {
+				queryBody.bool.must.push(constraint);
+			}
+		}
+	}
+*/
+	if (constraintMap[partType]) {
+		for (const relatedPart in constraintMap[partType]) {
+			if (constraintMap[partType][relatedPart]) {
+				const constraintFunction = constraintMap[partType][relatedPart];
+				//const constraint = constraintFunction(formFields[relatedPart] || {}, formFields);
+				const constraint = constraintMap[partType][relatedPart](formFields);
+				//console.log(partType);
+				//console.log(relatedPart);
+				//console.log("\n\n\n\n");
+				//console.log(constraint);
+				if (constraint) {
+					if (constraint.bool.must) {
+						queryBody.bool.must.push(...constraint.bool.must);
+					}
+					if (constraint.bool.should) {
+						queryBody.bool.should.push(...constraint.bool.should);
+					}
+					if (constraint.bool.must_not) {
+						queryBody.bool.must_not.push(...constraint.bool.must_not);
+					}
+				}
+			}
+		}
+	}
+	return queryBody;
+};
+
+const finalQuery = async (key, jsonFormFields) => {
+	let queryBody = {
+		bool: {
+			must: [], // Mandatory clauses
+			filter: [], // Filters that must match
+			should: [], // Optional clauses to boost relevance
+			must_not: [] // Clauses that must not match
+		}
+	};
+
+	const buildQuery = await buildWizardQuery(queryBody, key, jsonFormFields);
+	if (buildQuery) {
+		//console.log("\n\nqueryBody: ");
+		//console.log(queryBody);
+		/*
+		for (const [key, value] of Object.entries(queryBody)) {
+			for (const [k, v] of Object.entries(value))  {
+				console.log(k, v);
+			}
+			
+		}
+*/
+		//console.log("\n\nbuildQuery: ");
+		//console.log(buildQuery);
+		/*
+		for (const [key, value] of Object.entries(buildQuery)) {
+			for (const [k, v] of Object.entries(value))  {
+			for (const [x, y] of Object.entries(v))  {
+				console.log(x, y);
+			}
+			}
+
+		}
+*/
+		queryBody = {...buildQuery};
+	}
+	//console.log("\n\n\n\n");
+	//console.log("queryBody: ", buildQuery);
+	//
+/*
+	const query = buildQuery.queryBody;
+	if (buildQuery.queryBody.function_score) {
+		console.log(JSON.stringify(buildQuery.queryBody.function_score, null, 2));
+		for (const [key, value] of Object.entries(buildQuery.queryBody.function_score.query.bool)) {
+			if (value.length === 0) {
+				delete buildQuery.queryBody.function_score.query.bool[key];
+			}
+	console.log(JSON.stringify(buildQuery.queryBody.function_score.query.bool, null, 2));
+		}
+		
+	} else {
+		console.log(JSON.stringify(buildQuery, null, 2));
+		for (const [key, value] of Object.entries(buildQuery.queryBody.bool)) {
+			if (value.length === 0) {
+				delete buildQuery.queryBody.bool[key];
+			}
+		}
+	console.log(JSON.stringify(buildQuery.queryBody.bool, null, 2));
+	}
+*/
+	const opensearchResult = await wizardSearch(key, {query: buildQuery.queryBody});
+	if (opensearchResult) {
+		//console.log("opensearchResult: ");
+		//console.log(JSON.stringify(opensearchResult, null, 2));
+		//const addComparator = await constraintComparator(queryBody, key, jsonFormFields, opensearchResult.body.hits.hits);
+	}
+
+	return opensearchResult;
+};
 
 app.get("/api/opensearch/search", routePagination, tableValidator(partNameSchema, "partName"), tableSearch(), async (req, res) => {
 	console.log("API parts accessed");
@@ -1921,8 +2207,8 @@ app.get("/api/opensearch/search", routePagination, tableValidator(partNameSchema
 		cpu: [],
 		gpu: [],
 		cpu_cooler: [],
-		mobo: [],
-		ram: [],
+		motherboard: [],
+		memory: [],
 		chassis: [],
 		psu: [],
 		storage: []
@@ -1931,8 +2217,8 @@ app.get("/api/opensearch/search", routePagination, tableValidator(partNameSchema
 		cpu: "",
 		gpu: "",
 		cpu_cooler: "",
-		mobo: "",
-		ram: "",
+		motherboard: "",
+		memory: "",
 		chassis: "",
 		psu: "",
 		storage: ""
@@ -1953,8 +2239,7 @@ app.get("/api/opensearch/search", routePagination, tableValidator(partNameSchema
 		
 
 		for (const key in opensearchResults) {
-			const buildQuery = await buildWizardQuery(key, jsonFormFields);
-			const opensearchResult = await wizardSearch(key, buildQuery);
+			const opensearchResult = await finalQuery(key, jsonFormFields);
 			
 			if (opensearchResult) {
 				opensearchResults[key] = opensearchResult;
@@ -1969,7 +2254,97 @@ app.get("/api/opensearch/search", routePagination, tableValidator(partNameSchema
 
 		
 
-		return res.status(200).json(parts);
+		return res.status(200).json("parts");
+	} catch (error) {
+		console.error(error);
+		// If there is a status message or data then use that, otherwise the defaults
+		const message = error.response ? error.response.data : "Internal Server Error";
+		const status = error.response ? error.response.status : 500;
+		return res.status(status).json({ message: message });
+	}
+});
+
+app.get("/api/opensearch/test", routePagination, tableValidator(partNameSchema, "partName"), tableSearch(), async (req, res) => {
+	console.log("API parts accessed");
+	console.log("\n");
+	console.log("\n");
+	console.log("\n");
+	console.log("\n");
+	console.log("\n");
+	let sql;
+	const jsonFormFields = {
+		price: 1500,
+		useCase: "gaming",
+		performancePreference: "maxCpu",
+		formFactor: "noPreference",
+		colorPreference: "noPreference",
+		otherColor: "",
+		rgbPreference: "noPreference",
+		cpuManufacturer: "amdPreference",
+		gpuManufacturer: "nvidiaPreference",
+		psuBias: "bestEfficiency",
+		storageBias: "noPreference",
+		additionalStorage: "noPreference"
+	};
+	const validFormFields = {
+		price: 0,
+		useCase: ["noPreference", "gaming", "work", "streaming", "generalUse", "editing", "workstation"],
+		performancePreference: ["noPreference", "maxGpu", "maxCpu", "maxRamAmount", "maxRamSpeed", "maxStorageAmount", "maxEfficiency"],
+		formFactor: ["noPreference", "smallest", "small", "medium", "large", "largest"],
+		colorPreference: ["noPreference", "black", "white", "red", "blue", "other"],
+		otherColor: "",
+		rgbPreference: ["noPreference", "noRgb", "minimumRgb", "largeRgb", "maximumRgb"],
+		cpuManufacturer: ["noPreference", "amdPreference", "intelPreference"],
+		gpuManufacturer: ["noPreference", "amdPreference", "nvidiaPreference", "intelPreference"],
+		psuBias: ["noPreference", "bestEfficiency", "balanced", "highWattage"],
+		storageBias: ["noPreference", "onlyM2", "onlySsd", "bootSsd", "balanced", "onlyHdd"],
+		additionalStorage: ["noPreference", "noAdded", "oneAdded", "twoAdded", "threeAdded", "maxAdded"]
+	};
+	let opensearchResults = {
+		cpu: [],
+		gpu: [],
+		cpu_cooler: [],
+		motherboard: [],
+		memory: [],
+		chassis: [],
+		psu: [],
+		storage: []
+	};
+	let partObj = {
+		cpu: "",
+		gpu: "",
+		cpu_cooler: "",
+		motherboard: "",
+		memory: "",
+		chassis: "",
+		psu: "",
+		storage: ""
+	};
+
+	try {
+		for (const key in jsonFormFields) {
+			if (key !== "price" && key !== "otherColor" && !validFormFields[key].includes(jsonFormFields[key])) {
+				throw new Error(`${jsonFormFields[key]} is not allowed! Valid values are ${validFormFields[key]}.`);
+			} else if (key === "price" && typeof jsonFormFields[key] !== "number") {
+				throw new Error(`${key} must be a number!`);
+			} else if (key === "otherColor" && typeof jsonFormFields[key] !== "string") {
+				throw new Error(`${key} must be a string!`);
+			}
+			
+		}
+
+		
+
+		for (const key in opensearchResults) {
+			const opensearchResult = await finalQuery(key, jsonFormFields);
+			//console.log(opensearchResult);
+			opensearchResults[key] = opensearchResult;
+		}
+
+		
+
+		return res.status(200).json(opensearchResults);
+		//return res.status(200).json(JSON.parse(opensearchResults.cpu.meta.request.params.body));
 	} catch (error) {
 		console.error(error);
 		// If there is a status message or data then use that, otherwise the defaults
