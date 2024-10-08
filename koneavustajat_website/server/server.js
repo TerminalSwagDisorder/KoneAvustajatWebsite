@@ -16,6 +16,7 @@ const axios = require("axios");
 const { check, validationResult } = require("express-validator");
 const Joi = require("joi");
 const { Client } = require('@opensearch-project/opensearch');
+const Fuse = require('fuse.js');
 
 // User authentication exports
 const jwt = require("jsonwebtoken");
@@ -930,7 +931,8 @@ const insertToPartIndex = async (items = 250) => {
 	try {
 		const partTypes = ["chassis", "cpu", "cpu_cooler", "gpu", "memory", "motherboard", "psu", "storage", "part_inventory"];
 		const excludedParams = ["image", "image_url", "url"];
-		const toParseNum = ["cores", "core_clock", "memory", "thread_count", "core_count", "tdp", "cooling_potential", "amount", "base_clock", "cache", "capacity", "speed"];
+		const toParseNum = ["cores", "core_clock", "thread_count", "core_count", "tdp", "cooling_potential", "amount", "base_clock", "speed"];
+		const toParseBytes = ["memory", "cache", "capacity"];
 
 		for (const part of partTypes) {
 			const countSql = `SELECT COUNT(*) AS total FROM ??`;
@@ -978,6 +980,14 @@ const insertToPartIndex = async (items = 250) => {
 					for (const val of toParseNum) {
 						if (normalizedRow[val] !== undefined && normalizedRow[val] !== null) {
 							const parsedValue = extractFirstNumbers(normalizedRow[val]);
+							normalizedRow[`${val}_parsed`] = parsedValue;
+						}
+					}
+					for (const val of toParseBytes) {
+						if (normalizedRow[val] !== undefined && normalizedRow[val] !== null) {
+							const normalizedValue = normalizedConversion(normalizedRow[val]);
+							if (normalizedValue && val !== "cache") normalizedRow[val] = normalizedValue;
+							const parsedValue = extractByteNumbers(normalizedRow[val]);
 							normalizedRow[`${val}_parsed`] = parsedValue;
 						}
 					}
@@ -1512,7 +1522,7 @@ const wizardSearch = async (index, query) => {
 			}
 		});
  */
-		console.log(response);
+		//console.log(response);
 		return response;
 	} catch (error) {
 		console.error("Error during search:", error);
@@ -1556,6 +1566,24 @@ const extractFirstNumbers = (num) => {
 	}
 	const number = match[0].replace(",", ".");
 	return parseFloat(number, 10);
+
+};
+
+const extractByteNumbers = (num) => {
+	if (!num) {
+		return null;
+	}
+	let removeDdr = num.replace(/ddr(\d)?(-)?/i, "");
+	const byteMatch = removeDdr.match(/(\d+)(\s*(m\s?b|m\s?t|k\s?b|k\s?t|m\s+|k\s+))/i);
+	if (byteMatch) {
+		return parseFloat(byteMatch[0], 10);
+	}
+
+	const match = removeDdr.match(/(\d+)/i);
+	if (!match) {
+		return null;
+	}
+	return parseFloat(match[0], 10);
 
 };
 
@@ -1611,8 +1639,8 @@ const performanceCalculator = (part, partType = null) => {
 	if (partType === "cpu") {
 		let coreCount = extractFirstNumbers(part.core_count);
 		let baseClock = extractFirstNumbers(part.base_clock);
-		let cache = extractFirstNumbers(part.cache);
-    	let cpuPerformance = ((coreCount + baseClock + cache) / 3);
+		let cache = extractByteNumbers(part.cache);
+    	let cpuPerformance = (((coreCount * 2) + (baseClock * 1.5) + (cache / 2)) / 3);
 
     	return cpuPerformance;
 		
@@ -1620,8 +1648,8 @@ const performanceCalculator = (part, partType = null) => {
 	if (partType === "gpu") {
 		let gpuCores = extractFirstNumbers(part.cores);
 		let gpuClock = extractFirstNumbers(part.core_clock);
-		let memory = extractFirstNumbers(part.memory);
-    	let gpuPerformance = ((gpuCores + gpuClock + memory) / 3);
+		let memory = extractByteNumbers(part.memory);
+    	let gpuPerformance = ((((gpuCores / 2) + (gpuClock * 1.5) + (memory * 2)) / 3) / 10);
 
     	return gpuPerformance;
 		
@@ -1781,7 +1809,14 @@ const buildWizardQuery = async (queryBody, partType, formFields) => {
 			// Manufacturer Preference Example
 			if (key === "cpuManufacturer" && value.endsWith("Preference") && partType === "cpu") {
 				let manufacturer = value.replace("Preference", ""); // Extract the manufacturer (e.g., 'amd', 'intel')
-				queryBody.bool.must.push({ match: { "manufacturer": manufacturer.toLowerCase() } });
+				queryBody.bool.must.push({
+					multi_match: {
+						query: manufacturer.toLowerCase(),
+						fields: ["manufacturer"], // You can add more fields here if needed
+						fuzziness: "AUTO",
+						boost: 3
+					}
+				});
 			}
 
 			if ((key === "colorPreference" && value !== "other") || (key === "otherColor" && value !== "")) {
@@ -1789,7 +1824,8 @@ const buildWizardQuery = async (queryBody, partType, formFields) => {
 					multi_match: {
 						query: value,
 						fields: ["name", "color"], // List the fields you want to match
-						fuzziness: "AUTO" // Enables fuzzy matching for typo-tolerance
+						fuzziness: "AUTO", // Enables fuzzy matching for typo-tolerance
+						boost: 2
 					}
 				});
 			}
@@ -1800,7 +1836,8 @@ const buildWizardQuery = async (queryBody, partType, formFields) => {
 						multi_match: {
 							query: "rgb",
 							fields: ["name", "color"], // Replace with fields relevant to your document schema
-							fuzziness: "AUTO"
+							fuzziness: "AUTO",
+							boost: 2
 						}
 					});
 				} else {
@@ -1809,7 +1846,8 @@ const buildWizardQuery = async (queryBody, partType, formFields) => {
 						multi_match: {
 							query: "rgb",
 							fields: ["name", "color"], // Replace with fields relevant to your document schema
-							fuzziness: "AUTO"
+							fuzziness: "AUTO",
+							boost: 2
 						}
 					});
 				}
@@ -1819,16 +1857,20 @@ const buildWizardQuery = async (queryBody, partType, formFields) => {
 			if (key === "gpuManufacturer" && value.endsWith("Preference") && partType === "gpu") {
 				let manufacturer;
 				if (value === "nvidiaPreference") {
-					manufacturer = "geforce";
+					manufacturer = "geforce quadro nvidia rtx gtx gt";
 				}
 				if (value === "amdPreference") {
-					manufacturer = "radeon";
+					manufacturer = "radeon rx amd";
+				}
+				if (value === "intelPreference") {
+					manufacturer = "intel arc";
 				}
 				queryBody.bool.must.push({
 					multi_match: {
 						query: manufacturer.toLowerCase(),
 						fields: ["manufacturer", "name"], // You can add more fields here if needed
-						fuzziness: "AUTO"
+						fuzziness: "AUTO",
+						boost: 3
 					}
 				});
 			}
@@ -1947,15 +1989,27 @@ const buildWizardQuery = async (queryBody, partType, formFields) => {
 	}
 
 	if (psuEfficiencyBoost > 2 && partType === "psu") {
-		const efficiencyValues = ["80", "Bronze", "Gold", "Platinum", "Titanium"];
-		queryBody.bool.should.push({
-			multi_match: {
-				query: "80 Bronze Gold Platinum Titanium",
-				fields: ["efficiency"],
-				fuzziness: "AUTO",
-				boost: psuEfficiencyBoost
-			}
-		});
+        const efficiencyLevels = [
+            { level: "Titanium", weight: 2.5 },
+            { level: "Platinum", weight: 2.25 },
+            { level: "Gold", weight: 2 },
+            { level: "Silver", weight: 1.75 },
+            { level: "Bronze", weight: 1.5 },
+            { level: "80", weight: 1 },
+        ];
+
+
+        efficiencyLevels.forEach(function(efficiency) {
+            queryBody.bool.should.push({
+                match: {
+                    efficiency: {
+                        query: efficiency.level,
+                        fuzziness: "AUTO",
+                        boost: psuEfficiencyBoost * efficiency.weight
+                    }
+                }
+            });
+        });
 	}
 
 	for (let key in prices) {
@@ -1967,7 +2021,14 @@ const buildWizardQuery = async (queryBody, partType, formFields) => {
 					price: { lte: prices[key]},
 				}
 			});
-			
+			functionScore.push({
+				"field_value_factor": {
+					"field": "price",
+					"factor": 1,
+					"modifier": "sqrt",
+					"missing": 1
+				}
+			});
 		}
 	}
 
@@ -1983,24 +2044,26 @@ const buildWizardQuery = async (queryBody, partType, formFields) => {
 	}
 
 	// Return the built query
-	return { queryBody: queryBody, prices: prices };
+	return { queryBody: queryBody, prices: prices, scoring: scoring };
 };
 
 const constraintComparator = async (queryBody, partType, formFields, currentData) => {
+	
 	const constraintMap = {
 		cpu: {
 			motherboard: (cpu) => ({ match: { socket: cpu.socket } }),
 			cpu_cooler: (cpu) => ({
 				bool: {
 					must: [
-						{ match: { compatibility: cpu.socket } },
-						{ range: { cooling_potential: { gte: cpu.tdp_parsed } } } // Use range for cooling potential
+						{ match: { compatibility: cpu.manufacturer } },
+						{ range: { cooling_potential_parsed: { gte: cpu.tdp_parsed } } } // Use range for cooling potential
 					]
 				}
 			})
 		},
 		motherboard: {
-			memory: (motherboard) => ({ match: { type: motherboard.memory_compatibility } })
+			memory: (motherboard) => ({ match: { type: motherboard.memory_compatibility } }),
+			chassis: (motherboard) => ({ match: { compatibility: motherboard.form_factor } })
 		},
 		memory: {
 			motherboard: (memory) => ({ match: { memory_compatibility: memory.type } })
@@ -2017,7 +2080,7 @@ const constraintComparator = async (queryBody, partType, formFields, currentData
 					constraints.bool.should = [
 						{
 							range: {
-								wattage: { gte: gpu.tdp_parsed * 2.5 }, boost: 2
+								wattage: { gte: gpu.tdp_parsed * 2.5, boost: 2 }
 							}
 						}
 					];
@@ -2026,15 +2089,6 @@ const constraintComparator = async (queryBody, partType, formFields, currentData
 
 				return constraints;
 			}
-/*
-			psu: (gpu) => {
-				return {
-					bool: {
-						must: [{ range: { wattage: { gte: gpu.tdp_parsed * 1.75 } } }]
-					}
-				};
-			}
-*/
 		},
 		psu: {
 			gpu: (psu) => {
@@ -2049,68 +2103,345 @@ const constraintComparator = async (queryBody, partType, formFields, currentData
 			motherboard: (chassis) => ({
 				match: { form_factor: chassis.compatibility || chassis.chassis_type }
 			}),
-			chassis: (motherboard) => ({
-				match: { compatibility: motherboard.form_factor }
-			})
 		},
 		cpu_cooler: {
 			cpu: (cpu_cooler) => ({
 				bool: {
 					must: [
-						{ match: { socket: cpu_cooler.compatibility } },
-						{ range: { tdp: { lte: cpu_cooler.cooling_potential_parsed } } }
+						{ match: { manufacturer: cpu_cooler.compatibility } },
+						{ range: { tdp_parsed: { lte: cpu_cooler.cooling_potential_parsed } } }
 					]
 				}
 			})
 		},
-
-		/*
-		  psu: {
-		    gpu: (psu) => ({
-		      range: {
-		        "psu_wattage": { gte: psu.tdp_parsed } // PSU must provide sufficient wattage for GPU
-		      }
-		    })
-		  },
-			*/
 	};
-/*
-	if (constraintMap[partType]) {
-		for (const relatedPart in constraintMap[partType]) {
-			const constraintFn = constraintMap[partType][relatedPart];
-			const constraint = constraintFn(partType, formFields);
+    if (constraintMap[partType]) {
+        // Use the first result from currentData as the representative part
+        if (currentData.length > 0) {
+            const partData = currentData[0]._source;
+			console.log(partData);
+            for (const relatedPart in constraintMap[partType]) {
+                if (constraintMap[partType][relatedPart]) {
+                    const constraintFunction = constraintMap[partType][relatedPart];
+                    const constraint = constraintFunction(partData, formFields);
 
-			if (constraint) {
-				queryBody.bool.must.push(constraint);
+                    if (constraint && constraint.bool) {
+						//console.log(JSON.stringify(queryBody, null, 2));
+						if (queryBody.function_score) {
+                            if (constraint.bool.must) {
+                                queryBody.function_score.query.bool.must.push(...constraint.bool.must);
+                            }
+                            if (constraint.bool.should) {
+                                queryBody.function_score.query.bool.should.push(...constraint.bool.should);
+                            }
+                            if (constraint.bool.must_not) {
+                                queryBody.function_score.query.bool.must_not.push(...constraint.bool.must_not);
+                            }	
+						}
+                        else {
+                            if (constraint.bool.must) {
+                                queryBody.bool.must.push(...constraint.bool.must);
+                            }
+                            if (constraint.bool.should) {
+                                queryBody.bool.should.push(...constraint.bool.should);
+                            }
+                            if (constraint.bool.must_not) {
+                                queryBody.bool.must_not.push(...constraint.bool.must_not);
+                            }
+                        }
+                    }
+                }
+            }
+        }
+	}
+	return queryBody;
+};
+/*
+const constrainData = async (partType, formFields, currentData) => {
+	//console.log(currentData);
+
+	const constraintMap2 = {
+		cpu: {
+			motherboard: (cpu) => cpu.socket === currentData.motherboard.socket,
+			cpu_cooler: (cpu) => {
+				const compatibleManufacturers = currentData.cpu_cooler.compatibility.split(',').map(c => c.trim().toLowerCase());
+				return compatibleManufacturers.includes(cpu.manufacturer.toLowerCase()) && cpu.tdp_parsed <= currentData.cpu_cooler.cooling_potential_parsed;
+			}
+		},
+		motherboard: {
+			memory: (motherboard) => motherboard.memory_compatibility === currentData.memory.type,
+			chassis: (motherboard) => motherboard.form_factor === currentData.chassis.compatibility
+		},
+		memory: {
+			motherboard: (memory) => memory.type === currentData.motherboard.memory_compatibility
+		},
+		gpu: {
+			psu: (gpu) => {
+				const requiredWattage = gpu.tdp_parsed * 1.75;
+				if (formFields.psuBias === "highWattage") {
+					return currentData.psu.wattage >= gpu.tdp_parsed * 2.5;
+				}
+				return currentData.psu.wattage >= requiredWattage;
+			}
+		},
+		psu: {
+			gpu: (psu) => psu.wattage >= currentData.gpu.tdp_parsed
+		},
+		chassis: {
+			motherboard: (chassis) => chassis.compatibility === currentData.motherboard.form_factor || chassis.chassis_type === currentData.motherboard.form_factor
+		},
+		cpu_cooler: {
+			cpu: (cpu_cooler) => {
+				const compatibleSockets = cpu_cooler.compatibility.split(',').map(c => c.trim().toLowerCase());
+				return compatibleSockets.includes(currentData.cpu.socket.toLowerCase()) && cpu_cooler.cooling_potential_parsed >= currentData.cpu.tdp_parsed;
 			}
 		}
-	}
-*/
+	};
+
+	// Define constraints with fuzzy matching using Fuse.js
+	const constraintMap = {
+		cpu: {
+			motherboard: (cpu) => {
+				const fuse = new Fuse(currentData, { keys: ['socket'], threshold: 0.3 });
+				return fuse.search(cpu.socket).length > 0; // Fuzzy match for CPU socket
+			},
+			cpu_cooler: (cpu) => {
+				const compatibleManufacturers = currentData.cpu_cooler.compatibility.split(',').map(c => c.trim().toLowerCase());
+				const fuse = new Fuse(compatibleManufacturers, { threshold: 0.3 });
+				const match = fuse.search(cpu.manufacturer.toLowerCase());
+				return match.length > 0 && cpu.tdp_parsed <= currentData.cpu_cooler.cooling_potential_parsed; // Fuzzy match for CPU cooler compatibility
+			}
+		},
+		motherboard: {
+			memory: (motherboard) => {
+				const fuse = new Fuse(currentData, { keys: ['memory_compatibility'], threshold: 0.3 });
+				return fuse.search(motherboard.memory_compatibility).length > 0; // Fuzzy match for memory compatibility
+			},
+			chassis: (motherboard) => {
+				const fuse = new Fuse(currentData, { keys: ['compatibility'], threshold: 0.3 });
+				return fuse.search(motherboard.form_factor).length > 0; // Fuzzy match for chassis compatibility
+			}
+		},
+		memory: {
+			motherboard: (memory) => {
+				const fuse = new Fuse(currentData, { keys: ['memory_compatibility'], threshold: 0.3 });
+				return fuse.search(memory.type).length > 0; // Fuzzy match for motherboard memory compatibility
+			}
+		},
+		gpu: {
+			psu: (gpu) => {
+				const requiredWattage = gpu.tdp_parsed * 1.75;
+				const fuse = new Fuse(currentData, { keys: ['wattage'], threshold: 0.3 });
+				if (formFields.psuBias === "highWattage") {
+					return fuse.search(gpu.tdp_parsed * 2.5).length > 0; // Fuzzy match for high wattage PSU
+				}
+				return fuse.search(requiredWattage).length > 0; // Fuzzy match for PSU wattage
+			}
+		},
+		psu: {
+			gpu: (psu) => {
+				const fuse = new Fuse(currentData, { keys: ['tdp_parsed'], threshold: 0.3 });
+				return fuse.search(psu.wattage).length > 0; // Fuzzy match for PSU compatibility with GPU
+			}
+		},
+		chassis: {
+			motherboard: (chassis) => {
+				const fuse = new Fuse(currentData, { keys: ['form_factor'], threshold: 0.3 });
+				return fuse.search(chassis.compatibility || chassis.chassis_type).length > 0; // Fuzzy match for chassis and motherboard form factor
+			}
+		},
+		cpu_cooler: {
+			cpu: (cpu_cooler) => {
+				const compatibleSockets = cpu_cooler.compatibility.split(',').map(c => c.trim().toLowerCase());
+				const fuse = new Fuse(compatibleSockets, { threshold: 0.3 });
+				const match = fuse.search(currentData.cpu.socket.toLowerCase());
+				return match.length > 0 && cpu_cooler.cooling_potential_parsed >= currentData.cpu.tdp_parsed; // Fuzzy match for CPU socket
+			}
+		}
+	};
+
+	// Check if there are constraints defined for the partType
 	if (constraintMap[partType]) {
-		for (const relatedPart in constraintMap[partType]) {
-			if (constraintMap[partType][relatedPart]) {
-				const constraintFunction = constraintMap[partType][relatedPart];
-				//const constraint = constraintFunction(formFields[relatedPart] || {}, formFields);
-				const constraint = constraintMap[partType][relatedPart](formFields);
-				//console.log(partType);
-				//console.log(relatedPart);
-				//console.log("\n\n\n\n");
-				//console.log(constraint);
-				if (constraint) {
-					if (constraint.bool.must) {
-						queryBody.bool.must.push(...constraint.bool.must);
-					}
-					if (constraint.bool.should) {
-						queryBody.bool.should.push(...constraint.bool.should);
-					}
-					if (constraint.bool.must_not) {
-						queryBody.bool.must_not.push(...constraint.bool.must_not);
+		const constraints = constraintMap[partType];
+
+		// Loop through the current data (parts) and check if they satisfy the constraints
+		console.log("currentData: ", currentData);
+		const compatibleParts = currentData.filter(partData => {
+			let isCompatible = true;
+
+			for (const relatedPart in constraints) {
+				if (constraints[relatedPart]) {
+					const constraintCheck = constraints[relatedPart](partData._source);
+					if (!constraintCheck) {
+						isCompatible = false; // If any constraint fails, the part is not compatible
+						break;
 					}
 				}
 			}
-		}
+			return isCompatible; // Return only parts that pass all constraints
+		});
+
+		return compatibleParts; // Return the filtered compatible parts
 	}
-	return queryBody;
+	
+	// If no constraints exist for this partType, return all currentData
+	return currentData;
+};
+*/
+const constrainData = async (partType, formFields, currentData) => {
+    const fuseOptions = {
+        threshold: 0.5 // Set your fuzzy matching threshold here
+    };
+
+    // Debugging: Check the structure of currentData
+    //console.log("currentData structure:", currentData);
+
+    // Initialize Fuse for each part type with relevant fields
+    const fuseCpu = new Fuse(currentData.cpu, { keys: ['socket'], threshold: 0.75});
+    const fuseCooler = new Fuse(currentData.cpu_cooler, { keys: ['compatibility'], ...fuseOptions });
+    const fuseGpu = new Fuse(currentData.gpu, { keys: ['tdp_parsed'], ...fuseOptions });
+    const fusePsu = new Fuse(currentData.psu, { keys: ['wattage'], ...fuseOptions });
+
+    // Define constraints with fuzzy matching using Fuse.js
+    const constraintMap = {
+    	cpu: {
+    		motherboard: (cpu) => {
+    			// Debugging: Check the socket you're searching for
+    			//console.log("Matching CPU socket:", cpu.socket);
+    			const result = fuseCpu.search(cpu.socket);
+    			//console.log("Motherboard match result:", result);
+    			return result.length > 0; // Fuzzy match for CPU socket
+    		},
+    	},
+    	motherboard: {
+    		memory: (motherboard) => {
+    			const fuseMemory = new Fuse(currentData.memory, { keys: ["type"], ...fuseOptions });
+    			const result = fuseMemory.search(motherboard.memory_compatibility);
+    			//console.log("Memory match result:", result);
+    			return result.length > 0;
+    		},
+    		chassis: (motherboard) => {
+    			const fuseChassis = new Fuse(currentData.chassis, { keys: ["compatibility"], ...fuseOptions });
+    			const result = fuseChassis.search(motherboard.form_factor);
+    			//console.log("Chassis match result:", result);
+    			return result.length > 0;
+    		}
+    	},
+    	gpu: {
+    		psu: (gpu) => {
+    			const requiredWattage = gpu.tdp_parsed * 1.75;
+    			const result = fusePsu.search(requiredWattage);
+    			//console.log("PSU wattage match:", result);
+    			if (formFields.psuBias === "highWattage") {
+    				return fusePsu.search(gpu.tdp_parsed * 2.5).length > 0;
+    			}
+    			return result.length > 0;
+    		}
+    	},
+    	psu: {
+    		gpu: (psu) => {
+    			const result = fuseGpu.search(psu.wattage);
+    			//console.log("GPU to PSU match result:", result);
+    			return result.length > 0;
+    		}
+    	},
+    	chassis: {
+    		motherboard: (chassis) => {
+    			const fuseMotherboard = new Fuse(currentData.motherboard, { keys: ["form_factor"], ...fuseOptions });
+    			const result = fuseMotherboard.search(chassis.compatibility || chassis.chassis_type);
+    			//console.log("Chassis to motherboard match:", result);
+    			return result.length > 0;
+    		}
+    	},
+    };
+
+	// Check if there are constraints defined for the partType
+	if (constraintMap[partType]) {
+		const constraints = constraintMap[partType];
+
+		// Debugging: Log current part data
+		//console.log("Current part data for", partType, currentData[partType]);
+
+		// Loop through the current data (parts) and check if they satisfy the constraints
+		const compatibleParts = currentData[partType].filter(partData => {
+			let isCompatible = true;
+
+			for (const relatedPart in constraints) {
+				if (constraints[relatedPart]) {
+					const constraintCheck = constraints[relatedPart](partData);
+					//console.log(`Constraint result for ${relatedPart}:`, constraintCheck);
+					if (!constraintCheck) {
+						isCompatible = false; // If any constraint fails, the part is not compatible
+						break;
+					}
+				}
+			}
+			return isCompatible; // Return only parts that pass all constraints
+		});
+
+        console.log("Compatible parts:", compatibleParts);
+        return compatibleParts; // Return the filtered compatible parts
+    }
+
+    // If no constraints exist for this partType, return all currentData
+   // console.log("Returning all current data:", currentData[partType]);
+    return currentData[partType];
+};
+
+const checkCompatibility = (partType, currentData) => {
+	// Example socket types and other constraints for matching
+	const compatibilityConstraints = {
+		cpu_cooler: {
+			matchField: "compatibility",
+			dependentOn: "cpu",
+			compareField: "socket"
+		},
+		motherboard: {
+			matchField: "form_factor",
+			dependentOn: "chassis",
+			compareField: "compatibility"
+		},
+		storage: {
+			matchField: "form_factor",
+			dependentOn: "motherboard",
+			compareField: "memory_compatibility"
+		},
+		// Add other constraints as necessary
+	};
+
+	// Store final compatible parts
+	let compatibleParts = {};
+
+	// Loop through each part type
+	for (const partCategory in currentData) {
+		const partList = currentData[partCategory];
+		compatibleParts[partCategory] = [];
+
+		// Check for compatibility for each part
+		partList.forEach((part) => {
+			// If part type has compatibility constraints
+			if (compatibilityConstraints[partCategory]) {
+				const constraint = compatibilityConstraints[partCategory];
+				const relatedParts = currentData[constraint.dependentOn] || [];
+
+				// Loop through the related parts for comparison
+				relatedParts.forEach((relatedPart) => {
+					// Check if the compatibility field includes the socket/compatibility
+					if (
+						relatedPart._source[constraint.compareField] &&
+						part._source[constraint.matchField].includes(relatedPart._source[constraint.compareField])
+					) {
+						compatibleParts[partCategory].push(part);
+					}
+				});
+			} else {
+				// If no constraints, just include the part as compatible
+				compatibleParts[partCategory].push(part);
+			}
+		});
+	}
+
+	return compatibleParts;
 };
 
 const finalQuery = async (key, jsonFormFields) => {
@@ -2125,62 +2456,22 @@ const finalQuery = async (key, jsonFormFields) => {
 
 	const buildQuery = await buildWizardQuery(queryBody, key, jsonFormFields);
 	if (buildQuery) {
-		//console.log("\n\nqueryBody: ");
-		//console.log(queryBody);
-		/*
-		for (const [key, value] of Object.entries(queryBody)) {
-			for (const [k, v] of Object.entries(value))  {
-				console.log(k, v);
-			}
-			
-		}
-*/
-		//console.log("\n\nbuildQuery: ");
-		//console.log(buildQuery);
-		/*
-		for (const [key, value] of Object.entries(buildQuery)) {
-			for (const [k, v] of Object.entries(value))  {
-			for (const [x, y] of Object.entries(v))  {
-				console.log(x, y);
-			}
-			}
-
-		}
-*/
-		queryBody = {...buildQuery};
+		queryBody = { ...buildQuery.queryBody };
 	}
-	//console.log("\n\n\n\n");
-	//console.log("queryBody: ", buildQuery);
-	//
-/*
-	const query = buildQuery.queryBody;
-	if (buildQuery.queryBody.function_score) {
-		console.log(JSON.stringify(buildQuery.queryBody.function_score, null, 2));
-		for (const [key, value] of Object.entries(buildQuery.queryBody.function_score.query.bool)) {
-			if (value.length === 0) {
-				delete buildQuery.queryBody.function_score.query.bool[key];
-			}
-	console.log(JSON.stringify(buildQuery.queryBody.function_score.query.bool, null, 2));
-		}
-		
-	} else {
-		console.log(JSON.stringify(buildQuery, null, 2));
-		for (const [key, value] of Object.entries(buildQuery.queryBody.bool)) {
-			if (value.length === 0) {
-				delete buildQuery.queryBody.bool[key];
-			}
-		}
-	console.log(JSON.stringify(buildQuery.queryBody.bool, null, 2));
-	}
-*/
-	const opensearchResult = await wizardSearch(key, {query: buildQuery.queryBody});
+	console.log(JSON.stringify(queryBody, null, 2));
+	const opensearchResult = await wizardSearch(key, {query: queryBody});
 	if (opensearchResult) {
 		//console.log("opensearchResult: ");
 		//console.log(JSON.stringify(opensearchResult, null, 2));
-		//const addComparator = await constraintComparator(queryBody, key, jsonFormFields, opensearchResult.body.hits.hits);
-	}
+		
+		//console.log(addComparator);
+		//const comparatorResults = await wizardSearch(key, {query: addComparator});
 
-	return opensearchResult;
+		//return opensearchResult;
+		return {opensearchResult: opensearchResult, queryBody: queryBody};
+	} else {
+		return "Search failed";
+	}
 };
 
 app.get("/api/opensearch/search", routePagination, tableValidator(partNameSchema, "partName"), tableSearch(), async (req, res) => {
@@ -2309,6 +2600,16 @@ app.get("/api/opensearch/test", routePagination, tableValidator(partNameSchema, 
 		chassis: [],
 		psu: [],
 		storage: []
+	};	
+	let addComparator = {
+		cpu: [],
+		gpu: [],
+		cpu_cooler: [],
+		motherboard: [],
+		memory: [],
+		chassis: [],
+		psu: [],
+		storage: []
 	};
 	let partObj = {
 		cpu: "",
@@ -2333,17 +2634,23 @@ app.get("/api/opensearch/test", routePagination, tableValidator(partNameSchema, 
 			
 		}
 
-		
-
 		for (const key in opensearchResults) {
 			const opensearchResult = await finalQuery(key, jsonFormFields);
-			//console.log(opensearchResult);
-			opensearchResults[key] = opensearchResult;
+			
+			if (opensearchResult) {
+				//console.log(opensearchResult.opensearchResult.body.hits.hits);
+				opensearchResults[key] = opensearchResult.opensearchResult.body.hits.hits.map(hit => hit._source);
+				}
 		}
+		for (const key in opensearchResults) {
+			addComparator[key] = await constrainData(key, jsonFormFields, opensearchResults);
+			//const addComparator2 = await constraintComparator(opensearchResult.queryBody, key, jsonFormFields, opensearchResults);
+		}
+
 
 		
 
-		return res.status(200).json(opensearchResults);
+		return res.status(200).json(addComparator);
 		//return res.status(200).json(JSON.parse(opensearchResults.cpu.meta.request.params.body));
 	} catch (error) {
 		console.error(error);
