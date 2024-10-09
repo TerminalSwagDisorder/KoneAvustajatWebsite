@@ -1648,6 +1648,14 @@ const extractMemorySpeed = (value) => {
 	return parseFloat(match[0], 10); // Return the first number or null
 };
 
+const extractMemory = (num) => {
+	let findDdr = num.match(/(ddr\d+)/i);
+	if (!findDdr) {
+		return "";
+	}
+	return String(findDdr[0].toLowerCase());
+};
+
 const performanceCalculator = (part, partType = null) => {
 	if (partType === "cpu") {
 		let coreCount = extractFirstNumbers(part.core_count);
@@ -2012,18 +2020,16 @@ const buildWizardQuery = async (queryBody, partType, formFields) => {
             { level: "80", weight: 1 },
         ];
 
+		queryBody.bool.should.push({
+			multi_match: {
+					query: "Bronze Silver Gold Platinum Titanium",
+					fields: ["efficiency"],
+					fuzziness: "AUTO",
+					boost: psuEfficiencyBoost
+				}
+			
+		});
 
-        efficiencyLevels.forEach(function(efficiency) {
-            queryBody.bool.should.push({
-                match: {
-                    efficiency: {
-                        query: efficiency.level,
-                        fuzziness: "AUTO",
-                        boost: psuEfficiencyBoost * efficiency.weight
-                    }
-                }
-            });
-        });
 	}
 
 	for (let key in prices) {
@@ -2061,32 +2067,63 @@ const buildWizardQuery = async (queryBody, partType, formFields) => {
 	return { queryBody: queryBody, prices: prices, scoring: scoring };
 };
 
-const constraintComparator = async (queryBody, partType, formFields, currentData, maxScores) => {
-	
+const constraintComparator = async (queryBody, formFields, currentData, maxScores) => {
+	const maxTdp = currentData.cpu_cooler
+		.map((cooler) => cooler.cooling_potential_parsed)
+		.filter((value) => value !== undefined && value !== null)
+		.reduce((max, value) => Math.max(max, value), null);
+	const maxCoolingPotential = currentData.cpu
+		.map((c) => c.tdp_parsed)
+		.filter((value) => value !== undefined && value !== null)
+		.reduce((max, value) => Math.max(max, value), null);
+	const ddrType = checkMemoryCompatibility(currentData.motherboard[0], currentData.memory);
+
 	const constraintMap = {
 		cpu: {
-			motherboard: (cpu) => ({ match: { socket: cpu.socket } }),
+			motherboard: (cpu) => ({
+				bool: {
+					must: [{ match: { chipset: cpu.manufacturer } }]
+				}
+			}),
 			cpu_cooler: (cpu) => ({
 				bool: {
 					must: [
-						{ match: { compatibility: cpu.socket } },
-						{ range: { cooling_potential_parsed: { gte: cpu.tdp_parsed } } }
+						{
+							multi_match: {
+								fields: ["compatibility"],
+								query: cpu.socket,
+								fuzziness: "AUTO"
+							}
+						},
+						{ range: { cooling_potential_parsed: { gte: maxCoolingPotential } } }
 					]
 				}
 			})
 		},
 		motherboard: {
-			memory: (motherboard) => ({ match: { type: motherboard.memory_compatibility } }),
-			chassis: (motherboard) => ({ match: { compatibility: motherboard.form_factor } })
+			memory: (motherboard) => ({
+				bool: {
+					must: [{ match: { type: ddrType } }]
+				}
+			}),
+			chassis: (motherboard) => ({
+				bool: {
+					must: [{ match: { compatibility: motherboard.form_factor } }]
+				}
+			})
 		},
 		memory: {
-			motherboard: (memory) => ({ match: { memory_compatibility: memory.type } })
+			motherboard: (memory) => ({
+				bool: {
+					must: [{ match: { memory_compatibility: ddrType } }]
+				}
+			})
 		},
 		gpu: {
 			psu: (gpu, formFields) => {
 				const constraints = {
 					bool: {
-						must: [{ range: { wattage: { gte: gpu.tdp_parsed * 1.75 } } }]
+						must: [{ range: { wattage: { gte: gpu.tdp_parsed * 1.5 } } }]
 					}
 				};
 
@@ -2094,7 +2131,7 @@ const constraintComparator = async (queryBody, partType, formFields, currentData
 					constraints.bool.should = [
 						{
 							range: {
-								wattage: { gte: gpu.tdp_parsed * 2.5 }
+								wattage: { gte: gpu.tdp_parsed * 2 }
 							}
 						}
 					];
@@ -2105,100 +2142,209 @@ const constraintComparator = async (queryBody, partType, formFields, currentData
 			}
 		},
 		psu: {
-			gpu: (psu) => {
-				return {
-					bool: {
-						must: [{ range: { tdp_parsed: { lte: psu.wattage } } }]
-					}
-				};
-			}
+			gpu: (psu) => ({
+				bool: {
+					must: [{ range: { tdp_parsed: { lte: psu.wattage } } }]
+				}
+			})
 		},
 		chassis: {
 			motherboard: (chassis) => ({
-				match: { form_factor: chassis.compatibility || chassis.chassis_type }
-			}),
+				bool: {
+					must: [
+						{
+							multi_match: {
+								query: `${chassis.compatibility || ""} ${chassis.chassis_type || ""}`,
+								fields: ["form_factor"],
+								fuzziness: "AUTO"
+							}
+						}
+					]
+				}
+			})
 		},
 		cpu_cooler: {
 			cpu: (cpu_cooler) => ({
 				bool: {
 					must: [
+						/*{ multi_match: { 
+							fields: ["socket"],
+							query: cpu_cooler.compatibility, 
+							fuzziness: "AUTO"
+						}},*/
 						{ match: { socket: cpu_cooler.compatibility } },
-						{ range: { tdp_parsed: { lte: cpu_cooler.cooling_potential_parsed } } }
+						{ range: { tdp_parsed: { lte: maxTdp } } }
+					]
+				}
+			})
+		}
+	};
+
+/*	const constraintMap = {
+		cpu: {
+			motherboard: (cpu) => ({
+				bool: {
+					must: [{ match: { socket: cpu.socket } }]
+				}
+			}),
+			cpu_cooler: (cpu) => ({
+				bool: {
+					must: [
+						{
+							multi_match: {
+								fields: ["compatibility"],
+								query: cpu.socket,
+								fuzziness: "AUTO"
+							}
+						},
+						{ range: { cooling_potential_parsed: { gte: maxCoolingPotential } } }
 					]
 				}
 			})
 		},
-	};
-    if (constraintMap[partType]) {
-		//console.log(queryBody);
-        // Use the first result from currentData as the representative part
-		console.log("partType", partType);
-		//console.log("currentData", currentData[partType].length);
-        if (currentData[partType].length > 0) {
-            const partData = currentData[partType][0];
-			//console.log(partData);
-            for (const relatedPart in constraintMap[partType]) {
-                if (constraintMap[partType][relatedPart]) {
-                	const constraintFunction = constraintMap[partType][relatedPart];
-                	const constraint = constraintFunction(partData, formFields);
+		motherboard: {
+			memory: (motherboard) => ({
+				bool: {
+					must: [{ match: { type: motherboard.memory_compatibility } }]
+				}
+			}),
+			chassis: (motherboard) => ({
+				bool: {
+					must: [{ match: { compatibility: motherboard.form_factor } }]
+				}
+			})
+		},
+		memory: {
+			motherboard: (memory) => ({
+				bool: {
+					must: [{ match: { memory_compatibility: memory.type } }]
+				}
+			})
+		},
+		gpu: {
+			psu: (gpu, formFields) => {
+				const constraints = {
+					bool: {
+						must: [{ range: { wattage: { gte: gpu.tdp_parsed * 1.5 } } }]
+					}
+				};
 
-                	// Ensure the related part's queryBody exists
-                	if (!queryBody[relatedPart]) {
-                		console.log(`${relatedPart} has no queryBody!`);
-                		// Initialize it if necessary
-                		queryBody[relatedPart] = {
-                			bool: {
-                				must: [],
-                				should: [],
-                				must_not: []
-                			}
-                		};
-                	}
+				if (formFields.psuBias === "highWattage") {
+					constraints.bool.should = [
+						{
+							range: {
+								wattage: { gte: gpu.tdp_parsed * 2 }
+							}
+						}
+					];
+					constraints.bool.minimum_should_match = 1;
+				}
 
-                	if (constraint && constraint.bool) {
-                		//console.log(maxScores[relatedPart]);
-                		//console.log(maxScores[relatedPart] * 0.75);
-                		//console.log(queryBody);
-                		//console.log(JSON.stringify(queryBody[partType], null, 2));
-                		if (queryBody[relatedPart].function_score) {
-                			queryBody[relatedPart].function_score.min_score = maxScores[relatedPart] * 0.75;
-                			if (constraint.bool.must) {
-                				queryBody[relatedPart].function_score.query.bool.must.push(...constraint.bool.must);
-                			}
-                			if (constraint.bool.should) {
-                				queryBody[relatedPart].function_score.query.bool.should.push(...constraint.bool.should);
-                			}
-                			if (constraint.bool.must_not) {
-                				queryBody[relatedPart].function_score.query.bool.must_not.push(
-                					...constraint.bool.must_not
-                				);
-                			}
-                		} else {
-                			queryBody[relatedPart].min_score = maxScores[relatedPart] * 0.75;
-                			if (constraint.bool.must) {
-                				queryBody[relatedPart].bool.must.push(...constraint.bool.must);
-                			}
-                			if (constraint.bool.should) {
-                				queryBody[relatedPart].bool.should.push(...constraint.bool.should);
-                			}
-                			if (constraint.bool.must_not) {
-                				queryBody[relatedPart].bool.must_not.push(...constraint.bool.must_not);
-                			}
-                		}
-                	}
-                }
-            }
-        }
-	}
-	if (queryBody[partType].function_score) {
-		queryBody[partType].function_score.min_score = maxScores[partType] * 0.75;
-	} else {
-		queryBody[partType].min_score = maxScores[partType] * 0.75;
+				return constraints;
+			}
+		},
+		psu: {
+			gpu: (psu) => ({
+				bool: {
+					must: [{ range: { tdp_parsed: { lte: psu.wattage } } }]
+				}
+			})
+		},
+		chassis: {
+			motherboard: (chassis) => ({
+				bool: {
+					must: [
+						{
+							multi_match: {
+								query: `${chassis.compatibility || ""} ${chassis.chassis_type || ""}`,
+								fields: ["form_factor"],
+								fuzziness: "AUTO"
+							}
+						}
+					]
+				}
+			})
+		},
+		cpu_cooler: {
+			cpu: (cpu_cooler) => ({
+				bool: {
+					must: [
+
+						{ match: { socket: cpu_cooler.compatibility } },
+						{ range: { tdp_parsed: { lte: maxTdp } } }
+					]
+				}
+			})
+		}
+	};*/	
+	
+	for (const partType in currentData) {
+		if (constraintMap[partType]) {
+			if (currentData[partType].length > 0) {
+				// Use the first result from currentData as the representative part
+				const partData = currentData[partType][0];
+				for (const relatedPart in constraintMap[partType]) {
+					if (constraintMap[partType][relatedPart]) {
+						const constraintFunction = constraintMap[partType][relatedPart];
+						const constraint = constraintFunction(partData, formFields);
+						if (constraint && constraint.bool) {
+							if (queryBody[relatedPart].function_score) {
+								queryBody[relatedPart].function_score.min_score = maxScores[relatedPart] * 0.75;
+								if (constraint.bool.must) {
+									queryBody[relatedPart].function_score.query.bool.must.push(...constraint.bool.must);
+								}
+								if (constraint.bool.should) {
+									queryBody[relatedPart].function_score.query.bool.should.push(
+										...constraint.bool.should
+									);
+								}
+								if (constraint.bool.must_not) {
+									queryBody[relatedPart].function_score.query.bool.must_not.push(
+										...constraint.bool.must_not
+									);
+								}
+							} else {
+								queryBody[relatedPart].min_score = maxScores[relatedPart] * 0.75;
+								if (constraint.bool.must) {
+									queryBody[relatedPart].bool.must.push(...constraint.bool.must);
+								}
+								if (constraint.bool.should) {
+									queryBody[relatedPart].bool.should.push(...constraint.bool.should);
+								}
+								if (constraint.bool.must_not) {
+									queryBody[relatedPart].bool.must_not.push(...constraint.bool.must_not);
+								}
+							}
+						}
+					}
+				}
+			}
+		}
+		if (queryBody[partType].function_score) {
+			queryBody[partType].function_score.min_score = maxScores[partType] * 0.75;
+		} else {
+			queryBody[partType].min_score = maxScores[partType] * 0.75;
+		}
 	}
 	return queryBody;
 };
 
-const finalQuery = async (key, jsonFormFields) => {
+const checkMemoryCompatibility = (motherboard, memoryKits) => {
+    const motherboardMemoryType = extractMemory(motherboard.memory_compatibility);
+
+    for (let i = 0; i < memoryKits.length; i++) {
+        const memoryKit = memoryKits[i];
+        const memoryType = extractMemory(memoryKit.type);
+		console.log(motherboardMemoryType, memoryType);
+        if (memoryType === motherboardMemoryType) {
+            return motherboardMemoryType;
+        } 
+    }
+
+    return null;
+};
+
+const initialQuery = async (key, jsonFormFields) => {
 	let queryBody = {
 		bool: {
 			must: [], // Mandatory clauses
@@ -2215,18 +2361,14 @@ const finalQuery = async (key, jsonFormFields) => {
 	//console.log(JSON.stringify(queryBody, null, 2));
 	const opensearchResult = await wizardSearch(key, {query: queryBody});
 	if (opensearchResult) {
-		//console.log("opensearchResult: ");
-		//console.log(JSON.stringify(opensearchResult, null, 2));
-		
-		//console.log(addComparator);
-		//const comparatorResults = await wizardSearch(key, {query: addComparator});
-
-		//return opensearchResult;
-		//console.log(queryBody);
 		return {opensearchResult: opensearchResult, queryBody: queryBody};
 	} else {
 		return "Search failed";
 	}
+};
+
+const chooseParts = async (partType, currentData, maxScore) => {
+
 };
 
 app.get("/api/opensearch/search", routePagination, tableValidator(partNameSchema, "partName"), tableSearch(), async (req, res) => {
@@ -2285,7 +2427,7 @@ app.get("/api/opensearch/search", routePagination, tableValidator(partNameSchema
 		
 
 		for (const key in opensearchResults) {
-			const opensearchResult = await finalQuery(key, jsonFormFields);
+			const opensearchResult = await initialQuery(key, jsonFormFields);
 			
 			if (opensearchResult) {
 				opensearchResults[key] = opensearchResult;
@@ -2364,16 +2506,6 @@ app.get("/api/opensearch/test", routePagination, tableValidator(partNameSchema, 
 		psu: [],
 		storage: []
 	};
-	let addComparator = {
-		cpu: [],
-		gpu: [],
-		cpu_cooler: [],
-		motherboard: [],
-		memory: [],
-		chassis: [],
-		psu: [],
-		storage: []
-	};
 	let partObj = {
 		cpu: "",
 		gpu: "",
@@ -2396,7 +2528,8 @@ app.get("/api/opensearch/test", routePagination, tableValidator(partNameSchema, 
 		storage: 0
 	};
 
-	let queryBody = {};
+	let addComparator = {};
+	let comparatorQuery = {};
 
 	try {
 		for (const key in jsonFormFields) {
@@ -2411,29 +2544,22 @@ app.get("/api/opensearch/test", routePagination, tableValidator(partNameSchema, 
 		}
 
 		for (const key in opensearchResults) {
-			const opensearchResult = await finalQuery(key, jsonFormFields);
+			const opensearchResult = await initialQuery(key, jsonFormFields);
 			
 			if (opensearchResult) {
 				//console.log(opensearchResult.opensearchResult.body.hits.hits);
 				opensearchResults[key] = opensearchResult.opensearchResult.body.hits.hits.map(hit => hit._source);
 				maxScores[key] = opensearchResult.opensearchResult.body.hits.max_score;
-				queryBody[key] = opensearchResult.queryBody;
+				comparatorQuery[key] = opensearchResult.queryBody;
 				//queryBody.push(opensearchResult.queryBody);
 				}
 		}
-		for (const key in opensearchResults) {
-			console.log(key);
-			console.log(maxScores[key]);
-			console.log(maxScores[key] * 0.75);
-			//console.log("key: ", key);
-			//addComparator[key] = await checkCompatibility(jsonFormFields, opensearchResults);
-			addComparator = await constraintComparator(queryBody, key, jsonFormFields, opensearchResults, maxScores);
-		}
 
-		for (const key in queryBody) {
-			comparatorResults[key] = await wizardSearch(key, {query: queryBody[key]});
+		addComparator = await constraintComparator(comparatorQuery, jsonFormFields, opensearchResults, maxScores);
+
+		for (const key in addComparator) {
+			comparatorResults[key] = await wizardSearch(key, {query: addComparator[key]});
 		}
-		
 
 		return res.status(200).json(comparatorResults);
 		//return res.status(200).json(JSON.parse(opensearchResults.cpu.meta.request.params.body));
@@ -2445,6 +2571,64 @@ app.get("/api/opensearch/test", routePagination, tableValidator(partNameSchema, 
 		return res.status(status).json({ message: message });
 	}
 });
+
+// Route for viewing regular users
+app.get("/api/users", routePagination, async (req, res) => {
+	console.log("API users accessed");
+
+	const { items, offset } = req.pagination;
+
+	const sql = "SELECT * FROM users LIMIT ? OFFSET ?";
+	try {
+		const [users] = await promisePool.query(sql, [items, offset]);
+		// Process each user to add isAdmin property
+		const processedUsers = users.map((user) => {
+			const isAdmin = user.RoleID === 4;
+
+			// Exclude sensitive information like hashed password
+			const { Password, ...userData } = user;
+			return { ...userData, isAdmin };
+		});
+		return res.status(200).json(processedUsers);
+	} catch (error) {
+		console.error(error);
+		// If there is a status message or data then use that, otherwise the defaults
+		const message = error.response ? error.response.data : "Internal Server Error";
+		const status = error.response ? error.response.status : 500;
+		return res.status(status).json({ message: message });
+	}
+});
+
+app.get("/api/users/id", idValidator, async (req, res) => {
+	console.log("API search users by id accessed");
+
+	const id = req.query.id;
+
+	const sql = "SELECT * FROM users WHERE UserID = ?";
+	try {
+		const [users] = await promisePool.query(sql, [id]);
+		if (!users.length) {
+			return res.status(404).json({ message: "User not found" });
+		}
+
+		const processedUsers = users.map((user) => {
+			const isAdmin = user.RoleID === 4;
+
+			// Exclude sensitive information like hashed password
+			const { Password, ...userData } = user;
+			return { ...userData, isAdmin };
+		});
+
+		return res.status(200).json(processedUsers);
+	} catch (error) {
+		console.error(error);
+		// If there is a status message or data then use that, otherwise the defaults
+		const message = error.response ? error.response.data : "Internal Server Error";
+		const status = error.response ? error.response.status : 500;
+		return res.status(status).json({ message: message });
+	}
+});
+
 
 // Route for viewing regular users
 app.get("/api/users", routePagination, async (req, res) => {
