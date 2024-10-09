@@ -1750,7 +1750,7 @@ const buildWizardQuery = async (queryBody, partType, formFields) => {
 						functionScore.push({
 							"field_value_factor": {
 								"field": "approximate_performance",
-								"factor": 0.2,
+								"factor": 0.5,
 								"modifier": "square",
 								"missing": 1
 							}
@@ -1767,7 +1767,7 @@ const buildWizardQuery = async (queryBody, partType, formFields) => {
 						functionScore.push({
 							"field_value_factor": {
 								"field": "approximate_performance",
-								"factor": 0.1,
+								"factor": 0.25,
 								"modifier": "square",
 								"missing": 1
 							}
@@ -1780,7 +1780,7 @@ const buildWizardQuery = async (queryBody, partType, formFields) => {
 					functionScore.push({
 						"field_value_factor": {
 							"field": "approximate_performance",
-							"factor": 0.2,
+							"factor": 0.5,
 							"modifier": "square",
 							"missing": 1
 						}
@@ -1797,7 +1797,7 @@ const buildWizardQuery = async (queryBody, partType, formFields) => {
 						functionScore.push({
 							"field_value_factor": {
 								"field": "approximate_performance",
-								"factor": 0.1,
+								"factor": 0.25,
 								"modifier": "square",
 								"missing": 1
 							}
@@ -1836,7 +1836,7 @@ const buildWizardQuery = async (queryBody, partType, formFields) => {
 						query: manufacturer.toLowerCase(),
 						fields: ["manufacturer"], // You can add more fields here if needed
 						fuzziness: "AUTO",
-						boost: 3
+						boost: 2
 					}
 				});
 			}
@@ -1879,10 +1879,10 @@ const buildWizardQuery = async (queryBody, partType, formFields) => {
 			if (key === "gpuManufacturer" && value.endsWith("Preference") && partType === "gpu") {
 				let manufacturer;
 				if (value === "nvidiaPreference") {
-					manufacturer = "geforce quadro nvidia rtx gtx gt";
+					manufacturer = "geforce quadro nvidia";
 				}
 				if (value === "amdPreference") {
-					manufacturer = "radeon rx amd";
+					manufacturer = "radeon amd";
 				}
 				if (value === "intelPreference") {
 					manufacturer = "intel arc";
@@ -1892,7 +1892,7 @@ const buildWizardQuery = async (queryBody, partType, formFields) => {
 						query: manufacturer.toLowerCase(),
 						fields: ["manufacturer", "name"], // You can add more fields here if needed
 						fuzziness: "AUTO",
-						boost: 3
+						boost: 2 // Check what lower boost does
 					}
 				});
 			}
@@ -2044,8 +2044,8 @@ const buildWizardQuery = async (queryBody, partType, formFields) => {
 			functionScore.push({
 				"field_value_factor": {
 					"field": "price",
-					"factor": 0.5,
-					"modifier": "sqrt",
+					"factor": 0.02,
+					"modifier": "square",
 					"missing": 1
 				}
 			});
@@ -2267,7 +2267,9 @@ const initialQuery = async (key, jsonFormFields) => {
 };
 
 const chooseParts = async (partType, currentData, maxScore) => {
-
+	// Choose the parts with highest score?
+	// Choose randomly within some percentage?
+	// Make multiple builds and choose best one?
 };
 
 app.get("/api/opensearch/search", routePagination, tableValidator(partNameSchema, "partName"), tableSearch(), async (req, res) => {
@@ -2358,7 +2360,7 @@ app.get("/api/opensearch/test", routePagination, tableValidator(partNameSchema, 
 
 	let sql;
 	const jsonFormFields = {
-		price: 1000,
+		price: 1500,
 		useCase: "gaming",
 		performancePreference: "maxGpu",
 		formFactor: "noPreference",
