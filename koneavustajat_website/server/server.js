@@ -1767,7 +1767,7 @@ const buildWizardQuery = async (queryBody, partType, formFields) => {
 						functionScore.push({
 							"field_value_factor": {
 								"field": "approximate_performance",
-								"factor": 0.05,
+								"factor": 0.1,
 								"modifier": "square",
 								"missing": 1
 							}
@@ -1797,7 +1797,7 @@ const buildWizardQuery = async (queryBody, partType, formFields) => {
 						functionScore.push({
 							"field_value_factor": {
 								"field": "approximate_performance",
-								"factor": 0.05,
+								"factor": 0.1,
 								"modifier": "square",
 								"missing": 1
 							}
@@ -2044,8 +2044,8 @@ const buildWizardQuery = async (queryBody, partType, formFields) => {
 			functionScore.push({
 				"field_value_factor": {
 					"field": "price",
-					"factor": 0.01,
-					"modifier": "square",
+					"factor": 0.5,
+					"modifier": "sqrt",
 					"missing": 1
 				}
 			});
@@ -2144,7 +2144,7 @@ const constraintComparator = async (queryBody, formFields, currentData, maxScore
 		psu: {
 			gpu: (psu) => ({
 				bool: {
-					must: [{ range: { tdp_parsed: { lte: psu.wattage } } }]
+					must: [{ range: { tdp_parsed: { lte: psu.wattage * 1.3 } } }]
 				}
 			})
 		},
@@ -2163,20 +2163,18 @@ const constraintComparator = async (queryBody, formFields, currentData, maxScore
 				}
 			})
 		},
+		/*
 		cpu_cooler: {
 			cpu: (cpu_cooler) => ({
 				bool: {
 					must: [
-						/*{ multi_match: { 
-							fields: ["socket"],
-							query: cpu_cooler.compatibility, 
-							fuzziness: "AUTO"
-						}},*/
+
 						{ range: { tdp_parsed: { lte: maxTdp } } }
 					]
 				}
 			})
 		}
+		*/
 	};
 	
 	for (const partType in currentData) {
@@ -2360,7 +2358,7 @@ app.get("/api/opensearch/test", routePagination, tableValidator(partNameSchema, 
 
 	let sql;
 	const jsonFormFields = {
-		price: 1500,
+		price: 1000,
 		useCase: "gaming",
 		performancePreference: "maxGpu",
 		formFactor: "noPreference",
