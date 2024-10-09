@@ -1750,7 +1750,7 @@ const buildWizardQuery = async (queryBody, partType, formFields) => {
 						functionScore.push({
 							"field_value_factor": {
 								"field": "approximate_performance",
-								"factor": 0.1,
+								"factor": 0.2,
 								"modifier": "square",
 								"missing": 1
 							}
@@ -1780,7 +1780,7 @@ const buildWizardQuery = async (queryBody, partType, formFields) => {
 					functionScore.push({
 						"field_value_factor": {
 							"field": "approximate_performance",
-							"factor": 0.1,
+							"factor": 0.2,
 							"modifier": "square",
 							"missing": 1
 						}
@@ -2172,111 +2172,12 @@ const constraintComparator = async (queryBody, formFields, currentData, maxScore
 							query: cpu_cooler.compatibility, 
 							fuzziness: "AUTO"
 						}},*/
-						{ match: { socket: cpu_cooler.compatibility } },
 						{ range: { tdp_parsed: { lte: maxTdp } } }
 					]
 				}
 			})
 		}
 	};
-
-/*	const constraintMap = {
-		cpu: {
-			motherboard: (cpu) => ({
-				bool: {
-					must: [{ match: { socket: cpu.socket } }]
-				}
-			}),
-			cpu_cooler: (cpu) => ({
-				bool: {
-					must: [
-						{
-							multi_match: {
-								fields: ["compatibility"],
-								query: cpu.socket,
-								fuzziness: "AUTO"
-							}
-						},
-						{ range: { cooling_potential_parsed: { gte: maxCoolingPotential } } }
-					]
-				}
-			})
-		},
-		motherboard: {
-			memory: (motherboard) => ({
-				bool: {
-					must: [{ match: { type: motherboard.memory_compatibility } }]
-				}
-			}),
-			chassis: (motherboard) => ({
-				bool: {
-					must: [{ match: { compatibility: motherboard.form_factor } }]
-				}
-			})
-		},
-		memory: {
-			motherboard: (memory) => ({
-				bool: {
-					must: [{ match: { memory_compatibility: memory.type } }]
-				}
-			})
-		},
-		gpu: {
-			psu: (gpu, formFields) => {
-				const constraints = {
-					bool: {
-						must: [{ range: { wattage: { gte: gpu.tdp_parsed * 1.5 } } }]
-					}
-				};
-
-				if (formFields.psuBias === "highWattage") {
-					constraints.bool.should = [
-						{
-							range: {
-								wattage: { gte: gpu.tdp_parsed * 2 }
-							}
-						}
-					];
-					constraints.bool.minimum_should_match = 1;
-				}
-
-				return constraints;
-			}
-		},
-		psu: {
-			gpu: (psu) => ({
-				bool: {
-					must: [{ range: { tdp_parsed: { lte: psu.wattage } } }]
-				}
-			})
-		},
-		chassis: {
-			motherboard: (chassis) => ({
-				bool: {
-					must: [
-						{
-							multi_match: {
-								query: `${chassis.compatibility || ""} ${chassis.chassis_type || ""}`,
-								fields: ["form_factor"],
-								fuzziness: "AUTO"
-							}
-						}
-					]
-				}
-			})
-		},
-		cpu_cooler: {
-			cpu: (cpu_cooler) => ({
-				bool: {
-					must: [
-
-						{ match: { socket: cpu_cooler.compatibility } },
-						{ range: { tdp_parsed: { lte: maxTdp } } }
-					]
-				}
-			})
-		}
-	};*/	
 	
 	for (const partType in currentData) {
 		if (constraintMap[partType]) {
@@ -2461,7 +2362,7 @@ app.get("/api/opensearch/test", routePagination, tableValidator(partNameSchema, 
 	const jsonFormFields = {
 		price: 1500,
 		useCase: "gaming",
-		performancePreference: "maxCpu",
+		performancePreference: "maxGpu",
 		formFactor: "noPreference",
 		colorPreference: "noPreference",
 		otherColor: "",
@@ -2469,7 +2370,7 @@ app.get("/api/opensearch/test", routePagination, tableValidator(partNameSchema, 
 		cpuManufacturer: "amdPreference",
 		gpuManufacturer: "nvidiaPreference",
 		psuBias: "bestEfficiency",
-		storageBias: "noPreference",
+		storageBias: "onlySsd",
 		additionalStorage: "noPreference"
 	};
 	const validFormFields = {
