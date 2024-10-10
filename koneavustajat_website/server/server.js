@@ -2067,15 +2067,29 @@ const buildWizardQuery = async (queryBody, partType, formFields) => {
 	return { queryBody: queryBody, prices: prices, scoring: scoring };
 };
 
+const getMaxValue = (data, key) => {
+	if (!data) {
+		return null;
+	}
+	if (!key) {
+		return null;
+	}
+
+	const value = data
+		.map((d) => d[key])
+		.filter((value) => value !== undefined && value !== null)
+		.reduce((max, value) => Math.max(max, value), null);
+
+	return value;
+};
+
 const constraintComparator = async (queryBody, formFields, currentData, maxScores) => {
-	const maxTdp = currentData.cpu_cooler
-		.map((cooler) => cooler.cooling_potential_parsed)
-		.filter((value) => value !== undefined && value !== null)
-		.reduce((max, value) => Math.max(max, value), null);
-	const maxCoolingPotential = currentData.cpu
-		.map((c) => c.tdp_parsed)
-		.filter((value) => value !== undefined && value !== null)
-		.reduce((max, value) => Math.max(max, value), null);
+
+	const maxCpuTdp = getMaxValue(currentData.cpu_cooler, "cooling_potential_parsed");
+	const maxCoolingPotential = getMaxValue(currentData.cpu, "tdp_parsed");
+	const maxPsuWattage = getMaxValue(currentData.psu, "wattage");
+	const maxGpuTdp = getMaxValue(currentData.gpu, "tdp_parsed");
+
 	const ddrType = checkMemoryCompatibility(currentData.motherboard[0], currentData.memory);
 
 	const constraintMap = {
@@ -2123,7 +2137,7 @@ const constraintComparator = async (queryBody, formFields, currentData, maxScore
 			psu: (gpu, formFields) => {
 				const constraints = {
 					bool: {
-						must: [{ range: { wattage: { gte: gpu.tdp_parsed * 1.5 } } }]
+						must: [{ range: { wattage: { gte: maxGpuTdp * 1.2 } } }]
 					}
 				};
 
@@ -2131,7 +2145,7 @@ const constraintComparator = async (queryBody, formFields, currentData, maxScore
 					constraints.bool.should = [
 						{
 							range: {
-								wattage: { gte: gpu.tdp_parsed * 2 }
+								wattage: { gte: maxGpuTdp * 1.5 }
 							}
 						}
 					];
@@ -2144,7 +2158,7 @@ const constraintComparator = async (queryBody, formFields, currentData, maxScore
 		psu: {
 			gpu: (psu) => ({
 				bool: {
-					must: [{ range: { tdp_parsed: { lte: psu.wattage * 1.3 } } }]
+					must: [{ range: { tdp_parsed: { lte: maxPsuWattage * 1.3 } } }]
 				}
 			})
 		},
@@ -2169,7 +2183,7 @@ const constraintComparator = async (queryBody, formFields, currentData, maxScore
 				bool: {
 					must: [
 
-						{ range: { tdp_parsed: { lte: maxTdp } } }
+						{ range: { tdp_parsed: { lte: maxCpuTdp } } }
 					]
 				}
 			})
@@ -2234,7 +2248,6 @@ const checkMemoryCompatibility = (motherboard, memoryKits) => {
     for (let i = 0; i < memoryKits.length; i++) {
         const memoryKit = memoryKits[i];
         const memoryType = extractMemory(memoryKit.type);
-		console.log(motherboardMemoryType, memoryType);
         if (memoryType === motherboardMemoryType) {
             return motherboardMemoryType;
         } 
@@ -2266,10 +2279,150 @@ const initialQuery = async (key, jsonFormFields) => {
 	}
 };
 
-const chooseParts = async (partType, currentData, maxScore) => {
+const chooseParts = async (finRes, maxScores, formFields, addComparator) => {
+	// I want some randomness
+	//
 	// Choose the parts with highest score?
 	// Choose randomly within some percentage?
 	// Make multiple builds and choose best one?
+	// Use formfields and choose the best using that?
+	let randomBuilds = {
+		1: [],
+		2: [],
+		3: [],
+		4: []
+	};
+
+	let comparatorResults = {
+		cpu: [],
+		gpu: [],
+		cpu_cooler: [],
+		motherboard: [],
+		memory: [],
+		chassis: [],
+		psu: [],
+		storage: []
+	};
+
+	let currentData = {
+		cpu: [],
+		gpu: [],
+		cpu_cooler: [],
+		motherboard: [],
+		memory: [],
+		chassis: [],
+		psu: [],
+		storage: []
+	};
+
+	let newMaxScores = {
+		cpu: 0,
+		gpu: 0,
+		cpu_cooler: 0,
+		motherboard: 0,
+		memory: 0,
+		chassis: 0,
+		psu: 0,
+		storage: 0
+	};
+
+	let newQueryParts = {
+		build1: {
+			cpu: [],
+			gpu: [],
+			cpu_cooler: [],
+			motherboard: [],
+			memory: [],
+			chassis: [],
+			psu: [],
+			storage: []
+		},
+		build2: {
+			cpu: [],
+			gpu: [],
+			cpu_cooler: [],
+			motherboard: [],
+			memory: [],
+			chassis: [],
+			psu: [],
+			storage: []
+		}
+	};
+
+	let newQuery = {};
+
+	for (const key in finRes) {
+		currentData[key] = finRes[key].hits.hits.map((hit) => hit._source);
+		if (key !== "gpu" && key !== "cpu") {
+			newQueryParts.build1[key].push(...currentData[key]);
+			newQueryParts.build2[key].push(...currentData[key]);
+		} else {
+			if (currentData[key].length > 1) {
+				newQueryParts.build1[key].push(currentData[key][0]);
+				newQueryParts.build2[key].push(
+					currentData[key][Math.floor(Math.random() * (currentData[key].length - 1)) + 1]
+				);
+			} else {
+				newQueryParts.build1[key].push(...currentData[key]);
+				newQueryParts.build2[key].push(...currentData[key]);
+			}
+		}
+	}
+	/*
+	let [build1Query, build2Query] = await Promise.all([
+		constraintComparator(addComparator, formFields, newQueryParts.build1, maxScores),
+		constraintComparator(addComparator, formFields, newQueryParts.build2, maxScores)
+	]);
+
+	let searchResults = await Promise.all(
+		Object.keys(newQueryParts.build1).map(async (part) => {
+			let [build1Results, build2Results] = await Promise.all([
+				wizardSearch(part, { query: build1Query[part] }),
+				wizardSearch(part, { query: build2Query[part] })
+			]);
+
+			comparatorResults[part] = [...build1Results.body.hits.hits.map(hit => hit._source), ...build2Results.body.hits.hits.map(hit => hit._source)];
+			newMaxScores[part] = Math.max(build1Results.body.hits.max_score, build2Results.body.hits.max_score);
+		})
+	);
+*/
+
+	for (const key in newQueryParts) {
+		newQuery[key] = await constraintComparator(addComparator, formFields, newQueryParts[key], maxScores);
+		for (const k in newQueryParts[key]) {
+			comparatorResults[k] = await wizardSearch(k, { query: newQuery[key][k] });
+			newMaxScores[k] = comparatorResults[k].body.hits.max_score;
+			comparatorResults[k] = comparatorResults[k].body.hits.hits.map((hit) => hit._source);
+		}
+	}
+
+	for (const key in randomBuilds) {
+		if (comparatorResults.cpu.length > parseInt(key)) {
+			randomBuilds[key].cpu =
+				comparatorResults.cpu[Math.floor(Math.random() * (comparatorResults.cpu.length - 1))];
+		}
+		if (comparatorResults.gpu.length > parseInt(key) && randomBuilds[key].cpu) {
+			randomBuilds[key].gpu =
+				comparatorResults.gpu[Math.floor(Math.random() * (comparatorResults.gpu.length - 1))];
+		}
+		if (randomBuilds[key].cpu && randomBuilds[key].gpu) {
+			for (const p in comparatorResults) {
+				if (p !== "gpu" && p !== "cpu") {
+					randomBuilds[key][p] =
+						comparatorResults[p][Math.floor(Math.random() * (comparatorResults[p].length - 1))];
+				}
+			}
+		} else {
+			delete randomBuilds[key];
+		}
+	}
+
+	//console.log(JSON.stringify(newQuery, null, 2));
+	//console.log("\n\n\n\n");
+	//console.log(JSON.stringify(addComparator, null, 2));
+	console.log(randomBuilds);
+	//console.log(comparatorResults);
+	return randomBuilds;
 };
 
 app.get("/api/opensearch/search", routePagination, tableValidator(partNameSchema, "partName"), tableSearch(), async (req, res) => {
@@ -2362,7 +2515,7 @@ app.get("/api/opensearch/test", routePagination, tableValidator(partNameSchema, 
 	const jsonFormFields = {
 		price: 1500,
 		useCase: "gaming",
-		performancePreference: "maxGpu",
+		performancePreference: "maxCpu",
 		formFactor: "noPreference",
 		colorPreference: "noPreference",
 		otherColor: "",
@@ -2431,6 +2584,7 @@ app.get("/api/opensearch/test", routePagination, tableValidator(partNameSchema, 
 
 	let addComparator = {};
 	let comparatorQuery = {};
+	let finRes = {};
 
 	try {
 		for (const key in jsonFormFields) {
@@ -2461,8 +2615,12 @@ app.get("/api/opensearch/test", routePagination, tableValidator(partNameSchema, 
 		for (const key in addComparator) {
 			comparatorResults[key] = await wizardSearch(key, {query: addComparator[key]});
 		}
+		for (const key in comparatorResults) {
+			finRes[key] = comparatorResults[key].body;
+		}
+		await chooseParts(finRes, maxScores, jsonFormFields, addComparator);
 
-		return res.status(200).json(comparatorResults);
+		return res.status(200).json(finRes);
 		//return res.status(200).json(JSON.parse(opensearchResults.cpu.meta.request.params.body));
 	} catch (error) {
 		console.error(error);
