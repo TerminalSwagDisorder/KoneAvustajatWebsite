@@ -1529,16 +1529,6 @@ const wizardSearch = async (index, query) => {
 	}
 };
 
-const buildWizardQuery2 = async (key, formFields) => { 
-	let query = {key: []};
-	if (formFields.toLowerCase().includes("preference")) {
-		
-	}
-	
-	
-	
-	return query;
-};
 const extractFirstNumbers = (num) => {
 	// Assuming wattage is in the format "650W" or "850W" within the name, extract the numeric part
 	//const match = num.match(/(\d{2,4})(\s*[wW])?/);
@@ -2281,24 +2271,22 @@ const initialQuery = async (key, jsonFormFields) => {
 	const buildQuery = await buildWizardQuery(queryBody, key, jsonFormFields);
 	if (buildQuery) {
 		queryBody = { ...buildQuery.queryBody };
+
 	}
 	//console.log(JSON.stringify(queryBody, null, 2));
 	const opensearchResult = await wizardSearch(key, {query: queryBody});
 	if (opensearchResult) {
-		return {opensearchResult: opensearchResult, queryBody: queryBody};
+		return {opensearchResult: opensearchResult, queryBody: queryBody, prices: buildQuery.prices, scoring: buildQuery.scoring};
 	} else {
 		return "Search failed";
 	}
 };
 
 const chooseParts = async (finRes, maxScores, formFields, addComparator) => {
-	// I want some randomness
-	//
-	// Choose the parts with highest score?
-	// Choose randomly within some percentage?
-	// Make multiple builds and choose best one?
-	// Use formfields and choose the best using that?
+	let completedBuilds = 0;
 	const buildAmount = 4;
+	let searchResults = {};
+
     let randomBuilds = Array(buildAmount).fill(null).map(() => ({
         cpu: null,
         gpu: null,
@@ -2309,7 +2297,6 @@ const chooseParts = async (finRes, maxScores, formFields, addComparator) => {
         psu: null,
         storage: null
     }));
-	let completedBuilds = 0;
 
 	let newQueryParts = {
 		build1: {
@@ -2333,31 +2320,6 @@ const chooseParts = async (finRes, maxScores, formFields, addComparator) => {
 			storage: []
 		}
 	};
-	
-	let newMaxScores = {
-		build1: {
-			cpu: 0,
-			gpu: 0,
-			cpu_cooler: 0,
-			motherboard: 0,
-			memory: 0,
-			chassis: 0,
-			psu: 0,
-			storage: 0
-		},
-		build2: {
-			cpu: 0,
-			gpu: 0,
-			cpu_cooler: 0,
-			motherboard: 0,
-			memory: 0,
-			chassis: 0,
-			psu: 0,
-			storage: 0
-		}
-	};
-	//let newQuery = {};
-	let searchResults = {};
 
 	for (const key in finRes) {
 		const sourceData = finRes[key].hits.hits.map((hit) => hit._source);
@@ -2376,214 +2338,107 @@ const chooseParts = async (finRes, maxScores, formFields, addComparator) => {
 			}
 		}
 	}
-	/*
-	let [build1Query, build2Query] = await Promise.all([
-		constraintComparator(addComparator, formFields, newQueryParts.build1, maxScores),
-		constraintComparator(addComparator, formFields, newQueryParts.build2, maxScores)
-	]);
-
-	let searchResults = await Promise.all(
-		Object.keys(newQueryParts.build1).map(async (part) => {
-			let [build1Results, build2Results] = await Promise.all([
-				wizardSearch(part, { query: build1Query[part] }),
-				wizardSearch(part, { query: build2Query[part] })
-			]);
-
-			comparatorResults[part] = [...build1Results.body.hits.hits.map(hit => hit._source), ...build2Results.body.hits.hits.map(hit => hit._source)];
-			newMaxScores[part] = Math.max(build1Results.body.hits.max_score, build2Results.body.hits.max_score);
-		})
-	);
-*/
 
 	for (const key in newQueryParts) {
 		const cloneComparator = structuredClone(addComparator);
 		let searchResult;
 		searchResults[key] = {};
 		const newQuery = await constraintComparator(cloneComparator, formFields, newQueryParts[key], maxScores);
-		console.log(JSON.stringify(newQuery, null, 2));
+		//console.log(JSON.stringify(newQuery, null, 2));
 		for (const k in newQueryParts[key]) {
 			searchResult = await wizardSearch(k, { query: newQuery[k] });
+			if (!searchResult) {
+				throw new Error("Something went wrong while searching for random parts.");
+			}
 			const newMaxScore = searchResult.body.hits.max_score;
 			const partData = searchResult.body.hits.hits.map((hit) => ({...hit._source, score: hit._score}));
 
-            searchResults[key][k] = {
-                ...partData,
-                maxScore: newMaxScore
-            };
+            searchResults[key][k] = [
+            	...partData,
+            	{ maxscore: newMaxScore }
+            ];
 		}
+
+		//console.log(Object.keys(searchResults[key]));
+		//console.log(searchResults);
 		for (completedBuilds; completedBuilds < buildAmount; completedBuilds++) {
 			if (completedBuilds === 2 && key !== "build2") {
 				break;
 			}
-			randomBuilds[completedBuilds].cpu = searchResults[key].cpu[getRandomRange(searchResults[key].cpu.length)];
-			randomBuilds[completedBuilds].gpu = searchResults[key].gpu[getRandomRange(searchResults[key].gpu.length)];
+			const cpuVal = searchResults[key].cpu[getRandomRange(searchResults[key].cpu.length)];
+			const gpuVal = searchResults[key].gpu[getRandomRange(searchResults[key].gpu.length)];
+			randomBuilds[completedBuilds] = {
+				cpu: cpuVal,
+				gpu: gpuVal
+			};
+
 			if (randomBuilds[completedBuilds].cpu && randomBuilds[completedBuilds].gpu) {
 				for (const k in searchResults[key]) {
 					if (k !== "gpu" && k !== "cpu") {
+						//console.log(searchResults[key][k].at(-1));
 						if (k === "maxscore") {
-							randomBuilds[completedBuilds][k].maxscore = searchResults[key][k].maxscore;
 						}
 						randomBuilds[completedBuilds][k] =
 							searchResults[key][k][getRandomRange(searchResults[key][k].length)];
 					}
+					//randomBuilds[completedBuilds][k].maxscore = Object.values(searchResults[key][k].at(-1))[0];
+					randomBuilds[completedBuilds][k].maxscore = searchResults[key][k].slice(-1)[0]?.maxscore;
 				}
 			}
 		}
 	}
-	//console.log(completedBuilds);
 	//console.log(randomBuilds);
-	//console.log(JSON.stringify(newQuery, null, 2));
-	//console.log("\n\n\n\n");
-	//console.log(JSON.stringify(addComparator, null, 2));
-
+	randomBuilds = randomBuilds.filter((build, index) => {
+		for (const [key, value] of Object.entries(build)) {
+			if (value === undefined || value === null || value.length === 0) {
+				console.warn(`${key} was empty, deleting build ${index}`);
+				return false;
+			}
+		}
+		return true;
+	});
+	/*
+	// Poopass filtering
+	for (const key in randomBuilds) {
+			for (let [k, v] of Object.entries(randomBuilds[key])) {
+				if (v === undefined || v === null || v.length === 0) {
+					randomBuilds.splice(key, 1);
+					console.warn(`${k} was empty, deleting ${key}`);
+				}
+		}
+	}
+	*/
+	
 	return randomBuilds;
 };
 
-
-const chooseParts2 = async (finRes, maxScores, formFields, addComparator) => {
-	// I want some randomness
-	//
-	// Choose the parts with highest score?
-	// Choose randomly within some percentage?
-	// Make multiple builds and choose best one?
-	// Use formfields and choose the best using that?
-	const buildAmount = 4;
-    let randomBuilds = Array(buildAmount).fill(null).map(() => ({
-        cpu: null,
-        gpu: null,
-        cpu_cooler: null,
-        motherboard: null,
-        memory: null,
-        chassis: null,
-        psu: null,
-        storage: null
-    }));
-	let completedBuilds = 0;
-
-	let newQueryParts = {
-		build1: {
-			cpu: [],
-			gpu: [],
-			cpu_cooler: [],
-			motherboard: [],
-			memory: [],
-			chassis: [],
-			psu: [],
-			storage: []
-		},
-		build2: {
-			cpu: [],
-			gpu: [],
-			cpu_cooler: [],
-			motherboard: [],
-			memory: [],
-			chassis: [],
-			psu: [],
-			storage: []
-		}
-	};
-	
-	let newMaxScores = {
-		build1: {
-			cpu: 0,
-			gpu: 0,
-			cpu_cooler: 0,
-			motherboard: 0,
-			memory: 0,
-			chassis: 0,
-			psu: 0,
-			storage: 0
-		},
-		build2: {
-			cpu: 0,
-			gpu: 0,
-			cpu_cooler: 0,
-			motherboard: 0,
-			memory: 0,
-			chassis: 0,
-			psu: 0,
-			storage: 0
-		}
-	};
-	let newQuery = {};
-	let searchResults = {};
-
-	for (const key in finRes) {
-		const sourceData = finRes[key].hits.hits.map((hit) => hit._source);
-		if (key !== "gpu" && key !== "cpu") {
-			newQueryParts.build1[key].push(...sourceData);
-			newQueryParts.build2[key].push(...sourceData);
-		} else {
-			if (sourceData.length > 1) {
-				newQueryParts.build1[key].push(sourceData[0]);
-				newQueryParts.build2[key].push(
-					sourceData[getRandomRange(sourceData.length, 1)]
-				);
-			} else {
-				newQueryParts.build1[key].push(...sourceData);
-				newQueryParts.build2[key].push(...sourceData);
-			}
-		}
+const chooseRandomBuild = async (randomBuilds, scoring) => {
+	if (!randomBuilds || !scoring || randomBuilds.length === 0) {
+		return null;
 	}
-	/*
-	let [build1Query, build2Query] = await Promise.all([
-		constraintComparator(addComparator, formFields, newQueryParts.build1, maxScores),
-		constraintComparator(addComparator, formFields, newQueryParts.build2, maxScores)
-	]);
-
-	let searchResults = await Promise.all(
-		Object.keys(newQueryParts.build1).map(async (part) => {
-			let [build1Results, build2Results] = await Promise.all([
-				wizardSearch(part, { query: build1Query[part] }),
-				wizardSearch(part, { query: build2Query[part] })
-			]);
-
-			comparatorResults[part] = [...build1Results.body.hits.hits.map(hit => hit._source), ...build2Results.body.hits.hits.map(hit => hit._source)];
-			newMaxScores[part] = Math.max(build1Results.body.hits.max_score, build2Results.body.hits.max_score);
-		})
-	);
-*/
-
-	for (const key in newQueryParts) {
-		newQuery[key] = await constraintComparator(addComparator, formFields, newQueryParts[key], maxScores);
-		//console.log(JSON.stringify(newQuery[key] , null, 2));
-		for (const k in newQueryParts[key]) {
-			newQueryParts[key][k] = await wizardSearch(k, { query: newQuery[key][k] });
-			//newMaxScores[key][k] = newQueryParts[key][k].body.hits.max_score;
-			const newMaxScore = newQueryParts[key][k].body.hits.max_score;
-			//const partScore = newQueryParts[key][k].body.hits.hits.map((hit) => hit._score);
-			const partData = newQueryParts[key][k].body.hits.hits.map((hit) => ({...hit._source, score: hit._score}));
-			newQueryParts[key][k] = partData;
-			newQueryParts[key][k].maxscore = newMaxScore;
-			//newQueryParts[key][k].score = partScore;
+	const threshold = 0.95;
+	let totalScores = [];
+	for (const build in randomBuilds) {
+		let total = 0;
+		for (const [key, value] of Object.entries(randomBuilds[build])) {
+			const normalized = parseFloat(value.score || 1) / parseFloat(value.maxscore || 1);
+			const weighted = parseFloat(normalized) * parseFloat(scoring[key]);
+			total += weighted;
 		}
-			//console.log(newQueryParts[key]);
-		for (completedBuilds; completedBuilds < buildAmount; completedBuilds++) {
-			if (completedBuilds === 2 && key !== "build2") {
-				break;
-			}
-			randomBuilds[completedBuilds].cpu = newQueryParts[key].cpu[getRandomRange(newQueryParts[key].cpu.length)];
-			randomBuilds[completedBuilds].gpu = newQueryParts[key].gpu[getRandomRange(newQueryParts[key].gpu.length)];
-			if (randomBuilds[completedBuilds].cpu && randomBuilds[completedBuilds].gpu) {
-				for (const k in newQueryParts[key]) {
-					if (k !== "gpu" && k !== "cpu") {
-						if (k === "maxscore") {
-							randomBuilds[completedBuilds][k].maxscore = newQueryParts[key][k].maxscore;
-						}
-						randomBuilds[completedBuilds][k] =
-							newQueryParts[key][k][getRandomRange(newQueryParts[key][k].length)];
-					}
-				}
-			}
-		}
+		totalScores.push({ index: build, total: total });
 	}
-	//console.log(completedBuilds);
-	//console.log(randomBuilds);
-	//console.log(JSON.stringify(newQuery, null, 2));
-	//console.log("\n\n\n\n");
-	//console.log(JSON.stringify(addComparator, null, 2));
 
-	return randomBuilds;
+	const highestScore = Math.max(...totalScores.map(b => b.total));
+	const thresholdScore = highestScore * threshold;
+	const buildsWithinThreshold = totalScores.filter(b => b.total >= thresholdScore);
+
+	if (buildsWithinThreshold.length === 0) {
+		return null;
+	}
+
+	const chosenBuild = buildsWithinThreshold[getRandomRange(buildsWithinThreshold.length) || 0];
+
+	return randomBuilds[chosenBuild.index];
 };
 
 app.get("/api/opensearch/search", routePagination, tableValidator(partNameSchema, "partName"), tableSearch(), async (req, res) => {
@@ -2746,15 +2601,19 @@ app.get("/api/opensearch/test", routePagination, tableValidator(partNameSchema, 
 	let addComparator = {};
 	let comparatorQuery = {};
 	let finRes = {};
+	let scoring;
 
 	try {
 		for (const key in jsonFormFields) {
 			if (key !== "price" && key !== "otherColor" && !validFormFields[key].includes(jsonFormFields[key])) {
-				throw new Error(`${jsonFormFields[key]} is not allowed! Valid values are ${validFormFields[key]}.`);
+				//throw new Error(`${jsonFormFields[key]} is not allowed! Valid values are ${validFormFields[key]}.`);
+				return res.status(400).json({ message: `${jsonFormFields[key]} is not allowed! Valid values are ${validFormFields[key]}.` });
 			} else if (key === "price" && typeof jsonFormFields[key] !== "number") {
-				throw new Error(`${key} must be a number!`);
+				//throw new Error(`${key} must be a number!`);
+				return res.status(400).json({ message: `${key} must be a number!` });
 			} else if (key === "otherColor" && typeof jsonFormFields[key] !== "string") {
-				throw new Error(`${key} must be a string!`);
+				//throw new Error(`${key} must be a string!`);
+				return res.status(400).json({ message: `${key} must be a string!` });
 			}
 			
 		}
@@ -2762,13 +2621,17 @@ app.get("/api/opensearch/test", routePagination, tableValidator(partNameSchema, 
 		for (const key in opensearchResults) {
 			const opensearchResult = await initialQuery(key, jsonFormFields);
 			
-			if (opensearchResult) {
-				//console.log(opensearchResult.opensearchResult.body.hits.hits);
-				opensearchResults[key] = opensearchResult.opensearchResult.body.hits.hits.map(hit => hit._source);
-				maxScores[key] = opensearchResult.opensearchResult.body.hits.max_score;
-				comparatorQuery[key] = opensearchResult.queryBody;
-				//queryBody.push(opensearchResult.queryBody);
-				}
+			if (!opensearchResult) {
+				// 406 Not Acceptable or 404 Not Found
+				return res.status(406).json({ message: "Couldn't fetch initial data." });
+			}
+			
+			//console.log(opensearchResult.opensearchResult.body.hits.hits);
+			opensearchResults[key] = opensearchResult.opensearchResult.body.hits.hits.map(hit => hit._source);
+			maxScores[key] = opensearchResult.opensearchResult.body.hits.max_score;
+			comparatorQuery[key] = opensearchResult.queryBody;
+			//queryBody.push(opensearchResult.queryBody);
+			scoring = opensearchResult.scoring;
 		}
 		const preComparatorQuery = structuredClone(comparatorQuery);
 		addComparator = await constraintComparator(comparatorQuery, jsonFormFields, opensearchResults, maxScores);
@@ -2780,9 +2643,14 @@ app.get("/api/opensearch/test", routePagination, tableValidator(partNameSchema, 
 			finRes[key] = comparatorResults[key].body;
 		}
 
-		await chooseParts(finRes, maxScores, jsonFormFields, preComparatorQuery);
+		const randomBuilds = await chooseParts(finRes, maxScores, jsonFormFields, preComparatorQuery);
+		const chosenBuild = await chooseRandomBuild(randomBuilds, scoring);
+		
+		for (const build in chosenBuild) {
+			console.log(`${build} ID: ${chosenBuild[build].id}`);
+		}
 
-		return res.status(200).json(comparatorResults);
+		return res.status(200).json(randomBuilds);
 		//return res.status(200).json(JSON.parse(opensearchResults.cpu.meta.request.params.body));
 	} catch (error) {
 		console.error(error);
