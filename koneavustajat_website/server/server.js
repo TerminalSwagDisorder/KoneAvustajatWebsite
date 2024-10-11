@@ -2294,7 +2294,7 @@ app.post("/api/users/signup", userValidator(userSchema), userFieldsValidator, as
 	}
 });
 
-app.get("/api/algorithm", routePagination, tableValidator(partNameSchema, "partName"), tableSearch(), async (req, res) => {
+app.post("/api/algorithm", routePagination, tableValidator(partNameSchema, "partName"), tableSearch(), async (req, res) => {
 	console.log("API algorithm accessed");
 	console.log("\n");
 	console.log("\n");
@@ -2318,6 +2318,10 @@ app.get("/api/algorithm", routePagination, tableValidator(partNameSchema, "partN
 	*/
 	
 	const { formFields } = req.body;
+	if (!formFields) {
+		return res.status(400).json({ message: "Request body did not contain expected form!" });
+	}
+
 	const jsonFormFields = JSON.parse(formFields);
 
 	const validFormFields = {
@@ -2334,6 +2338,7 @@ app.get("/api/algorithm", routePagination, tableValidator(partNameSchema, "partN
 		storageBias: ["noPreference", "onlyM2", "onlySsd", "bootSsd", "balanced", "onlyHdd"],
 		additionalStorage: ["noPreference", "noAdded", "oneAdded", "twoAdded", "threeAdded", "maxAdded"]
 	};
+
 	let opensearchResults = {
 		cpu: [],
 		gpu: [],
@@ -2344,6 +2349,7 @@ app.get("/api/algorithm", routePagination, tableValidator(partNameSchema, "partN
 		psu: [],
 		storage: []
 	};
+
 	let comparatorResults = {
 		cpu: [],
 		gpu: [],
@@ -2354,6 +2360,7 @@ app.get("/api/algorithm", routePagination, tableValidator(partNameSchema, "partN
 		psu: [],
 		storage: []
 	};
+
 	let partObj = {
 		cpu: null,
 		gpu: null,
@@ -2382,6 +2389,7 @@ app.get("/api/algorithm", routePagination, tableValidator(partNameSchema, "partN
 	let scoring;
 
 	try {
+		// Validate form fields
 		for (const key in jsonFormFields) {
 			if (key !== "price" && key !== "otherColor" && !validFormFields[key].includes(jsonFormFields[key])) {
 				//throw new Error(`${jsonFormFields[key]} is not allowed! Valid values are ${validFormFields[key]}.`);
@@ -2394,13 +2402,14 @@ app.get("/api/algorithm", routePagination, tableValidator(partNameSchema, "partN
 				return res.status(400).json({ message: `${key} must be a string!` });
 			}
 		}
-
+		
+		// Fetch OpenSearch results for each part
 		for (const key in opensearchResults) {
 			const opensearchResult = await initialQuery(key, jsonFormFields);
 			
 			if (!opensearchResult) {
 				// 406 Not Acceptable or 404 Not Found
-				return res.status(406).json({ message: "Couldn't fetch initial data." });
+				return res.status(500).json({ message: "Couldn't fetch initial data." });
 			}
 			
 			opensearchResults[key] = opensearchResult.opensearchResult.body.hits.hits.map(hit => hit._source);
@@ -2408,26 +2417,44 @@ app.get("/api/algorithm", routePagination, tableValidator(partNameSchema, "partN
 			comparatorQuery[key] = opensearchResult.queryBody;
 			scoring = opensearchResult.scoring;
 		}
+
+		// Clone and apply constraints
 		const preComparatorQuery = structuredClone(comparatorQuery);
 		addComparator = await constraintComparator(comparatorQuery, jsonFormFields, opensearchResults, maxScores);
 
+		// Search for comparator results
 		for (const key in addComparator) {
 			comparatorResults[key] = await wizardSearch(key, {query: addComparator[key]});
 		}
+
+		// Extract final results
 		for (const key in comparatorResults) {
 			finRes[key] = comparatorResults[key].body;
 		}
-
+		
+		// Generate random builds
 		const randomBuilds = await chooseParts(finRes, maxScores, jsonFormFields, preComparatorQuery);
+
+		if (randomBuilds.length === 0) {
+		   return res.status(422).json({ message: "No valid builds could be created with the given constraints." });
+		}
+		
+		// Choose a random build within the scoring threshold
 		const chosenBuild = await chooseRandomBuild(randomBuilds, scoring);
 
+		if (!chosenBuild) {
+			return res.status(404).json({ message: "No suitable build found with the given preferences." });
+		}
+
+		// Query for acutal data in database
 		const partQueries = Object.keys(chosenBuild).map((build) => {
 			const sql = `SELECT * FROM ${build} WHERE ID = ?`;
 			return promisePool.query(sql, [chosenBuild[build].id]);
 		});
 
 		const parts = await Promise.all(partQueries);
-
+		
+		// Populate part objects
 		for (const [index, part] of parts.entries()) {
 			const build = Object.keys(chosenBuild)[index];
 			if (!part.length) {
@@ -2447,10 +2474,11 @@ app.get("/api/algorithm", routePagination, tableValidator(partNameSchema, "partN
 		}
 		*/
 		
+		// Calculate total price
 		const totalPrice = Object.values(partObj).reduce((sum, part) => sum + parseFloat(part.Price), 0).toFixed(2);
 		console.log(totalPrice);
 
-		return res.status(200).json(partObj);
+		return res.status(200).json({partObj: partObj, totalPrice: totalPrice});
 	} catch (error) {
 		console.error(error);
 		// If there is a status message or data then use that, otherwise the defaults
