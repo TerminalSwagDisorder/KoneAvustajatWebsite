@@ -749,7 +749,7 @@ const checkRegex = (req, res, next) => {
 
 const getAllRoutes = (app) => {
 	return app._router.stack
-		.filter((r) => r.route && r.route.path) // Filter out non-route handlers
+		.filter((r) => r.route && r.route.path)
 		.map((r) => {
 			return {
 				method: Object.keys(r.route.methods)[0].toUpperCase(),
@@ -759,7 +759,7 @@ const getAllRoutes = (app) => {
 };
 
 
-// OpenSearch functions
+// OpenSearch & related functions
 const indexPartData = async (partData) => {
     try {
         const response = await client.index({
@@ -1135,38 +1135,6 @@ const searchInIndex = async (index, query) => {
 				}
 			}
 		});
-		/*
-			{
-				// Searches across multiple fields using a single query
-				multi_match: {
-					query: "Ryzen",
-					fields: ["name", "manufacturer"]
-			  	}
-			}
-
-
-			body: {
-				query: {
-					bool: {
-						must: [
-							{ match: { name: query } }, // Fuzzy search
-							{ range: { price: { lte: maxPrice } } } // Price range
-						]
-					}
-				}
-			},
-			body: {
-				query: {
-					bool: {
-						should: [
-						  { fuzzy: { name: { value: query, fuzziness: "AUTO" } } },  // Fuzzy match on the name field
-						  { fuzzy: { manufacturer: { value: query, fuzziness: "AUTO" } } }  // Fuzzy match on the manufacturer field
-						]
-					}
-				}
-			}
-		});
- */
 		return response;
 	} catch (error) {
 		console.error("Error during search:", error);
@@ -1214,315 +1182,13 @@ const fullTextSearch = async (index, searchTerm) => {
 	}
 };
 
-////////////////////////////////////////////////////////////////////
-////////////////////////////////////////////////////////////////////
-////////////////////////////////////////////////////////////////////
-
-// Server routes
-////////////////////////////////////////////////////////////////////
-////////////////////////////////////////////////////////////////////
-////////////////////////////////////////////////////////////////////
-
-app.get("/", async (req, res) => {
-	console.log("Index accessed");
-	const routes = getAllRoutes(app);
-	let links = routes
-		.filter((route) => route.method === "GET")
-		.map((route) => `<li style="list-style-type: none;"><a style="color: blue;" href="${route.path}">${route.path}</a></li>`)
-		.join("");
-
-	const html = `
-		<html style="background-color: #121212;">
-			<head>
-				<title>Server Routes</title>
-			</head>
-			<body>
-				<br></br>
-				<ul>${links}</ul>
-			</body>
-		</html>
-	`;
-
-	return res.status(200).send(html);
-});
-
-// User routes
-
-////////////////////////////////////////////////////////////////////
-////////////////////////////////////////////////////////////////////
-////////////////////////////////////////////////////////////////////
-////////////////////////////////////////////////////////////////////
-// MySQL & Express session
-
-// Route to check connection to the opensearch instance
-app.get("/api/health", async (req, res) => {
-	console.log("API health accessed");
-	const response = await checkApiHealth();
-	try {
-		// Success message & status, with defaults
-		const message = response.statusMessage || response.statusText;
-        const status = response.status || 500;
-
-		return res.status(status).json({ message: message });
-	} catch (error) {
-		// Non-success message & status, with defaults
-		const message = error.response ? error.response?.data : "Internal Server Error";
-        const status = error.response ? error.response?.status : 500;
-        return res.status(status).json({ message: message });
-		
-	}
-});
-
-// Route for frontend pagination in MySQL
-app.get("/api/count", routePagination, tableValidator(tableNameSchema, "tableName"), async (req, res) => {
-	console.log("MySQL pagination accessed");
-
-	const tableName = req.query.tableName; // Get the table name from the query
-	const { items } = req.pagination;
-
-	if (items <= 0) {
-		return res.status(400).json({ message: "Number of items cannot be below 1" });
-	}
-
-	const sql = `SELECT COUNT(*) AS total FROM ??`;
-	try {
-		const [result] = await promisePool.query(sql, [tableName]);
-		const total = result[0].total;
-		const pages = Math.ceil(total / items);
-
-		console.log("Total pages calculated:", pages);
-		return res.status(200).json({ index: pages });
-	} catch (error) {
-		console.error(error);
-		return res.status(500).json({ message: "Internal Server Error", details: error.message });
-	}
-});
-
-app.get("/api/routes", async (req, res) => {
-	console.log("API routes accessed");
-	const getRoutesArray = [];
-	const postRoutesArray = [];
-	const otherRoutesArray = [];
-	try {
-		const routes = getAllRoutes(app);
-
-		for (const route of routes) {
-			if (route.method === "GET") {
-				getRoutesArray.push(route);
-			} else if (route.method === "POST") {
-				postRoutesArray.push(route);
-			} else {
-				otherRoutesArray.push(route);
-			}
-		}
-
-		const routeObj = { getRoutes: getRoutesArray, postRoutes: postRoutesArray, otherRoutes: otherRoutesArray };
-		return res.status(200).json(routeObj);
-	} catch (error) {
-		const message = error.response ? error.response.data : "Internal Server Error";
-		const status = error.response ? error.response.status : 500;
-		return res.status(status).json({ message: message });
-	}
-});
-
-app.get("/api/opensearch/manage", tableSearch("opensearch"), async (req, res) => {
-	console.log("API opensearch accessed");
-/*
-	method: Joi.string().trim().required().valid("create", "insert", "purge", "delete"),
-	amount: Joi.string().trim().optional().valid("all", "single"),
-	type: Joi.string().trim().optional().valid("index", "template", "data", "document"), 
-	part: Joi.string().trim().optional().valid("chassis", "cpu", "cpu_cooler", "gpu", "memory", "motherboard", "psu", "storage", "part_inventory"),
-	id: Joi.number().optional(),
-	
-	const createIndices = await createPartIndex();
-	const createTemplate = await createIndexTemplate();
-	const insertAll = await insertToPartIndex();
-	const insertSingle = await insertSingleToPartIndex(part, data);
-	const purge = await purgePartIndices(true);
-	const deleteAll = await deleteAllFromPartIndex(part);
-	const deleteSingle = await deleteSingleFromPartIndex(part, id);
-
-const opensearchSchema2 = Joi.object({
-	method: Joi.string().trim().required().valid("create", "insert", "purge", "delete"),
-	amount: Joi.string().trim().optional().valid("all", "single").when('method', {
-		is: "insert",
-		then: Joi.required(),
-	}),
-	type: Joi.string().trim().optional().valid("index", "template", "data", "document").when('method', {
-		is: "create",
-		then: Joi.required(),
-	}),
-	part: Joi.string().trim().optional().valid("chassis", "cpu", "cpu_cooler", "gpu", "memory", "motherboard", "psu", "storage", "part_inventory").when('method', {
-		is: ["insert", "delete"],
-		then: Joi.required(),
-	}),
-	id: Joi.number().optional().when('method', {
-		is: "delete",
-		then: Joi.required(),
-	}),
-});
-
- */
-
-	try {
-		const { method, amount, type, part, id, data } = req.searchTerms;
-		let operation = "Failed to run any operation!";
-
-		if (method === "create") {
-			if (type === "index") {
-				await createPartIndex();
-				operation = "createPartIndex completed successfully";
-			}
-			if (type === "template") {
-				await createIndexTemplate();
-				operation = "createIndexTemplate completed successfully";
-			}
-		}
-
-		if (method === "insert") {
-			if (amount === "all") {
-				await insertToPartIndex();
-				operation = "insertToPartIndex completed successfully";
-			} 
-			if (amount === "single" && (type === "document" || type === "data")) {
-				if (!part || !data) {
-					console.log("Missing part or data for single document insertion.");
-				}
-				await insertSingleToPartIndex(part, data);
-				operation = `insertSingleToPartIndex with ${part} and ${data} completed successfully`;
-			}
-		}
-
-		if (method === "purge") {
-			await purgePartIndices("true");
-			operation = "Ran purgePartIndices";
-		}
-
-		if (method === "delete") {
-			if (amount === "all" && type === "data") {
-				await deleteAllFromPartIndex(part);
-				operation = `deleteAllFromPartIndex with ${part} completed successfully`;
-			}
-			if (amount === "single" && type === "document") {
-				if (!part || !id) {
-					console.log("Missing part or ID for single document deletion.");
-				}
-				await deleteSingleFromPartIndex(part, id);
-				operation = `deleteSingleFromPartIndex with ${part} and ${id} completed successfully`;
-			}
-		}
-
-
-		return res.status(200).json({ message: operation });
-	} catch (error) {
-		const message = error.response ? error.response.data : "Internal Server Error";
-		const status = error.response ? error.response.status : 500;
-		return res.status(status).json({ message: message });
-	}
-});
-
-app.get("/api/opensearch/view", async (req, res) => {
-	const viewQuery = req.query.type || "indices";
-	try {
-	// const response2 = await axios.get(`${opensearch}/${viewQuery}`, { timeout: 5000 });
-	const response = await client.cat[viewQuery]({ format: 'json' });
-
-	return res.status(200).json(response);
-	} catch (error) {
-		console.error(error);
-		// If there is a status message or data then use that, otherwise the defaults
-		const message = error.response ? error.response.data : "Internal Server Error";
-		const status = error.response ? error.response.status : 500;
-		return res.status(status).json({ message: message });
-	}
-});
-
-app.get("/api/opensearch/backup", async (req, res) => {
-	const index = req.query.index || "cpu";
-	let query = req.query.query || "100";
-	try {
-	const response = await searchInIndex(index, query);
-
-	return res.status(200).json(response);
-	} catch (error) {
-		console.error(error);
-		// If there is a status message or data then use that, otherwise the defaults
-		const message = error.response ? error.response.data : "Internal Server Error";
-		const status = error.response ? error.response.status : 500;
-		return res.status(status).json({ message: message });
-	}
-});
-
-app.post("/api/users/signup", userValidator(userSchema), userFieldsValidator, async (req, res) => {
-	console.log("API user signup accessed");
-
-	const { formFields } = req.body;
-	const jsonFormFields = JSON.parse(formFields);
-	const { name, email, password } = jsonFormFields;
-
-	try {
-		// Check if email exists
-		const emailCheckSql = "SELECT email FROM users WHERE Email = ?";
-		const [user] = await promisePool.query(emailCheckSql, [email]);
-		if (user.length > 0) {
-			return res.status(409).json({ message: "One or more fields already in use" });
-		}
-
-		// Hash password & insert data into db
-		const hashedPassword = await bcrypt.hash(password, 10);
-		const insertSql = "INSERT INTO users (name, email, password) VALUES (?, ?, ?)";
-		const [result] = await promisePool.query(insertSql, [name, email, hashedPassword]);
-		return res.status(200).json({ message: "User registered successfully", id: result.insertId });
-	} catch (error) {
-		console.error(error);
-		// If there is a status message or data then use that, otherwise the defaults
-		const message = error.response ? error.response.data : "Internal Server Error";
-		const status = error.response ? error.response.status : 500;
-		return res.status(status).json({ message: message });
-	}
-});
 
 const wizardSearch = async (index, query) => {
-	//console.log("\n\n\n");
-	//console.log(query);
 	try {
 		const response = await client.search({
 			index,
 			body: query
 		});
-		/*
-			{
-				// Searches across multiple fields using a single query
-				multi_match: {
-					query: "Ryzen",
-					fields: ["name", "manufacturer"]
-			  	}
-			}
-
-
-			body: {
-				query: {
-					bool: {
-						must: [
-							{ match: { name: query } }, // Fuzzy search
-							{ range: { price: { lte: maxPrice } } } // Price range
-						]
-					}
-				}
-			},
-			body: {
-				query: {
-					bool: {
-						should: [
-						  { fuzzy: { name: { value: query, fuzziness: "AUTO" } } },  // Fuzzy match on the name field
-						  { fuzzy: { manufacturer: { value: query, fuzziness: "AUTO" } } }  // Fuzzy match on the manufacturer field
-						]
-					}
-				}
-			}
-		});
- */
-		//console.log(response);
 		return response;
 	} catch (error) {
 		console.error("Error during search:", error);
@@ -1530,21 +1196,6 @@ const wizardSearch = async (index, query) => {
 };
 
 const extractFirstNumbers = (num) => {
-	// Assuming wattage is in the format "650W" or "850W" within the name, extract the numeric part
-	//const match = num.match(/(\d{2,4})(\s*[wW])?/);
-	//const match = num.match(/(\d{3,5})(\.\d+)?/);
-	//const match = num.match(/(\d{3,5})((\.|\,)\d+)?/);
-	//const match = num.match(/(\d{3,5})(\.\d+|\,\d+)?/);
-	//const match = removeDdr.match(/(\d+)(\.\d+|\,\d+)?(?:[^a-z-])?/i);
-	/*
-	let removeDdr2 = num;
-	const matchDdr = removeDdr2.match(/(ddr(\d)?(-)?)/i);
-	if (matchDdr) {
-		removeDdr2 = removeDdr2.replace(matchDdr[0] || "", "");
-		const match2 = removeDdr2.match(/((\d+)([\.\,]\d+)?)/i);
-		console.log("removeDdr2", match2);
-	}
-	*/
 	if (!num) {
 		return null;
 	}
@@ -1627,7 +1278,7 @@ const extractNumber = (str) => {
 	if (!match) {
 		return null;
 	}
-	return parseFloat(match[0], 10); // Return the first number or null
+	return parseFloat(match[0], 10);
 };
 
 const extractMemorySpeed = (value) => {
@@ -1635,7 +1286,7 @@ const extractMemorySpeed = (value) => {
 	if (!match) {
 		return null;
 	}
-	return parseFloat(match[0], 10); // Return the first number or null
+	return parseFloat(match[0], 10);
 };
 
 const extractMemory = (num) => {
@@ -1660,7 +1311,6 @@ const performanceCalculator = (part, partType = null) => {
 		let gpuCores = extractFirstNumbers(part.cores);
 		let gpuClock = extractFirstNumbers(part.core_clock);
 		let memory = extractByteNumbers(part.memory);
-		//console.log(memory);
     	let gpuPerformance = ((((gpuCores * 2) + (gpuClock * 1.5) + (memory / 2)) / 3) / 100);
 
     	return gpuPerformance;
@@ -1916,7 +1566,7 @@ const buildWizardQuery = async (queryBody, partType, formFields) => {
 					});
 					queryBody.bool.must.push({
 						multi_match: {
-							query: "2280 m.2 2230",
+							query: "2280 m.2",
 							fields: ["form_factor"],
 							fuzziness: "AUTO",
 							boost: 2
@@ -1936,7 +1586,7 @@ const buildWizardQuery = async (queryBody, partType, formFields) => {
 					});
 					queryBody.bool.must.push({
 						multi_match: {
-							query: "2280 m.2 2230 2.5",
+							query: "2280 m.2 2.5",
 							fields: ["form_factor"],
 							fuzziness: "AUTO",
 							boost: 2
@@ -1964,7 +1614,7 @@ const buildWizardQuery = async (queryBody, partType, formFields) => {
 					});
 					queryBody.bool.must.push({
 						multi_match: {
-							query: "2280 m.2 2230 2.5",
+							query: "2280 m.2 2.5",
 							fields: ["form_factor"],
 							fuzziness: "AUTO",
 							boost: 2
@@ -2025,7 +1675,6 @@ const buildWizardQuery = async (queryBody, partType, formFields) => {
 	for (let key in prices) {
 		if (key === partType) {
 			prices[key] = scoring[key] * (0.01 * formFields.price);
-			//queryBody.bool.must.push({ range: { [`price`]: { gte: prices[key], boost: 10 } } });
 			queryBody.bool.must.push({
 				range: {
 					price: { lte: prices[key]},
@@ -2167,18 +1816,6 @@ const constraintComparator = async (queryBody, formFields, currentData, maxScore
 				}
 			})
 		},
-		/*
-		cpu_cooler: {
-			cpu: (cpu_cooler) => ({
-				bool: {
-					must: [
-
-						{ range: { tdp_parsed: { lte: maxCpuTdp } } }
-					]
-				}
-			})
-		}
-		*/
 	};
 	
 	for (const partType in currentData) {
@@ -2273,7 +1910,6 @@ const initialQuery = async (key, jsonFormFields) => {
 		queryBody = { ...buildQuery.queryBody };
 
 	}
-	//console.log(JSON.stringify(queryBody, null, 2));
 	const opensearchResult = await wizardSearch(key, {query: queryBody});
 	if (opensearchResult) {
 		return {opensearchResult: opensearchResult, queryBody: queryBody, prices: buildQuery.prices, scoring: buildQuery.scoring};
@@ -2344,7 +1980,6 @@ const chooseParts = async (finRes, maxScores, formFields, addComparator) => {
 		let searchResult;
 		searchResults[key] = {};
 		const newQuery = await constraintComparator(cloneComparator, formFields, newQueryParts[key], maxScores);
-		//console.log(JSON.stringify(newQuery, null, 2));
 		for (const k in newQueryParts[key]) {
 			searchResult = await wizardSearch(k, { query: newQuery[k] });
 			if (!searchResult) {
@@ -2359,8 +1994,6 @@ const chooseParts = async (finRes, maxScores, formFields, addComparator) => {
             ];
 		}
 
-		//console.log(Object.keys(searchResults[key]));
-		//console.log(searchResults);
 		for (completedBuilds; completedBuilds < buildAmount; completedBuilds++) {
 			if (completedBuilds === 2 && key !== "build2") {
 				break;
@@ -2375,19 +2008,17 @@ const chooseParts = async (finRes, maxScores, formFields, addComparator) => {
 			if (randomBuilds[completedBuilds].cpu && randomBuilds[completedBuilds].gpu) {
 				for (const k in searchResults[key]) {
 					if (k !== "gpu" && k !== "cpu") {
-						//console.log(searchResults[key][k].at(-1));
 						if (k === "maxscore") {
 						}
 						randomBuilds[completedBuilds][k] =
 							searchResults[key][k][getRandomRange(searchResults[key][k].length)];
 					}
-					//randomBuilds[completedBuilds][k].maxscore = Object.values(searchResults[key][k].at(-1))[0];
 					randomBuilds[completedBuilds][k].maxscore = searchResults[key][k].slice(-1)[0]?.maxscore;
 				}
 			}
 		}
 	}
-	//console.log(randomBuilds);
+
 	randomBuilds = randomBuilds.filter((build, index) => {
 		for (const [key, value] of Object.entries(build)) {
 			if (value === undefined || value === null || value.length === 0) {
@@ -2397,17 +2028,6 @@ const chooseParts = async (finRes, maxScores, formFields, addComparator) => {
 		}
 		return true;
 	});
-	/*
-	// Poopass filtering
-	for (const key in randomBuilds) {
-			for (let [k, v] of Object.entries(randomBuilds[key])) {
-				if (v === undefined || v === null || v.length === 0) {
-					randomBuilds.splice(key, 1);
-					console.warn(`${k} was empty, deleting ${key}`);
-				}
-		}
-	}
-	*/
 	
 	return randomBuilds;
 };
@@ -2441,78 +2061,185 @@ const chooseRandomBuild = async (randomBuilds, scoring) => {
 	return randomBuilds[chosenBuild.index];
 };
 
-app.get("/api/opensearch/search", routePagination, tableValidator(partNameSchema, "partName"), tableSearch(), async (req, res) => {
-	console.log("API parts accessed");
 
-	let sql;
-	const { formFields } = req.body;
-	const jsonFormFields = JSON.parse(formFields);
-	const validFormFields = {
-		price: 0,
-		useCase: ["noPreference", "gaming", "work", "streaming", "generalUse", "editing", "workstation"],
-		performancePreference: ["noPreference", "maxGpu", "maxCpu", "maxRamAmount", "maxRamSpeed", "maxStorageAmount", "maxEfficiency"],
-		formFactor: ["noPreference", "smallest", "small", "medium", "large", "largest"],
-		colorPreference: ["noPreference", "black", "white", "red", "blue", "other"],
-		otherColor: "",
-		rgbPreference: ["noPreference", "noRgb", "minimumRgb", "largeRgb", "maximumRgb"],
-		cpuManufacturer: ["noPreference", "amdPreference", "intelPreference"],
-		gpuManufacturer: ["noPreference", "amdPreference", "nvidiaPreference", "intelPreference"],
-		psuBias: ["noPreference", "bestEfficiency", "balanced", "highWattage"],
-		storageBias: ["noPreference", "onlyM2", "onlySsd", "bootSsd", "balanced", "onlyHdd"],
-		additionalStorage: ["noPreference", "noAdded", "oneAdded", "twoAdded", "threeAdded", "maxAdded"]
-	};
-	let opensearchResults = {
-		cpu: [],
-		gpu: [],
-		cpu_cooler: [],
-		motherboard: [],
-		memory: [],
-		chassis: [],
-		psu: [],
-		storage: []
-	};
-	let partObj = {
-		cpu: "",
-		gpu: "",
-		cpu_cooler: "",
-		motherboard: "",
-		memory: "",
-		chassis: "",
-		psu: "",
-		storage: ""
-	};
+////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////
+
+// Server routes
+////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////
+
+app.get("/", async (req, res) => {
+	console.log("Index accessed");
+	const routes = getAllRoutes(app);
+	let links = routes
+		.filter((route) => route.method === "GET")
+		.map((route) => `<li style="list-style-type: none;"><a style="color: blue;" href="${route.path}">${route.path}</a></li>`)
+		.join("");
+
+	const html = `
+		<html style="background-color: #121212;">
+			<head>
+				<title>Server Routes</title>
+			</head>
+			<body>
+				<br></br>
+				<ul>${links}</ul>
+			</body>
+		</html>
+	`;
+
+	return res.status(200).send(html);
+});
+
+// User routes
+
+////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////
+// MySQL & Express session
+
+// Route to check connection to the opensearch instance
+app.get("/api/health", async (req, res) => {
+	console.log("API health accessed");
+	const response = await checkApiHealth();
+	try {
+		// Success message & status, with defaults
+		const message = response.statusMessage || response.statusText;
+        const status = response.status || 500;
+
+		return res.status(status).json({ message: message });
+	} catch (error) {
+		// Non-success message & status, with defaults
+		const message = error.response ? error.response?.data : "Internal Server Error";
+        const status = error.response ? error.response?.status : 500;
+        return res.status(status).json({ message: message });
+		
+	}
+});
+
+// Route for frontend pagination in MySQL
+app.get("/api/count", routePagination, tableValidator(tableNameSchema, "tableName"), async (req, res) => {
+	console.log("MySQL pagination accessed");
+
+	const tableName = req.query.tableName; // Get the table name from the query
+	const { items } = req.pagination;
+
+	if (items <= 0) {
+		return res.status(400).json({ message: "Number of items cannot be below 1" });
+	}
+
+	const sql = `SELECT COUNT(*) AS total FROM ??`;
+	try {
+		const [result] = await promisePool.query(sql, [tableName]);
+		const total = result[0].total;
+		const pages = Math.ceil(total / items);
+
+		console.log("Total pages calculated:", pages);
+		return res.status(200).json({ index: pages });
+	} catch (error) {
+		console.error(error);
+		return res.status(500).json({ message: "Internal Server Error", details: error.message });
+	}
+});
+
+app.get("/api/routes", async (req, res) => {
+	console.log("API routes accessed");
+	const getRoutesArray = [];
+	const postRoutesArray = [];
+	const otherRoutesArray = [];
+	try {
+		const routes = getAllRoutes(app);
+
+		for (const route of routes) {
+			if (route.method === "GET") {
+				getRoutesArray.push(route);
+			} else if (route.method === "POST") {
+				postRoutesArray.push(route);
+			} else {
+				otherRoutesArray.push(route);
+			}
+		}
+
+		const routeObj = { getRoutes: getRoutesArray, postRoutes: postRoutesArray, otherRoutes: otherRoutesArray };
+		return res.status(200).json(routeObj);
+	} catch (error) {
+		const message = error.response ? error.response.data : "Internal Server Error";
+		const status = error.response ? error.response.status : 500;
+		return res.status(status).json({ message: message });
+	}
+});
+
+app.get("/api/opensearch/manage", tableSearch("opensearch"), async (req, res) => {
+	console.log("API opensearch accessed");
 
 	try {
-		for (const key in jsonFormFields) {
-			if (!validFormFields[key].includes(jsonFormFields[key]) && key !== "price" && key !== "otherColor") {
-				throw new Error(`${jsonFormFields[key]} is not allowed! Valid values are ${validFormFields[key]}.`);
-			} else if (key === "price" && typeof jsonFormFields[key] !== "number") {
-				throw new Error(`${key} must be a number!`);
-			} else if (key === "otherColor" && typeof jsonFormFields[key] !== "string") {
-				throw new Error(`${key} must be a string!`);
+		const { method, amount, type, part, id, data } = req.searchTerms;
+		let operation = "Failed to run any operation!";
+
+		if (method === "create") {
+			if (type === "index") {
+				await createPartIndex();
+				operation = "createPartIndex completed successfully";
 			}
-			
+			if (type === "template") {
+				await createIndexTemplate();
+				operation = "createIndexTemplate completed successfully";
+			}
 		}
 
-		
-
-		for (const key in opensearchResults) {
-			const opensearchResult = await initialQuery(key, jsonFormFields);
-			
-			if (opensearchResult) {
-				opensearchResults[key] = opensearchResult;
-
-				let randomNumber = Math.floor((Math.random() * opensearchResults[key].length) + 1);
-				const param = opensearchResults[key][randomNumber].id;
-				sql = `SELECT * FROM ${key} WHERE 'ID' = ?`;
-				const [result] = await promisePool.query(sql, param);
-				partObj[key] = result;
+		if (method === "insert") {
+			if (amount === "all") {
+				await insertToPartIndex();
+				operation = "insertToPartIndex completed successfully";
+			} 
+			if (amount === "single" && (type === "document" || type === "data")) {
+				if (!part || !data) {
+					console.log("Missing part or data for single document insertion.");
 				}
+				await insertSingleToPartIndex(part, data);
+				operation = `insertSingleToPartIndex with ${part} and ${data} completed successfully`;
+			}
 		}
 
-		
+		if (method === "purge") {
+			await purgePartIndices("true");
+			operation = "Ran purgePartIndices";
+		}
 
-		return res.status(200).json("parts");
+		if (method === "delete") {
+			if (amount === "all" && type === "data") {
+				await deleteAllFromPartIndex(part);
+				operation = `deleteAllFromPartIndex with ${part} completed successfully`;
+			}
+			if (amount === "single" && type === "document") {
+				if (!part || !id) {
+					console.log("Missing part or ID for single document deletion.");
+				}
+				await deleteSingleFromPartIndex(part, id);
+				operation = `deleteSingleFromPartIndex with ${part} and ${id} completed successfully`;
+			}
+		}
+
+
+		return res.status(200).json({ message: operation });
+	} catch (error) {
+		const message = error.response ? error.response.data : "Internal Server Error";
+		const status = error.response ? error.response.status : 500;
+		return res.status(status).json({ message: message });
+	}
+});
+
+app.get("/api/opensearch/view", async (req, res) => {
+	const viewQuery = req.query.type || "indices";
+	try {
+	// const response2 = await axios.get(`${opensearch}/${viewQuery}`, { timeout: 5000 });
+	const response = await client.cat[viewQuery]({ format: 'json' });
+
+	return res.status(200).json(response);
 	} catch (error) {
 		console.error(error);
 		// If there is a status message or data then use that, otherwise the defaults
@@ -2522,12 +2249,58 @@ app.get("/api/opensearch/search", routePagination, tableValidator(partNameSchema
 	}
 });
 
-app.get("/api/opensearch/test", routePagination, tableValidator(partNameSchema, "partName"), tableSearch(), async (req, res) => {
-	console.log("API parts accessed");
+app.get("/api/opensearch/backup", async (req, res) => {
+	const index = req.query.index || "cpu";
+	let query = req.query.query || "100";
+	try {
+	const response = await searchInIndex(index, query);
+
+	return res.status(200).json(response);
+	} catch (error) {
+		console.error(error);
+		// If there is a status message or data then use that, otherwise the defaults
+		const message = error.response ? error.response.data : "Internal Server Error";
+		const status = error.response ? error.response.status : 500;
+		return res.status(status).json({ message: message });
+	}
+});
+
+app.post("/api/users/signup", userValidator(userSchema), userFieldsValidator, async (req, res) => {
+	console.log("API user signup accessed");
+
+	const { formFields } = req.body;
+	const jsonFormFields = JSON.parse(formFields);
+	const { name, email, password } = jsonFormFields;
+
+	try {
+		// Check if email exists
+		const emailCheckSql = "SELECT email FROM users WHERE Email = ?";
+		const [user] = await promisePool.query(emailCheckSql, [email]);
+		if (user.length > 0) {
+			return res.status(409).json({ message: "One or more fields already in use" });
+		}
+
+		// Hash password & insert data into db
+		const hashedPassword = await bcrypt.hash(password, 10);
+		const insertSql = "INSERT INTO users (name, email, password) VALUES (?, ?, ?)";
+		const [result] = await promisePool.query(insertSql, [name, email, hashedPassword]);
+		return res.status(200).json({ message: "User registered successfully", id: result.insertId });
+	} catch (error) {
+		console.error(error);
+		// If there is a status message or data then use that, otherwise the defaults
+		const message = error.response ? error.response.data : "Internal Server Error";
+		const status = error.response ? error.response.status : 500;
+		return res.status(status).json({ message: message });
+	}
+});
+
+app.get("/api/algorithm", routePagination, tableValidator(partNameSchema, "partName"), tableSearch(), async (req, res) => {
+	console.log("API algorithm accessed");
 	console.log("\n");
 	console.log("\n");
 
-	let sql;
+	/* 
+	// For debugging
 	const jsonFormFields = {
 		price: 1500,
 		useCase: "gaming",
@@ -2542,6 +2315,11 @@ app.get("/api/opensearch/test", routePagination, tableValidator(partNameSchema, 
 		storageBias: "onlySsd",
 		additionalStorage: "noPreference"
 	};
+	*/
+	
+	const { formFields } = req.body;
+	const jsonFormFields = JSON.parse(formFields);
+
 	const validFormFields = {
 		price: 0,
 		useCase: ["noPreference", "gaming", "work", "streaming", "generalUse", "editing", "workstation"],
@@ -2577,14 +2355,14 @@ app.get("/api/opensearch/test", routePagination, tableValidator(partNameSchema, 
 		storage: []
 	};
 	let partObj = {
-		cpu: "",
-		gpu: "",
-		cpu_cooler: "",
-		motherboard: "",
-		memory: "",
-		chassis: "",
-		psu: "",
-		storage: ""
+		cpu: null,
+		gpu: null,
+		cpu_cooler: null,
+		motherboard: null,
+		memory: null,
+		chassis: null,
+		psu: null,
+		storage: null
 	};
 	
 	let maxScores = {
@@ -2615,7 +2393,6 @@ app.get("/api/opensearch/test", routePagination, tableValidator(partNameSchema, 
 				//throw new Error(`${key} must be a string!`);
 				return res.status(400).json({ message: `${key} must be a string!` });
 			}
-			
 		}
 
 		for (const key in opensearchResults) {
@@ -2626,11 +2403,9 @@ app.get("/api/opensearch/test", routePagination, tableValidator(partNameSchema, 
 				return res.status(406).json({ message: "Couldn't fetch initial data." });
 			}
 			
-			//console.log(opensearchResult.opensearchResult.body.hits.hits);
 			opensearchResults[key] = opensearchResult.opensearchResult.body.hits.hits.map(hit => hit._source);
 			maxScores[key] = opensearchResult.opensearchResult.body.hits.max_score;
 			comparatorQuery[key] = opensearchResult.queryBody;
-			//queryBody.push(opensearchResult.queryBody);
 			scoring = opensearchResult.scoring;
 		}
 		const preComparatorQuery = structuredClone(comparatorQuery);
@@ -2645,15 +2420,37 @@ app.get("/api/opensearch/test", routePagination, tableValidator(partNameSchema, 
 
 		const randomBuilds = await chooseParts(finRes, maxScores, jsonFormFields, preComparatorQuery);
 		const chosenBuild = await chooseRandomBuild(randomBuilds, scoring);
-		let totalprice = 0;
-		for (const build in chosenBuild) {
-			totalprice += parseFloat(chosenBuild[build].price);
-			console.log(`${build} ID: ${chosenBuild[build].id}`);
-		}
-		console.log(totalprice);
 
-		return res.status(200).json(chosenBuild);
-		//return res.status(200).json(JSON.parse(opensearchResults.cpu.meta.request.params.body));
+		const partQueries = Object.keys(chosenBuild).map((build) => {
+			const sql = `SELECT * FROM ${build} WHERE ID = ?`;
+			return promisePool.query(sql, [chosenBuild[build].id]);
+		});
+
+		const parts = await Promise.all(partQueries);
+
+		for (const [index, part] of parts.entries()) {
+			const build = Object.keys(chosenBuild)[index];
+			if (!part.length) {
+				return res.status(404).json({ message: `Part ${build} not found` });
+			}
+			partObj[build] = part[0][0];
+		}
+
+		/*
+		for (const build in chosenBuild) {
+			sql = `SELECT * FROM ${build} WHERE ID = ?`;
+			const [part] = await promisePool.query(sql, [chosenBuild[build].id]);
+			if (!part.length) {
+				return res.status(404).json({ message: "Part not found" });
+			}
+			partObj[build] = part[0];
+		}
+		*/
+		
+		const totalPrice = Object.values(partObj).reduce((sum, part) => sum + parseFloat(part.Price), 0).toFixed(2);
+		console.log(totalPrice);
+
+		return res.status(200).json(partObj);
 	} catch (error) {
 		console.error(error);
 		// If there is a status message or data then use that, otherwise the defaults
@@ -3407,44 +3204,6 @@ app.get("/api/users/customers/addresses/id", idValidator, async (req, res) => {
 		const status = error.response ? error.response.status : 500;
 		return res.status(status).json({ message: message });
 	}
-});
-
-app.get("/api/algorithm", async (req, res) => {
-	console.log("API algorithm accessed");
-	const exampleData = {
-		"price": "1200",
-		"useCase": "gaming",
-		"performancePreference": "maxGpu",
-		"formFactor": "medium",
-		"colorPreference": "black",
-		"otherColor": "",
-		"rgbPreference": "noRgb",
-		"cpuManufacturer": "amdPreference",
-		"gpuManufacturer": "nvidiaPreference",
-		"psuBias": "noPreference",
-		"storageBias": "onlySsd",
-		"additionalStorage": "noPreference",
-		"table": "wizard"
-	};
-	
-	/*
-	 
-if i were to do a combination of fuzzy searching (fuse.js) (i feel like searching the database like this would be beneficial), constraints (dont exceed price), scoring (if usecase is gaming, weigh gpu higher), rulesets (if performancepreference is gpu, make sure it is higher end/allocate more buget to it or something similar), hierarchy (constraints -> rulesets -> scoring) (for example price is 1000€, perfprec is cpu, usecase is gaming (where the weighing/hierarchy would go like this: gpu -> cpu -> ram -> ssd etc), so due to the hierarchy, allocate more buget to the cpu, but still see that some amount is left for the gpu). Im also considering on when choosing the appropriate parts, if there should be a set of them, within similar weighing, and one would be chosen by random (if there is only one within an acceptable weigh range then that one is chosen by default). Also, if there are no preferences (price is always mandatory though), how it should be weighed, and would the weighing be changed based on price (for example, at very low prices a gpu could be omitted for an igpu, but after a threshold it becomes mandatory (unless user sets preferences against it). How does this sound?
-	 
-
-Also add the wizard object plus any completed build to the database (i guess in "wizardSettings" and "completedBuilds" tables)
-
-current plan:
-	opensearch
-	axios
-	json-rules-engine
-	lodash
-	possible:
-		fusejs
-		mathjs
-	  */
-
-	return res.status(200).json({message: "This will be the wizard algorithm"});
 });
 
 ////////////////////////////////////////////////////////////////////
