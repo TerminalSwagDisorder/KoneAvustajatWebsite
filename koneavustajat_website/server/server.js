@@ -2645,12 +2645,14 @@ app.get("/api/opensearch/test", routePagination, tableValidator(partNameSchema, 
 
 		const randomBuilds = await chooseParts(finRes, maxScores, jsonFormFields, preComparatorQuery);
 		const chosenBuild = await chooseRandomBuild(randomBuilds, scoring);
-		
+		let totalprice = 0;
 		for (const build in chosenBuild) {
+			totalprice += parseFloat(chosenBuild[build].price);
 			console.log(`${build} ID: ${chosenBuild[build].id}`);
 		}
+		console.log(totalprice);
 
-		return res.status(200).json(randomBuilds);
+		return res.status(200).json(chosenBuild);
 		//return res.status(200).json(JSON.parse(opensearchResults.cpu.meta.request.params.body));
 	} catch (error) {
 		console.error(error);
