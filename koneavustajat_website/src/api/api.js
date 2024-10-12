@@ -31,17 +31,63 @@ export const ThemeProvider = ({ children }) => {
         </ThemeContext.Provider>
     );
 };
+/*
+// Search function for users/otherusers
+export const wizardAlgorithm = async (formFields) => {
+	try {
+		await checkAllowedTableNames(["getroutes"], tableName);
+		const correctSearchTerms = await checkSearchTerms(searchTerms);
+		
+		const query = await buildQuery(correctSearchTerms, false);
 
-export const wizardAlgorithm = async (wizard) => {
-	console.log("This will be used for the wizard algorithm");
-	/*
-	const response = await fetch(`http://localhost:4000/api/algorithm`, {
-		method: "GET",
-		credentials: "include", // Important, because we're using cookies
-	});
-	 
-	 */
-	
+		const response = await fetch(`http://localhost:4000/api/${tableName}/search?${query}`, {
+			method: "GET",
+			credentials: "include", // Important, because we're using cookies
+		});
+		const data = await response.json();
+
+        if (!response.ok) {
+            alert(`HTTP error ${response.status}: ${data.message}`);
+            throw new Error(`HTTP error ${response.status}: ${data.message}`);
+        }
+
+		// If data is not correct format
+		if (!Array.isArray(data)) {
+		  return Object.values(data);
+		}
+		
+		return data;
+	} catch (error) {
+		console.error(error);
+	}
+};
+*/
+
+export const wizardAlgorithm = async (formFields) => {
+	try {
+		if (formFields && typeof formFields === "object" && !Array.isArray(formFields)) formFields = JSON.stringify(formFields);
+
+		const response = await fetch("http://localhost:4000/api/algorithm", {
+			method: "POST",
+			headers: {
+				"Content-Type": "application/json"
+			},
+			credentials: "include", // For all fetch requests, do this!
+			body: JSON.stringify({ formFields })
+		});
+		const data = await response.json();
+
+        if (!response.ok) {
+            alert(`HTTP error ${response.status}: ${data.message}`);
+            throw new Error(`HTTP error ${response.status}: ${data.message}`);
+        }
+
+		console.log("api data", data);
+		alert("Build fetched.");
+		return data;
+	} catch (error) {
+		console.error("Error while fetching build:", error);
+	}
 };
 
 
@@ -142,7 +188,6 @@ export const fetchSearchData = async (searchTerms, tableName) => {
 	}
 };
 
-
 // Search function for users/otherusers using id
 export const fetchSearchIdData = async (id, tableName, partName) => {
 	console.log(id, tableName);
@@ -168,7 +213,7 @@ export const fetchSearchIdData = async (id, tableName, partName) => {
 		if (!Array.isArray(data)) {
 		  return Object.values(data);
 		}
-		console.log(data)
+		console.log(data);
 		
 		return data;
 	} catch (error) {
@@ -229,10 +274,10 @@ export const handleSignin = async (event, formFields, handleUserChange, userType
 	const email = event.target.email.value;
 	const password = event.target.password.value;
 	// Only allow the specified userTypes
-	const allowedUserTypes = ["otheruser", "user"]
+	const allowedUserTypes = ["otheruser", "user"];
 	if (!allowedUserTypes.includes(userType) || userType === "") {
-		console.error(`userType "${userType}" is not allowed!`)
-		alert(`userType "${userType}" is not allowed!`)
+		console.error(`userType "${userType}" is not allowed!`);
+		alert(`userType "${userType}" is not allowed!`);
 	}
 
 	// api call to the server to log in the user
@@ -241,9 +286,9 @@ export const handleSignin = async (event, formFields, handleUserChange, userType
 		// Depending on usertype, create the endpoint
 			let responseEndpoint;
 			if (userType === "user") {
-				responseEndpoint = "users"
+				responseEndpoint = "users";
 			} else if (userType === "otheruser") {
-				responseEndpoint = "other/users"
+				responseEndpoint = "other/users";
 			}
 
 			if (formFields && typeof formFields === "object" && !Array.isArray(formFields)) formFields = JSON.stringify(formFields);
@@ -261,13 +306,13 @@ export const handleSignin = async (event, formFields, handleUserChange, userType
 
 			// If successful, set the current user to the provided credentials and return the data
 			if (response.ok) {
-				alert("Successfully signed in!")
+				alert("Successfully signed in!");
 				handleUserChange(data.user);
 				return data.user;
 			} else {
-				console.log(data)
+				console.log(data);
 				if (data.message) {
-					alert(`HTTP error ${response.status}: ${data.message}`)
+					alert(`HTTP error ${response.status}: ${data.message}`);
 					throw new Error(data.error);
 				} else {
 					alert("Failed sign in. Please try again.");
@@ -324,10 +369,10 @@ export const handleSignup = async (event, formFields) => {
 export const handleSignup = async (event, userType, formFields) => {
 
 	// Only allow the specified userTypes
-	const allowedUserTypes = ["user", "otheruser"]
+	const allowedUserTypes = ["user", "otheruser"];
 	if (!allowedUserTypes.includes(userType) || userType === "") {
-		console.error(`userType "${userType}" is not allowed!`)
-		alert(`userType "${userType}" is not allowed!`)
+		console.error(`userType "${userType}" is not allowed!`);
+		alert(`userType "${userType}" is not allowed!`);
 	}
 
 	//console.log(name, email, password)
@@ -335,15 +380,15 @@ export const handleSignup = async (event, userType, formFields) => {
 		// Depending on usertype, create the endpoint
 		let responseEndpoint;
 		if (userType === "user") {
-			formFields.role = "user"
-			responseEndpoint = "users"
+			formFields.role = "user";
+			responseEndpoint = "users";
 		} else if (userType === "otheruser") {
-			formFields.role = "ambulance"
-			responseEndpoint = "other/users"
+			formFields.role = "ambulance";
+			responseEndpoint = "other/users";
 		}
 
 		if (formFields && typeof formFields === "object" && !Array.isArray(formFields)) formFields = JSON.stringify(formFields);
-		console.log(formFields)
+		console.log(formFields);
 		// api call to register a new user
 		const response = await fetch(`http://localhost:4000/api/${responseEndpoint}/signup`, {
 			method: "POST",
@@ -361,7 +406,7 @@ export const handleSignup = async (event, userType, formFields) => {
 			return true;
 		} else {
 			if (data.message) {
-				alert(`HTTP error ${response.status}: ${data.message}`)
+				alert(`HTTP error ${response.status}: ${data.message}`);
 				throw new Error(data.error);
 			} else {
 				alert("Failed sign up. Please try again.");
@@ -370,7 +415,7 @@ export const handleSignup = async (event, userType, formFields) => {
 		}
 	} catch (error) {
 		console.error("Error adding user:", error);
-		if (error.message) alert(error.message)
+		if (error.message) alert(error.message);
 
 	}
 };
@@ -411,7 +456,7 @@ export const checkIfSignedIn = async () => {
 		});
 
 		const data = await response.json();
-		console.log(data)
+		console.log(data);
 
 		// If the user is authenticated, return user data
 		if (response.ok) {
@@ -478,7 +523,7 @@ export const handleCredentialChange = async (event, formFields) => {
 			return true;
 		} else {
 			if (data.message) {
-				alert(`HTTP error ${response.status}: ${data.message}`)
+				alert(`HTTP error ${response.status}: ${data.message}`);
 				throw new Error(data.error);
 			} else {
 				alert("Failed change credentials. Please try again.");

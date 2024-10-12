@@ -20,7 +20,7 @@ import UsedPartsPurchase from './components/UsedPartsPurchase';
 import UsedPartsBuild from './components/UsedPartsBuild';
 import UsedPartsModify from './components/UsedPartsModify';
 import ShoppingCart from './components/ShoppingCart';
-import { ThemeContext, ThemeProvider, fetchUsers, fetchDynamicData, fetchSearchIdData, fetchDataAmount, handleSignin, handleSignup, handleSignout, checkIfSignedIn, refreshProfile, handleCredentialChange } from "./api/api";
+import { ThemeContext, ThemeProvider, fetchUsers, fetchDynamicData, fetchSearchIdData, fetchDataAmount, handleSignin, handleSignup, handleSignout, checkIfSignedIn, refreshProfile, handleCredentialChange, wizardAlgorithm } from "./api/api";
 import { useSelector, useDispatch } from "react-redux";
 
 
@@ -109,7 +109,7 @@ function App() {
 		)}
 			<Route path="computerwizard" element={<ComputerWizard />}>
 				<Route path="browse" element={<ComputerWizardBrowse fetchDynamicData={fetchDynamicData} fetchDataAmount={fetchDataAmount} />} />
-				<Route path="wizard" element={<ComputerWizardWizard />} />
+				<Route path="wizard" element={<ComputerWizardWizard wizardAlgorithm={wizardAlgorithm} />} />
 				<Route path="build" element={<ComputerWizardBuild />} />
 			</Route>
 			<Route path="usedparts" element={<UsedPartsBrowse fetchDynamicData={fetchDynamicData} fetchDataAmount={fetchDataAmount} />} />
