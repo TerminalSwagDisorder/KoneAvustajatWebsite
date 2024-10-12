@@ -1,9 +1,9 @@
 import React, { useState, useEffect } from "react";
 import { useSelector, useDispatch } from "react-redux";
-import { addToWizard, removeFromWizard, clearWizard } from "../redux/wizardSlice";
+import { addToWizard, removeFromWizard, clearWizard, addToCompletedBuild } from "../redux/wizardSlice";
 import { Form, Button, InputGroup, Dropdown, DropdownButton, Container, Row, Col, Image, CloseButton, ListGroup } from "react-bootstrap";
 
-const ComputerWizardWizard = () => {
+const ComputerWizardWizard = ({ wizardAlgorithm }) => {
 	const [currentOperation, setCurrentOperation] = useState("wizard");
 	const [formFields, setFormFields] = useState({
 		price: 0,
@@ -19,31 +19,91 @@ const ComputerWizardWizard = () => {
 		storageBias: "noPreference",
 		additionalStorage: "noPreference"
 	});
+	const [currentBuild, setCurrentBuild] = useState({});
+	const [currentPrice, setCurrentPrice] = useState(0);
+	const [chosenPart, setChosenPart] = useState("");
 
+	useEffect(() => {
+		if (Object.entries(currentBuild).length > 0) {
+			handleAddToWizard();
+		}
+	}, [currentBuild]);
+	
     const wizard = useSelector((state) => state.wizard.wizard);
+	const completedBuild = useSelector((state) => state.wizard.completedBuild);
     const dispatch = useDispatch();
 
     const wizardItems = Object.values(wizard);
     const wizardEntries = Object.entries(wizard);
-	console.log(wizardItems);
+    const completedBuildItems = Object.values(completedBuild);
+    const completedBuildEntries = Object.entries(completedBuild);
+	if (wizardItems.length > 0) console.log(wizardItems);
+	if (wizardEntries.length > 0) console.log(wizardEntries);
 	console.log(wizardEntries);
 
     const totalPrice = wizardItems.reduce((acc, item) => {
         return acc + (parseFloat(item.Price) || 0);
     }, 0).toFixed(2);
 
-	const handleAddToWizard = (formFields) => {
-        if (formFields) {
-            const newItem = {
-                ...formFields,
-                table: "wizard",
-            };
-            dispatch(addToWizard(newItem));
-        } else {
-            console.error("Unable to add to wizard!");
-        }
+	const handleAddToWizard = () => {
+		for (const item in wizardEntries) {
+			for (const i in currentBuild[item]) {
+				console.log(currentBuild[item][i]);
+				
+
+			}
+		}
+		const newItem = {
+			...currentBuild,
+			totalPrice: currentPrice,
+			table: "wizard",
+		};
+		dispatch(addToWizard(newItem));
+
 	};
+
+    const handleAddToCompletedBuild = () => {
+		if (window.confirm("Are you sure, this will overwrite your existing build!") == false) {
+			return false;
+		} 
+		console.log("wizardEntries", wizardEntries);
+		console.log("wizardEntries", wizardEntries[0][1]);
+		for (const item in wizardEntries) {
+			for (const i in wizardEntries[item]) {
+				console.log(wizardEntries[item][i]);
+				
+			}
+		}
+        const newItem = {
+            ...wizardEntries[0][1],
+			totalPrice: currentPrice,
+            table: "wizardBuild",
+        };
+        dispatch(addToCompletedBuild(newItem));
+    };
 	
+	const fetchRandomizedBuild = async (formFields) => {
+		if (window.confirm("Are you sure, this will overwrite your existing build!") == false) {
+			return false;
+		} 
+		const randomBuild = await wizardAlgorithm(formFields);
+		if (randomBuild) {
+			return randomBuild;
+		}
+		return false;
+	};
+
+	const handleWizardBuild = (randomBuild) => {
+		if (!randomBuild) {
+			return false;
+		}
+		console.log("randomBuild.partObj", randomBuild.partObj);
+		setCurrentBuild(randomBuild.partObj);
+		setCurrentPrice(randomBuild.totalPrice);
+		console.log(currentBuild);
+		return true;
+	};
+
     const handleRemoveFromWizard = (itemId) => {
         dispatch(removeFromWizard(itemId));
     };
@@ -54,6 +114,14 @@ const ComputerWizardWizard = () => {
 
 	const closeForm = () => {
 		setCurrentOperation("");
+	};
+
+	const toggleChoosePart = (newChoice) => {
+		if (chosenPart === newChoice) {
+			setChosenPart("");
+		} else {
+			setChosenPart(newChoice);
+		}
 	};
 
 	const handleComputerWizardForm = (operation) => {
@@ -67,7 +135,7 @@ const ComputerWizardWizard = () => {
 		}));
 	};
 
-	const handleSubmit = (event) => {
+	const handleSubmit = async (event) => {
 		event.preventDefault();
 
 		if (Number.isNaN(formFields.price) || formFields.price === 0 || formFields.price === undefined) {
@@ -85,11 +153,15 @@ const ComputerWizardWizard = () => {
 		}
 
 		try {
-			handleAddToWizard(formFields);
-			console.log(formFields);
+			const fetchBuild = await fetchRandomizedBuild(formFields);
+			if (fetchBuild) {
+				const handle = handleWizardBuild(fetchBuild);
+				if (handle) handleAddToWizard(currentBuild);
+			}
+			//console.log(formFields);
 		} catch (error) {
-			console.error("Error updating credentials:", error);
-			alert("Error updating credentials.");
+			console.error("Error updating build:", error);
+			alert("Error updating build.");
 		}
 	};
 	
@@ -110,21 +182,69 @@ const ComputerWizardWizard = () => {
     				{wizardEntries.map(([wizardKey, wizardVal]) => (
     					<ListGroup.Item key={wizardKey}>
     						<p>
-    							{Object.keys(wizardVal).map((key, idx) =>
-									key !== "table" && (
-										<ListGroup.Item key={key}>
-											{key}: {wizardVal[key] || "None"}
+    							{Object.keys(wizardVal).map(
+    								(key, idx) =>
+										key !== "table" && key !== "totalPrice" && (
+										<ListGroup.Item
+											onClick={() => toggleChoosePart(wizardVal[key].Name)}
+											key={key}>
+											{key}: {wizardVal[key].Name || "None"}
+											{renderAdditionalInfo(wizardVal[key])}
 										</ListGroup.Item>
-									)
-    							)}
+    							))}
+								<ListGroup.Item>
+									Total price: {wizardVal.totalPrice}€
+								</ListGroup.Item>
     							<Button
     								className="user-select-button"
     								onClick={() => handleRemoveFromWizard(wizardKey)}>
     								<span>Remove</span>
     							</Button>
+    							<Button
+    								className="user-select-button"
+    								onClick={() => handleAddToCompletedBuild(wizardKey)}>
+    								<span>Add to build (This will overwrite any existing build)</span>
+    							</Button>
     						</p>
     					</ListGroup.Item>
     				))}
+    			</ListGroup>
+    		);
+    	}
+    };
+
+    const renderAdditionalInfo = (partData) => {
+    	if (chosenPart == partData.Name) {
+    		return (
+    			<ListGroup>
+    				<br />
+    				{Object.entries(partData).map(
+    					([key, value], idx) =>
+    						key !== "ID" && (
+    							<ListGroup.Item key={idx}>
+    								{key === "Url" || key === "Image_Url" ? (
+    									<span>
+    										<a href={value} target="_blank" rel="noopener noreferrer">
+    											{value}
+    										</a>
+    									</span>
+    								) : key === "Image" ? (
+    									<Image
+    										src={process.env.PUBLIC_URL + "/product_images/" + value}
+    										alt={key}
+    										style={{ width: "100px", height: "auto" }}
+    									/>
+    								) : (
+    									<span>
+    										<b>{key}</b>:{" "}
+    										{typeof value === "object" && value !== null
+    											? renderAdditionalInfo(value)
+    											: value}
+    									</span>
+    								)}
+    							</ListGroup.Item>
+    						)
+    				)}
     			</ListGroup>
     		);
     	}

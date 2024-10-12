@@ -11,6 +11,8 @@ const ComputerWizardBuild = () => {
     const dispatch = useDispatch();
     const completedBuildItems = Object.values(completedBuild);
     const completedBuildEntries = Object.entries(completedBuild);
+    
+    console.log(completedBuildEntries);
         
     const totalPrice = completedBuildItems.reduce((acc, item) => {
         return acc + (parseFloat(item.Price) || 0);
