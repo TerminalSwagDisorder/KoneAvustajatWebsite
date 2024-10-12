@@ -1357,16 +1357,40 @@ const buildWizardQuery = async (queryBody, partType, formFields) => {
 					scoring.motherboard = 10;
 					scoring.chassis = 5;
 					scoring.psu = 8;
+					queryBody.bool.must_not.push({
+						multi_match: {
+							query: "epyc threadripper xeon",
+							fields: ["name"], // You can add more fields here if needed
+							fuzziness: "AUTO",
+							boost: 2
+						}
+					});
 				}
 				if (value === "work") {
 					scoring.cpu = 25;
 					scoring.gpu = 15;
+					queryBody.bool.should.push({
+						multi_match: {
+							query: "epyc threadripper xeon",
+							fields: ["name"], // You can add more fields here if needed
+							fuzziness: "AUTO",
+							boost: 0.5
+						}
+					});
 				}
 				if (value === "streaming") {
 					scoring.cpu = 25;
 					scoring.gpu = 15;
 					scoring.memory = 15;
 					scoring.chassis = 5;
+					queryBody.bool.should.push({
+						multi_match: {
+							query: "epyc threadripper xeon",
+							fields: ["name"], // You can add more fields here if needed
+							fuzziness: "AUTO",
+							boost: 0.5
+						}
+					});
 				}
 				if (value === "editing") {
 					scoring.cpu = 24;
@@ -1375,12 +1399,28 @@ const buildWizardQuery = async (queryBody, partType, formFields) => {
 					scoring.chassis = 5;
 					scoring.motherboard = 10;
 					scoring.psu = 7;
+					queryBody.bool.should.push({
+						multi_match: {
+							query: "epyc threadripper xeon",
+							fields: ["name"], // You can add more fields here if needed
+							fuzziness: "AUTO",
+							boost: 1.25
+						}
+					});
 				}
 				if (value === "workstation") {
 					scoring.cpu = 25;
 					scoring.gpu = 25;
 					scoring.chassis = 5;
 					scoring.motherboard = 10;
+					queryBody.bool.should.push({
+						multi_match: {
+							query: "epyc threadripper xeon",
+							fields: ["name"], // You can add more fields here if needed
+							fuzziness: "AUTO",
+							boost: 1.5
+						}
+					});
 				}
 			}
 
@@ -1722,10 +1762,27 @@ const getMaxValue = (data, key) => {
 	return value;
 };
 
+const getMinValue = (data, key, maxCoolingPotential) => {
+	if (!data) {
+		return null;
+	}
+	if (!key) {
+		return null;
+	}
+
+	const value = data
+		.map((d) => d[key])
+		.filter((value) => value !== undefined && value !== null)
+		.reduce((min, value) => Math.min(min, value), maxCoolingPotential);
+
+	return value;
+};
+
 const constraintComparator = async (queryBody, formFields, currentData, maxScores) => {
 
 	const maxCpuTdp = getMaxValue(currentData.cpu_cooler, "cooling_potential_parsed");
-	const maxCoolingPotential = getMaxValue(currentData.cpu, "tdp_parsed");
+	const maxCoolingPotential = getMaxValue(currentData.cpu, "tdp_parsed"); // Problems with some builds featuring high wattage items
+	const minCoolingPotential = getMinValue(currentData.cpu, "tdp_parsed", maxCoolingPotential);
 	const maxPsuWattage = getMaxValue(currentData.psu, "wattage");
 	const maxGpuTdp = getMaxValue(currentData.gpu, "tdp_parsed");
 
@@ -1748,6 +1805,9 @@ const constraintComparator = async (queryBody, formFields, currentData, maxScore
 								fuzziness: "AUTO"
 							}
 						},
+						{ range: { cooling_potential_parsed: { gte: minCoolingPotential } } }
+					],
+					should: [
 						{ range: { cooling_potential_parsed: { gte: maxCoolingPotential } } }
 					]
 				}
@@ -1977,6 +2037,7 @@ const chooseParts = async (finRes, maxScores, formFields, addComparator) => {
 
 	for (const key in newQueryParts) {
 		const cloneComparator = structuredClone(addComparator);
+		const lateCloneComparator = structuredClone(addComparator);
 		let searchResult;
 		searchResults[key] = {};
 		const newQuery = await constraintComparator(cloneComparator, formFields, newQueryParts[key], maxScores);
@@ -2003,13 +2064,21 @@ const chooseParts = async (finRes, maxScores, formFields, addComparator) => {
 			randomBuilds[completedBuilds] = {
 				cpu: cpuVal,
 				gpu: gpuVal
-			};
+			}; 
 
 			if (randomBuilds[completedBuilds].cpu && randomBuilds[completedBuilds].gpu) {
 				for (const k in searchResults[key]) {
+					// Defaults to SOMETHING in case of (cpu_cooler) failure (LGA3647)
+					if (searchResults[key][k].length < 2) {
+						searchResult = await wizardSearch(k, { query: lateCloneComparator[k] });
+						const newMaxScore = searchResult.body.hits.max_score;
+						const partData = searchResult.body.hits.hits.map((hit) => ({...hit._source, score: hit._score}));
+						searchResults[key][k] = [
+							...partData,
+							{ maxscore: newMaxScore }
+						];
+					}
 					if (k !== "gpu" && k !== "cpu") {
-						if (k === "maxscore") {
-						}
 						randomBuilds[completedBuilds][k] =
 							searchResults[key][k][getRandomRange(searchResults[key][k].length)];
 					}
@@ -2021,14 +2090,13 @@ const chooseParts = async (finRes, maxScores, formFields, addComparator) => {
 
 	randomBuilds = randomBuilds.filter((build, index) => {
 		for (const [key, value] of Object.entries(build)) {
-			if (value === undefined || value === null || value.length === 0) {
+			if (value.maxscore === null || value === undefined || value === null || value.length === 0) {
 				console.warn(`${key} was empty, deleting build ${index}`);
 				return false;
 			}
 		}
 		return true;
 	});
-	
 	return randomBuilds;
 };
 
@@ -2316,7 +2384,7 @@ app.post("/api/algorithm", routePagination, tableValidator(partNameSchema, "part
 		additionalStorage: "noPreference"
 	};
 	*/
-	
+
 	const { formFields } = req.body;
 	if (!formFields) {
 		return res.status(400).json({ message: "Request body did not contain expected form!" });
@@ -2396,10 +2464,12 @@ app.post("/api/algorithm", routePagination, tableValidator(partNameSchema, "part
 				return res.status(400).json({ message: `${jsonFormFields[key]} is not allowed! Valid values are ${validFormFields[key]}.` });
 			} else if (key === "price" && typeof jsonFormFields[key] !== "number") {
 				//throw new Error(`${key} must be a number!`);
-				return res.status(400).json({ message: `${key} must be a number!` });
+				//return res.status(400).json({ message: `${key} must be a number!` });
+				jsonFormFields[key] = parseFloat(jsonFormFields[key]);
 			} else if (key === "otherColor" && typeof jsonFormFields[key] !== "string") {
 				//throw new Error(`${key} must be a string!`);
-				return res.status(400).json({ message: `${key} must be a string!` });
+				//return res.status(400).json({ message: `${key} must be a string!` });
+				jsonFormFields[key] = String(jsonFormFields[key]);
 			}
 		}
 		
@@ -2473,9 +2543,8 @@ app.post("/api/algorithm", routePagination, tableValidator(partNameSchema, "part
 			partObj[build] = part[0];
 		}
 		*/
-		
 		// Calculate total price
-		const totalPrice = Object.values(partObj).reduce((sum, part) => sum + parseFloat(part.Price), 0).toFixed(2);
+		const totalPrice = Object.values(partObj).reduce((sum, part) => sum + (parseFloat(part.Price || 0)), 0).toFixed(2);
 		console.log(totalPrice);
 
 		return res.status(200).json({partObj: partObj, totalPrice: totalPrice});
