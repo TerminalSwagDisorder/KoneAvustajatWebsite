@@ -1319,6 +1319,8 @@ const performanceCalculator = (part, partType = null) => {
 	return 0;
 };
 
+
+
 const buildWizardQuery = async (queryBody, partType, formFields) => {
 	let scoring = {
 		// out of 100
@@ -1357,40 +1359,80 @@ const buildWizardQuery = async (queryBody, partType, formFields) => {
 					scoring.motherboard = 10;
 					scoring.chassis = 5;
 					scoring.psu = 8;
-					queryBody.bool.must_not.push({
-						multi_match: {
-							query: "epyc threadripper xeon",
-							fields: ["name"], // You can add more fields here if needed
-							fuzziness: "AUTO",
-							boost: 2
-						}
-					});
+					if (partType === "cpu") {
+						queryBody.bool.must_not.push({
+							multi_match: {
+								query: "epyc threadripper xeon",
+								fields: ["name"], 
+								fuzziness: "AUTO",
+							}
+						});
+					}
+					if (partType === "gpu") {
+						queryBody.bool.must_not.push({
+							match_phrase: {
+								name: "radeon pro"
+							}
+						});
+						queryBody.bool.must_not.push({
+							multi_match: {
+								query: "quadro",
+								fields: ["name"], 
+								fuzziness: "AUTO"
+							}
+						});
+					}
 				}
 				if (value === "work") {
 					scoring.cpu = 25;
 					scoring.gpu = 15;
-					queryBody.bool.should.push({
-						multi_match: {
-							query: "epyc threadripper xeon",
-							fields: ["name"], // You can add more fields here if needed
-							fuzziness: "AUTO",
-							boost: 0.5
-						}
-					});
+					if (partType === "cpu") {
+						queryBody.bool.should.push({
+							multi_match: {
+								query: "epyc threadripper xeon",
+								fields: ["name"], 
+								fuzziness: "AUTO",
+								boost: 0.3
+							}
+						});
+					}
+					if (partType === "gpu") {
+						queryBody.bool.should.push({
+							multi_match: {
+								query: "quadro pro",
+								fields: ["name"], 
+								fuzziness: "AUTO",
+								boost: 0.3
+							}
+						});
+					}
 				}
 				if (value === "streaming") {
 					scoring.cpu = 25;
 					scoring.gpu = 15;
 					scoring.memory = 15;
 					scoring.chassis = 5;
-					queryBody.bool.should.push({
-						multi_match: {
-							query: "epyc threadripper xeon",
-							fields: ["name"], // You can add more fields here if needed
-							fuzziness: "AUTO",
-							boost: 0.5
-						}
-					});
+					if (partType === "cpu") {
+						queryBody.bool.should.push({
+							multi_match: {
+								query: "epyc threadripper xeon",
+								fields: ["name"], 
+								fuzziness: "AUTO",
+								boost: 0.3
+							}
+						});
+					}
+					if (partType === "gpu") {
+						queryBody.bool.should.push({
+							multi_match: {
+								query: "quadro pro",
+								fields: ["name"], 
+								fuzziness: "AUTO",
+								boost: 0.3
+							}
+						});
+
+					}
 				}
 				if (value === "editing") {
 					scoring.cpu = 24;
@@ -1399,28 +1441,70 @@ const buildWizardQuery = async (queryBody, partType, formFields) => {
 					scoring.chassis = 5;
 					scoring.motherboard = 10;
 					scoring.psu = 7;
-					queryBody.bool.should.push({
-						multi_match: {
-							query: "epyc threadripper xeon",
-							fields: ["name"], // You can add more fields here if needed
-							fuzziness: "AUTO",
-							boost: 1.25
-						}
-					});
+					if (partType === "cpu") {
+						queryBody.bool.should.push({
+							multi_match: {
+								query: "epyc threadripper xeon",
+								fields: ["name"], 
+								fuzziness: "AUTO",
+								boost: 0.5
+							}
+						});
+					}
+					if (partType === "gpu") {
+						queryBody.bool.should.push({
+							multi_match: {
+								query: "radeon pro",
+								fields: ["name"], 
+								fuzziness: "AUTO",
+								boost: 0.5,
+								operator: "and"
+							}
+						});
+						queryBody.bool.should.push({
+							multi_match: {
+								query: "quadro",
+								fields: ["name"], 
+								fuzziness: "AUTO",
+								boost: 0.5
+							}
+						});
+					}
 				}
 				if (value === "workstation") {
 					scoring.cpu = 25;
 					scoring.gpu = 25;
 					scoring.chassis = 5;
 					scoring.motherboard = 10;
-					queryBody.bool.should.push({
-						multi_match: {
-							query: "epyc threadripper xeon",
-							fields: ["name"], // You can add more fields here if needed
-							fuzziness: "AUTO",
-							boost: 1.5
-						}
-					});
+					if (partType === "cpu") {
+						queryBody.bool.should.push({
+							multi_match: {
+								query: "epyc threadripper xeon",
+								fields: ["name"], 
+								fuzziness: "AUTO",
+								boost: 0.75
+							}
+						});
+					}
+					if (partType === "gpu") {
+						queryBody.bool.should.push({
+							multi_match: {
+								query: "radeon pro",
+								fields: ["name"], 
+								fuzziness: "AUTO",
+								boost: 0.75,
+								operator: "and"
+							}
+						});
+						queryBody.bool.should.push({
+							multi_match: {
+								query: "quadro",
+								fields: ["name"], 
+								boost: 0.75,
+								fuzziness: "AUTO"
+							}
+						});
+					}
 				}
 			}
 
@@ -1514,7 +1598,7 @@ const buildWizardQuery = async (queryBody, partType, formFields) => {
 				queryBody.bool.must.push({
 					multi_match: {
 						query: manufacturer.toLowerCase(),
-						fields: ["manufacturer"], // You can add more fields here if needed
+						fields: ["manufacturer"], 
 						fuzziness: "AUTO",
 						boost: 2
 					}
@@ -1526,7 +1610,7 @@ const buildWizardQuery = async (queryBody, partType, formFields) => {
 					multi_match: {
 						query: value,
 						fields: ["name", "color"], // List the fields you want to match
-						fuzziness: "AUTO", // Enables fuzzy matching for typo-tolerance
+						fuzziness: "AUTO:2,4", // Enables fuzzy matching for typo-tolerance
 						boost: 2
 					}
 				});
@@ -1538,7 +1622,7 @@ const buildWizardQuery = async (queryBody, partType, formFields) => {
 						multi_match: {
 							query: "rgb",
 							fields: ["name", "color"], // Replace with fields relevant to your document schema
-							fuzziness: "AUTO",
+							fuzziness: 1,
 							boost: 2
 						}
 					});
@@ -1548,7 +1632,7 @@ const buildWizardQuery = async (queryBody, partType, formFields) => {
 						multi_match: {
 							query: "rgb",
 							fields: ["name", "color"], // Replace with fields relevant to your document schema
-							fuzziness: "AUTO",
+							fuzziness: 1,
 							boost: 2
 						}
 					});
@@ -1570,7 +1654,7 @@ const buildWizardQuery = async (queryBody, partType, formFields) => {
 				queryBody.bool.must.push({
 					multi_match: {
 						query: manufacturer.toLowerCase(),
-						fields: ["manufacturer", "name"], // You can add more fields here if needed
+						fields: ["manufacturer", "name"], 
 						fuzziness: "AUTO",
 						boost: 2 // Check what lower boost does
 					}
@@ -2070,6 +2154,7 @@ const chooseParts = async (finRes, maxScores, formFields, addComparator) => {
 				for (const k in searchResults[key]) {
 					// Defaults to SOMETHING in case of (cpu_cooler) failure (LGA3647)
 					if (searchResults[key][k].length < 2) {
+						console.warn(`${k} was empty, trying to add default data.`);
 						searchResult = await wizardSearch(k, { query: lateCloneComparator[k] });
 						const newMaxScore = searchResult.body.hits.max_score;
 						const partData = searchResult.body.hits.hits.map((hit) => ({...hit._source, score: hit._score}));
