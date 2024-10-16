@@ -1242,6 +1242,9 @@ const extractByteNumbers = (num) => {
 };
 
 const normalizedConversion = (value) => {
+	if (!value) {
+		return null;
+	}
 	const match = value.match(/(\d+(\.\d+)?)(\s*)(tb|tt|gb|mt|mb|gt|kb|kt)/i);
 	if (!match) {
 		return null;
@@ -1264,6 +1267,9 @@ const normalizedConversion = (value) => {
 };
 
 const wattageConversion = (value) => {
+	if (!value) {
+		return null;
+	}
 	const match = value.match(/(\d+)\s*w/i);
 	if (!match) {
 		return null;
@@ -1282,6 +1288,9 @@ const extractNumber = (str) => {
 };
 
 const extractMemorySpeed = (value) => {
+	if (!value) {
+		return null;
+	}
 	let match = value.match(/\d{3,5}/i);
 	if (!match) {
 		return null;
@@ -1319,9 +1328,42 @@ const performanceCalculator = (part, partType = null) => {
 	return 0;
 };
 
+const getIndexDocumentCount = async () => {
+    const countResponse = await client.count({ index: 'motherboard' });
+    return countResponse.body.count;
+};
 
+const getUniqueCpuCompatibilities = async () => {
+	try {
+		let totalDocs = await getIndexDocumentCount();
+		if (totalDocs > 1000) {
+			totalDocs = 1000;
+		}
 
-const buildWizardQuery = async (queryBody, partType, formFields) => {
+		const response = await client.search({
+			index: "motherboard",
+			size: 0,
+			body: {
+				aggs: {
+					unique_sockets: {
+						terms: {
+							field: "cpu_compatibility.raw",
+							size: totalDocs 
+						}
+					}
+				}
+			}
+		});
+
+		const uniqueSockets = response.body.aggregations.unique_sockets.buckets.map((bucket) => bucket.key);
+		return uniqueSockets;
+	} catch (error) {
+		console.error("Error fetching unique CPU compatibilities:", error);
+		return [];
+	}
+};
+
+const buildWizardQuery = async (queryBody, partType, formFields, compatibleSockets) => {
 	let scoring = {
 		// out of 100
 		cpu: 20,
@@ -1349,9 +1391,43 @@ const buildWizardQuery = async (queryBody, partType, formFields) => {
 
 	let psuEfficiencyBoost = 2;
 	for (const [key, value] of Object.entries(formFields)) {
-		// RGB Preference Example
 		if (value !== "noPreference") {
 			if (key === "useCase") {
+				if (value === "generalUse") {
+					if (partType === "cpu") {
+						queryBody.bool.must_not.push({
+							multi_match: {
+								query: "epyc threadripper xeon",
+								fields: ["name"], 
+								fuzziness: "AUTO",
+							}
+						});
+					}
+					if (partType === "gpu") {
+						queryBody.bool.must_not.push({
+							match_phrase: {
+								name: "radeon pro"
+							}
+						});
+						queryBody.bool.must_not.push({
+							multi_match: {
+								query: "quadro",
+								fields: ["name"], 
+								fuzziness: "AUTO"
+							}
+						});
+					}
+					if (partType !== "gpu" && partType !== "cpu") {
+						queryBody.bool.should.push({
+							multi_match: {
+								query: "pro professional",
+								fields: ["name"], 
+								fuzziness: "AUTO",
+								boost: 0.3
+							}
+						});
+					}
+				}
 				if (value === "gaming") {
 					scoring.cpu = 25;
 					scoring.gpu = 25;
@@ -1382,6 +1458,16 @@ const buildWizardQuery = async (queryBody, partType, formFields) => {
 							}
 						});
 					}
+					if (partType !== "gpu" && partType !== "cpu") {
+						queryBody.bool.should.push({
+							multi_match: {
+								query: "pro professional",
+								fields: ["name"], 
+								fuzziness: "AUTO",
+								boost: 0.3
+							}
+						});
+					}
 				}
 				if (value === "work") {
 					scoring.cpu = 25;
@@ -1392,7 +1478,7 @@ const buildWizardQuery = async (queryBody, partType, formFields) => {
 								query: "epyc threadripper xeon",
 								fields: ["name"], 
 								fuzziness: "AUTO",
-								boost: 0.3
+								boost: 0.5
 							}
 						});
 					}
@@ -1402,7 +1488,17 @@ const buildWizardQuery = async (queryBody, partType, formFields) => {
 								query: "quadro pro",
 								fields: ["name"], 
 								fuzziness: "AUTO",
-								boost: 0.3
+								boost: 0.5
+							}
+						});
+					}
+					if (partType !== "gpu" && partType !== "cpu") {
+						queryBody.bool.should.push({
+							multi_match: {
+								query: "pro professional",
+								fields: ["name"], 
+								fuzziness: "AUTO",
+								boost: 0.5
 							}
 						});
 					}
@@ -1418,7 +1514,7 @@ const buildWizardQuery = async (queryBody, partType, formFields) => {
 								query: "epyc threadripper xeon",
 								fields: ["name"], 
 								fuzziness: "AUTO",
-								boost: 0.3
+								boost: 0.65
 							}
 						});
 					}
@@ -1428,10 +1524,20 @@ const buildWizardQuery = async (queryBody, partType, formFields) => {
 								query: "quadro pro",
 								fields: ["name"], 
 								fuzziness: "AUTO",
-								boost: 0.3
+								boost: 0.65
 							}
 						});
 
+					}
+					if (partType !== "gpu" && partType !== "cpu") {
+						queryBody.bool.should.push({
+							multi_match: {
+								query: "pro professional",
+								fields: ["name"], 
+								fuzziness: "AUTO",
+								boost: 0.65
+							}
+						});
 					}
 				}
 				if (value === "editing") {
@@ -1447,7 +1553,7 @@ const buildWizardQuery = async (queryBody, partType, formFields) => {
 								query: "epyc threadripper xeon",
 								fields: ["name"], 
 								fuzziness: "AUTO",
-								boost: 0.5
+								boost: 1
 							}
 						});
 					}
@@ -1457,7 +1563,7 @@ const buildWizardQuery = async (queryBody, partType, formFields) => {
 								query: "radeon pro",
 								fields: ["name"], 
 								fuzziness: "AUTO",
-								boost: 0.5,
+								boost: 1,
 								operator: "and"
 							}
 						});
@@ -1466,7 +1572,17 @@ const buildWizardQuery = async (queryBody, partType, formFields) => {
 								query: "quadro",
 								fields: ["name"], 
 								fuzziness: "AUTO",
-								boost: 0.5
+								boost: 1
+							}
+						});
+					}
+					if (partType !== "gpu" && partType !== "cpu") {
+						queryBody.bool.should.push({
+							multi_match: {
+								query: "pro professional",
+								fields: ["name"], 
+								fuzziness: "AUTO",
+								boost: 1
 							}
 						});
 					}
@@ -1482,7 +1598,7 @@ const buildWizardQuery = async (queryBody, partType, formFields) => {
 								query: "epyc threadripper xeon",
 								fields: ["name"], 
 								fuzziness: "AUTO",
-								boost: 0.75
+								boost: 1.25
 							}
 						});
 					}
@@ -1492,7 +1608,7 @@ const buildWizardQuery = async (queryBody, partType, formFields) => {
 								query: "radeon pro",
 								fields: ["name"], 
 								fuzziness: "AUTO",
-								boost: 0.75,
+								boost: 1.25,
 								operator: "and"
 							}
 						});
@@ -1500,10 +1616,20 @@ const buildWizardQuery = async (queryBody, partType, formFields) => {
 							multi_match: {
 								query: "quadro",
 								fields: ["name"], 
-								boost: 0.75,
+								boost: 1.25,
 								fuzziness: "AUTO"
 							}
 						});
+					if (partType !== "gpu" && partType !== "cpu") {
+						queryBody.bool.should.push({
+							multi_match: {
+								query: "pro professional",
+								fields: ["name"], 
+								fuzziness: "AUTO",
+								boost: 1.25
+							}
+						});
+					}
 					}
 				}
 			}
@@ -1774,6 +1900,16 @@ const buildWizardQuery = async (queryBody, partType, formFields) => {
 		}
 	}
 
+	if (partType === "cpu" && compatibleSockets.length > 0) {
+		queryBody.bool.must.push({
+			multi_match: {
+				query: compatibleSockets.toString().replace(/,/g, " "),
+				fields: ["socket"], 
+				fuzziness: "AUTO",
+			}
+		});
+	}
+
 	if (psuEfficiencyBoost > 2 && partType === "psu") {
         const efficiencyLevels = [
             { level: "Titanium", weight: 2.5 },
@@ -1787,7 +1923,7 @@ const buildWizardQuery = async (queryBody, partType, formFields) => {
 		queryBody.bool.should.push({
 			multi_match: {
 					query: "Bronze Silver Gold Platinum Titanium",
-					fields: ["efficiency"],
+					fields: ["efficiency", "name"],
 					fuzziness: "AUTO",
 					boost: psuEfficiencyBoost
 				}
@@ -1862,8 +1998,29 @@ const getMinValue = (data, key, maxCoolingPotential) => {
 	return value;
 };
 
-const constraintComparator = async (queryBody, formFields, currentData, maxScores) => {
+const constraintComparator = async (queryBody, formFields, currentData, maxScores, index = 0) => {
+	//console.log(currentData.motherboard[0], currentData.memory[0], currentData.cpu[0]);
+	//console.log(currentData.cpu);
+	//console.log(currentData.motherboard);
+	const compatibleCpus = currentData.cpu.filter((cpu) => {
+		return currentData.motherboard.some(mb => mb.cpu_compatibility.includes(cpu.socket));
+	});
 
+	if (compatibleCpus.length === 0) {
+		throw new Error("No compatible CPUs found when running constraintComparator");
+	}
+
+	currentData.cpu = compatibleCpus;
+
+	const compatibleMotherboards = currentData.motherboard.filter((mobo) => {
+		return currentData.memory.some(memory => mobo.memory_compatibility.includes(extractMemory(memory.type)));
+	});
+
+	if (compatibleMotherboards.length === 0) {
+		throw new Error("No compatible motherboards found when running constraintComparator");
+	}
+
+	currentData.motherboard = compatibleMotherboards;
 	const maxCpuTdp = getMaxValue(currentData.cpu_cooler, "cooling_potential_parsed");
 	const maxCoolingPotential = getMaxValue(currentData.cpu, "tdp_parsed"); // Problems with some builds featuring high wattage items
 	const minCoolingPotential = getMinValue(currentData.cpu, "tdp_parsed", maxCoolingPotential);
@@ -1871,12 +2028,23 @@ const constraintComparator = async (queryBody, formFields, currentData, maxScore
 	const maxGpuTdp = getMaxValue(currentData.gpu, "tdp_parsed");
 
 	const ddrType = checkMemoryCompatibility(currentData.motherboard[0], currentData.memory);
+	const cpuCompatibility = checkCpuCompatibility(currentData.cpu, currentData.motherboard);
+
 
 	const constraintMap = {
 		cpu: {
 			motherboard: (cpu) => ({
 				bool: {
-					must: [{ match: { chipset: cpu.manufacturer } }]
+					must: [
+						//{ match: { chipset: cpu.manufacturer } }, // Probably not needed with cpu compatiblity
+						{
+							multi_match: {
+								fields: ["cpu_compatibility"],
+								query: cpu.socket,
+								fuzziness: "AUTO"
+							}
+						}
+					]
 				}
 			}),
 			cpu_cooler: (cpu) => ({
@@ -1966,7 +2134,7 @@ const constraintComparator = async (queryBody, formFields, currentData, maxScore
 		if (constraintMap[partType]) {
 			if (currentData[partType].length > 0) {
 				// Use the first result from currentData as the representative part
-				const partData = currentData[partType][0];
+				const partData = currentData[partType][index];
 				for (const relatedPart in constraintMap[partType]) {
 					if (constraintMap[partType][relatedPart]) {
 						const constraintFunction = constraintMap[partType][relatedPart];
@@ -2014,6 +2182,10 @@ const constraintComparator = async (queryBody, formFields, currentData, maxScore
 };
 
 const checkMemoryCompatibility = (motherboard, memoryKits) => {
+	if (!motherboard || !memoryKits) {
+		return null;
+	}
+
     const motherboardMemoryType = extractMemory(motherboard.memory_compatibility);
 
     for (let i = 0; i < memoryKits.length; i++) {
@@ -2026,6 +2198,23 @@ const checkMemoryCompatibility = (motherboard, memoryKits) => {
 
     return null;
 };
+
+const checkCpuCompatibility = (cpus, motherboards) => {
+	if (!cpus || !motherboards) {
+		return null;
+	}
+    for (let cpu of cpus) {
+        for (let mobo of motherboards) {
+            if (mobo.cpu_compatibility.includes(cpu.socket)) {
+                return cpu.socket;
+            }
+        }
+    }
+
+
+    return null; // No compatible combination found
+};
+
 
 const getRandomRange = (value, skipFirst = 0) => {
 	if (!value || typeof skipFirst !== "number") {
@@ -2049,7 +2238,9 @@ const initialQuery = async (key, jsonFormFields) => {
 		}
 	};
 
-	const buildQuery = await buildWizardQuery(queryBody, key, jsonFormFields);
+	const compatibleSockets = await getUniqueCpuCompatibilities();
+	
+	const buildQuery = await buildWizardQuery(queryBody, key, jsonFormFields, compatibleSockets);
 	if (buildQuery) {
 		queryBody = { ...buildQuery.queryBody };
 
@@ -2100,6 +2291,30 @@ const chooseParts = async (finRes, maxScores, formFields, addComparator) => {
 			storage: []
 		}
 	};
+/*
+	// Compatibility filters
+	//console.log(finRes.cpu.hits.hits.map((hit) => hit._source));
+	//console.log(finRes.motherboard.hits.hits.map((hit) => hit._source));
+	const compatibleCpus = finRes.cpu.hits.hits.map((hit) => hit._source).filter((cpu) => {
+		return finRes.motherboard.hits.hits.map((hit) => hit._source).some(mb => mb.cpu_compatibility.includes(cpu.socket));
+	});
+	if (compatibleCpus.length === 0) {
+		throw new Error("No compatible CPUs found when running chooseParts");
+	}
+	//console.log(finRes.cpu.hits.hits);
+	//console.log("\n\n\n");
+	finRes.cpu.hits.hits._source = compatibleCpus;
+//	console.log(finRes.cpu.hits.hits);
+
+	const compatibleMotherboards = finRes.motherboard.hits.hits.map((hit) => hit._source).filter((mobo) => {
+		return finRes.memory.hits.hits.map((hit) => hit._source).some(memory => mobo.memory_compatibility.includes(extractMemory(memory.type)));
+	});
+
+	if (compatibleMotherboards.length === 0) {
+		throw new Error("No compatible motherboards found when running chooseParts");
+	}
+	finRes.motherboard.hits.hits._source = compatibleMotherboards;
+*/
 
 	for (const key in finRes) {
 		const sourceData = finRes[key].hits.hits.map((hit) => hit._source);
@@ -2119,6 +2334,8 @@ const chooseParts = async (finRes, maxScores, formFields, addComparator) => {
 		}
 	}
 
+	//console.log(newQueryParts.build1);
+	//console.log(newQueryParts.build2);
 	for (const key in newQueryParts) {
 		const cloneComparator = structuredClone(addComparator);
 		const lateCloneComparator = structuredClone(addComparator);
@@ -2572,14 +2789,61 @@ app.post("/api/algorithm", routePagination, tableValidator(partNameSchema, "part
 			comparatorQuery[key] = opensearchResult.queryBody;
 			scoring = opensearchResult.scoring;
 		}
+		
+		
+		/*
+		for (const key in opensearchResults) {
+			console.log(opensearchResults[key].length);
+		}
+
+		const minResLen = Object.values(opensearchResults)
+			.map((v) => v.length)
+			.filter((value) => value !== undefined && value !== null)
+			.reduce((min, value) => Math.min(min, value), Infinity);
 
 		// Clone and apply constraints
 		const preComparatorQuery = structuredClone(comparatorQuery);
-		addComparator = await constraintComparator(comparatorQuery, jsonFormFields, opensearchResults, maxScores);
+		for (let i = 0; i < minResLen; i++) {
+			addComparator = await constraintComparator(comparatorQuery, jsonFormFields, opensearchResults, maxScores, i);
+			// Search for comparator results
+			for (const key in addComparator) {
+				comparatorResults[key] = await wizardSearch(key, {query: addComparator[key]});
 
+				console.log(comparatorResults[key].body.hits.hits.length);
+				if (comparatorResults[key].body.hits.hits.length === 0) {
+					console.warn(key, "is 0!");
+					break;
+				}
+			}
+			const checkComparatorLength = Object.values(comparatorResults)
+				.map((d) => d.length)
+				.filter((value) => value !== undefined && value !== null)
+				.reduce((min, value) => Math.min(min, value), Infinity);
+			console.log(checkComparatorLength);
+
+			if (checkComparatorLength == 0) {
+				console.warn("There is a 0 value");
+				console.warn(comparatorResults);
+			}
+
+			if (checkComparatorLength !== 0) {
+				console.warn("There is no 0 value");
+				console.warn(comparatorResults);
+				break;
+			}
+		}
+		*/
+		const preComparatorQuery = structuredClone(comparatorQuery);
+		console.log("In route");
+		addComparator = await constraintComparator(comparatorQuery, jsonFormFields, opensearchResults, maxScores);
 		// Search for comparator results
 		for (const key in addComparator) {
 			comparatorResults[key] = await wizardSearch(key, {query: addComparator[key]});
+
+			console.log(comparatorResults[key].body.hits.hits.length);
+			if (comparatorResults[key].body.hits.hits.length === 0) {
+				console.warn(key, "is 0!");
+			}
 		}
 
 		// Extract final results
