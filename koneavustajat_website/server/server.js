@@ -1936,11 +1936,12 @@ const buildWizardQuery = async (queryBody, partType, formFields, compatibleSocke
 	}
 
 	if (partType === "cpu" && compatibleSockets.length > 0) {
-		queryBody.bool.must.push({
+		queryBody.bool.should.push({
 			multi_match: {
 				query: compatibleSockets.toString().replace(/,/g, " "),
 				fields: ["socket"], 
-				fuzziness: "AUTO",
+				fuzziness: "AUTO:5,8",
+				boost: 5,
 			}
 		});
 	}
@@ -2034,15 +2035,60 @@ const getMinValue = (data, key, maxCoolingPotential) => {
 };
 
 const constraintComparator = async (queryBody, formFields, currentData, maxScores, index = 0) => {
+/*
+	const compareMoboMemory = currentData.motherboard.filter((mobo) => {
+		return currentData.memory.some(memory => extractMemory(mobo.memory_compatibility).includes(extractMemory(memory.type)));
+	});
+
+	console.log(currentData.motherboard);
+	if (compareMoboMemory.length === 0) {
+		console.error("No compatible motherboards found when running constraintComparator");
+	}
+
+	currentData.motherboard = compareMoboMemory;
+	const compareMemoryMobo = currentData.memory.filter((mem) => {
+		return currentData.motherboard.some(motherboard => mem.type.includes(extractMemory(motherboard.memory_compatibility)));
+	});
+
+	console.log(currentData.motherboard);
+	if (compareMemoryMobo.length === 0) {
+		console.error("No compatible memory kits found when running constraintComparator");
+	}
+
+	currentData.memory = compareMemoryMobo;
+	const compareCpuMobo = currentData.cpu.filter((cpu) => {
+		return currentData.motherboard.some(mb => cpu.socket.includes(mb.cpu_compatibility));
+	});
+
+	if (compareCpuMobo.length === 0) {
+		console.error("No compatible CPUs found when running constraintComparator");
+	}
+
+	currentData.cpu = compareCpuMobo;
+
+	const compareMoboCpu = currentData.motherboard.filter((mobo) => {
+		return currentData.cpu.some(cpu => mobo.cpu_compatibility.includes(cpu.socket));
+	});
+
+	console.log(currentData.motherboard);
+	if (compareMoboCpu.length === 0) {
+		console.error("No compatible motherboards found when running constraintComparator");
+	}
+
+	currentData.motherboard = compareMoboCpu;
+*/
+
+
 	const maxCpuTdp = getMaxValue(currentData.cpu_cooler, "cooling_potential_parsed");
 	const maxCoolingPotential = getMaxValue(currentData.cpu, "tdp_parsed"); // Problems with some builds featuring high wattage items
 	const minCoolingPotential = getMinValue(currentData.cpu, "tdp_parsed", maxCoolingPotential);
 	const maxPsuWattage = getMaxValue(currentData.psu, "wattage");
 	const maxGpuTdp = getMaxValue(currentData.gpu, "tdp_parsed");
 
-	const memoryCompatibility = await getMemoryCompatibilityBySocket(currentData.cpu.map(cpu => cpu.socket));
-	const cpuCompatibility = checkCpuCompatibility(currentData.cpu, currentData.motherboard);
+	//const memoryCompatibility = await getMemoryCompatibilityBySocket(currentData.cpu.map(cpu => cpu.socket));
+	//const cpuCompatibility = checkCpuCompatibility(currentData.cpu, currentData.motherboard);
 	const ddrType = checkMemoryCompatibility(currentData.motherboard, currentData.memory);
+	console.log("ddrType", ddrType);
 
 	const constraintMap = {
 		cpu: {
@@ -2054,7 +2100,7 @@ const constraintComparator = async (queryBody, formFields, currentData, maxScore
 							multi_match: {
 								fields: ["cpu_compatibility"],
 								query: cpu.socket,
-								fuzziness: "AUTO"
+								fuzziness: "AUTO:5,8"
 							}
 						}
 					]
@@ -2067,7 +2113,7 @@ const constraintComparator = async (queryBody, formFields, currentData, maxScore
 							multi_match: {
 								fields: ["compatibility"],
 								query: cpu.socket,
-								fuzziness: "AUTO"
+								fuzziness: "AUTO:5,8"
 							}
 						},
 						{ range: { cooling_potential_parsed: { gte: minCoolingPotential } } }
@@ -2081,7 +2127,7 @@ const constraintComparator = async (queryBody, formFields, currentData, maxScore
 		motherboard: {
 			memory: (motherboard) => ({
 				bool: {
-					must: [{ match: { type: ddrType } }]
+					must: [{ match: { type: extractMemory(motherboard.memory_compatibility) } }]
 				}
 			}),
 			chassis: (motherboard) => ({
@@ -2198,16 +2244,19 @@ const checkMemoryCompatibility = (motherboards, memoryKits) => {
 	if (!motherboards || !memoryKits) {
 		return null;
 	}
-	
+
 	for (let motherboard of motherboards) {
 		const motherboardMemoryType = extractMemory(motherboard.memory_compatibility);
 		for (let memory of memoryKits) {
 			const memoryType = extractMemory(memory.type);
+			console.log("memoryType", memoryType, "motherboardMemoryType", motherboardMemoryType);
 			if (motherboardMemoryType.includes(memoryType)) {
-				return motherboardMemoryType;
+				console.log("memoryType", memoryType);
+				return memoryType;
 			} 
-
 		}
+		console.log("motherboardMemoryType", motherboardMemoryType);
+		return motherboardMemoryType;
 	}
 
 
@@ -2306,15 +2355,13 @@ const chooseParts = async (finRes, maxScores, formFields, addComparator) => {
 			storage: []
 		}
 	};
-
-	const compareMoboMemory = finRes.motherboard.hits.hits.map((hit) => hit._source).filter((mobo) => {
-		return finRes.memory.hits.hits.map((hit) => hit._source).some(memory => mobo.memory_compatibility.includes(extractMemory(memory.type)));
+	const compareCpuMobo = finRes.cpu.hits.hits.map((hit) => hit._source).filter((cpu) => {
+		return finRes.motherboard.hits.hits.map((hit) => hit._source).some(mb => mb.cpu_compatibility.includes(cpu.socket));
 	});
-
-	if (compareMoboMemory.length === 0) {
-		console.warn("No compatible motherboards found when running chooseParts");
+	if (compareCpuMobo.length === 0) {
+		throw new Error("No compatible CPUs found when running chooseParts");
 	}
-	finRes.motherboard.hits.hits._source = compareMoboMemory;
+	finRes.cpu.hits.hits._source = compareCpuMobo;
 
 	for (const key in finRes) {
 		const sourceData = finRes[key].hits.hits.map((hit) => hit._source);
@@ -2371,6 +2418,9 @@ const chooseParts = async (finRes, maxScores, formFields, addComparator) => {
 				for (const k in searchResults[key]) {
 					// Defaults to SOMETHING in case of (cpu_cooler) failure (LGA3647)
 					if (searchResults[key][k].length < 2) {
+						console.warn(`${k} was empty.`);
+						continue;
+						/*
 						console.warn(`${k} was empty, trying to add default data.`);
 						searchResult = await wizardSearch(k, { query: lateCloneComparator[k] });
 						const newMaxScore = searchResult.body.hits.max_score;
@@ -2378,7 +2428,7 @@ const chooseParts = async (finRes, maxScores, formFields, addComparator) => {
 						searchResults[key][k] = [
 							...partData,
 							{ maxscore: newMaxScore }
-						];
+						];*/
 					}
 					if (k !== "gpu" && k !== "cpu") {
 						randomBuilds[completedBuilds][k] =
