@@ -1191,7 +1191,7 @@ const wizardSearch = async (index, query) => {
 		});
 		return response;
 	} catch (error) {
-		console.error("Error during search:", error);
+		console.error("\x1b[41m", "Error during search:\n", JSON.stringify(error));
 	}
 };
 
@@ -1766,10 +1766,22 @@ const buildWizardQuery = async (queryBody, partType, formFields, compatibleSocke
 				});
 			}
 
-			if ((key === "colorPreference" && value !== "other") || (key === "otherColor" && value !== "")) {
+			if (((key === "colorPreference" && value !== "other") || (key === "otherColor" && value !== "")) && partType !== "storage") {
+				const colorMap = {
+					black: "musta",
+					white: "valkoinen",
+					red: "punainen",
+					blue: "sininen",
+					green: "vihreä",
+					musta: "black",
+					valkionen: "white",
+					punainen: "red",
+					sininen: "blue",
+					vihreä: "green"
+				};
 				queryBody.bool.should.push({
 					multi_match: {
-						query: value,
+						query: `${value} ${colorMap[value] || ""}`,
 						fields: ["name", "color"], // List the fields you want to match
 						fuzziness: "AUTO:2,4", // Enables fuzzy matching for typo-tolerance
 						boost: 2
@@ -2004,10 +2016,10 @@ const buildWizardQuery = async (queryBody, partType, formFields, compatibleSocke
 
 const getMaxValue = (data, key) => {
 	if (!data) {
-		return null;
+		return "";
 	}
 	if (!key) {
-		return null;
+		return "";
 	}
 
 	const value = data
@@ -2020,10 +2032,10 @@ const getMaxValue = (data, key) => {
 
 const getMinValue = (data, key, maxCoolingPotential) => {
 	if (!data) {
-		return null;
+		return "";
 	}
 	if (!key) {
-		return null;
+		return "";
 	}
 
 	const value = data
@@ -2079,7 +2091,7 @@ const constraintComparator = async (queryBody, formFields, currentData, maxScore
 */
 
 
-	const maxCpuTdp = getMaxValue(currentData.cpu_cooler, "cooling_potential_parsed");
+	//const maxCpuTdp = getMaxValue(currentData.cpu_cooler, "cooling_potential_parsed");
 	const maxCoolingPotential = getMaxValue(currentData.cpu, "tdp_parsed"); // Problems with some builds featuring high wattage items
 	const minCoolingPotential = getMinValue(currentData.cpu, "tdp_parsed", maxCoolingPotential);
 	const maxPsuWattage = getMaxValue(currentData.psu, "wattage");
@@ -2092,6 +2104,20 @@ const constraintComparator = async (queryBody, formFields, currentData, maxScore
 
 	const constraintMap = {
 		cpu: {
+			cpu: (cpu) => ({
+				bool: {
+					must: [
+						//{ match: { chipset: cpu.manufacturer } }, // Probably not needed with cpu compatiblity
+						{
+							multi_match: {
+								fields: ["socket"],
+								query: cpu.socket,
+								fuzziness: "AUTO:5,8"
+							}
+						}
+					]
+				}
+			}),
 			motherboard: (cpu) => ({
 				bool: {
 					must: [
@@ -2127,12 +2153,12 @@ const constraintComparator = async (queryBody, formFields, currentData, maxScore
 		motherboard: {
 			memory: (motherboard) => ({
 				bool: {
-					must: [{ match: { type: extractMemory(motherboard.memory_compatibility) } }]
+					must: [{ match: { type: ddrType } }]
 				}
 			}),
 			chassis: (motherboard) => ({
 				bool: {
-					must: [{ match: { compatibility: motherboard.form_factor } }]
+					must: [{ match: { compatibility: motherboard.form_factor || "" } }]
 				}
 			})
 		},
@@ -2165,6 +2191,7 @@ const constraintComparator = async (queryBody, formFields, currentData, maxScore
 				return constraints;
 			}
 		},
+		/* // Can be used in conjunction with psu wattage, but kind of unnecessary
 		psu: {
 			gpu: (psu) => ({
 				bool: {
@@ -2172,6 +2199,7 @@ const constraintComparator = async (queryBody, formFields, currentData, maxScore
 				}
 			})
 		},
+		*/
 		chassis: {
 			motherboard: (chassis) => ({
 				bool: {
@@ -2242,10 +2270,14 @@ const constraintComparator = async (queryBody, formFields, currentData, maxScore
 
 const checkMemoryCompatibility = (motherboards, memoryKits) => {
 	if (!motherboards || !memoryKits) {
-		return null;
+		return "";
 	}
 
 	for (let motherboard of motherboards) {
+		if (!motherboard.memory_compatibility) {
+			console.log("No memory type for motherboard");
+			return "";
+		}
 		const motherboardMemoryType = extractMemory(motherboard.memory_compatibility);
 		for (let memory of memoryKits) {
 			const memoryType = extractMemory(memory.type);
@@ -2253,14 +2285,14 @@ const checkMemoryCompatibility = (motherboards, memoryKits) => {
 			if (motherboardMemoryType.includes(memoryType)) {
 				console.log("memoryType", memoryType);
 				return memoryType;
-			} 
+			}
 		}
 		console.log("motherboardMemoryType", motherboardMemoryType);
 		return motherboardMemoryType;
 	}
 
 
-    return null;
+    return "";
 };
 
 const checkCpuCompatibility = (cpus, motherboards) => {
@@ -2317,7 +2349,25 @@ const initialQuery = async (key, jsonFormFields) => {
 	}
 };
 
+const preProcessPartData = async (finRes, newQueryParts) => {
+	for (const key in finRes) {
+		if (key === "gpu" || key === "cpu") {
+			const sourceData = finRes[key].hits.hits.map((hit) => hit._source);
+			if (sourceData.length > 1) {
+				newQueryParts.build1[key].push(sourceData[0]);
+				newQueryParts.build2[key].push(sourceData[getRandomRange(sourceData.length, 1)]);
+			} else {
+				newQueryParts.build1[key].push(...sourceData);
+				newQueryParts.build2[key].push(...sourceData);
+			}
+		}
+	}
+	return newQueryParts;
+};
+
 const chooseParts = async (finRes, maxScores, formFields, addComparator) => {
+	const lateCloneComparator = structuredClone(addComparator);
+
 	let completedBuilds = 0;
 	const buildAmount = 4;
 	let searchResults = {};
@@ -2355,38 +2405,34 @@ const chooseParts = async (finRes, maxScores, formFields, addComparator) => {
 			storage: []
 		}
 	};
-	const compareCpuMobo = finRes.cpu.hits.hits.map((hit) => hit._source).filter((cpu) => {
-		return finRes.motherboard.hits.hits.map((hit) => hit._source).some(mb => mb.cpu_compatibility.includes(cpu.socket));
-	});
-	if (compareCpuMobo.length === 0) {
-		throw new Error("No compatible CPUs found when running chooseParts");
-	}
-	finRes.cpu.hits.hits._source = compareCpuMobo;
 
-	for (const key in finRes) {
-		const sourceData = finRes[key].hits.hits.map((hit) => hit._source);
-		if (key !== "gpu" && key !== "cpu") {
-			newQueryParts.build1[key].push(...sourceData);
-			newQueryParts.build2[key].push(...sourceData);
-		} else {
-			if (sourceData.length > 1) {
-				newQueryParts.build1[key].push(sourceData[0]);
-				newQueryParts.build2[key].push(
-					sourceData[getRandomRange(sourceData.length, 1)]
-				);
-			} else {
-				newQueryParts.build1[key].push(...sourceData);
-				newQueryParts.build2[key].push(...sourceData);
+	newQueryParts = await preProcessPartData(finRes, newQueryParts);
+
+	for (const key in newQueryParts) {
+		const cloneComparator = structuredClone(addComparator);
+		let searchResult;
+		const newQuery = await constraintComparator(cloneComparator, formFields, newQueryParts[key], maxScores);
+
+		for (const k in newQueryParts[key]) {
+			searchResult = await wizardSearch(k, { query: newQuery[k] });
+			if (!searchResult) {
+				console.error("Something went wrong while searching for random parts.");
+				continue;
 			}
+			const newMaxScore = searchResult.body.hits.max_score;
+			const partData = searchResult.body.hits.hits.map((hit) => ({ ...hit._source, score: hit._score }));
+
+			newQueryParts[key][k] = [...partData, { maxscore: newMaxScore }];
 		}
 	}
 
 	for (const key in newQueryParts) {
-		const cloneComparator = structuredClone(addComparator);
-		const lateCloneComparator = structuredClone(addComparator);
 		let searchResult;
+		const cloneComparator = structuredClone(addComparator);
 		searchResults[key] = {};
 		const newQuery = await constraintComparator(cloneComparator, formFields, newQueryParts[key], maxScores);
+		console.log(`Before:\n`);
+		console.log(JSON.stringify(newQuery, null, 2));
 		for (const k in newQueryParts[key]) {
 			searchResult = await wizardSearch(k, { query: newQuery[k] });
 			if (!searchResult) {
@@ -2395,14 +2441,13 @@ const chooseParts = async (finRes, maxScores, formFields, addComparator) => {
 				continue;
 			}
 			const newMaxScore = searchResult.body.hits.max_score;
-			const partData = searchResult.body.hits.hits.map((hit) => ({...hit._source, score: hit._score}));
+			const partData = searchResult.body.hits.hits.map((hit) => ({ ...hit._source, score: hit._score }));
 
-            searchResults[key][k] = [
-            	...partData,
-            	{ maxscore: newMaxScore }
-            ];
+			searchResults[key][k] = [...partData, { maxscore: newMaxScore }];
 		}
+	}
 
+	for (const key in newQueryParts) {
 		for (completedBuilds; completedBuilds < buildAmount; completedBuilds++) {
 			if (completedBuilds === 2 && key !== "build2") {
 				break;
@@ -2416,11 +2461,11 @@ const chooseParts = async (finRes, maxScores, formFields, addComparator) => {
 
 			if (randomBuilds[completedBuilds].cpu && randomBuilds[completedBuilds].gpu) {
 				for (const k in searchResults[key]) {
-					// Defaults to SOMETHING in case of (cpu_cooler) failure (LGA3647)
 					if (searchResults[key][k].length < 2) {
 						console.warn(`${k} was empty.`);
 						continue;
 						/*
+						// Defaults to SOMETHING in case of failure (eg. cpu_cooler -> LGA3647)
 						console.warn(`${k} was empty, trying to add default data.`);
 						searchResult = await wizardSearch(k, { query: lateCloneComparator[k] });
 						const newMaxScore = searchResult.body.hits.max_score;
