@@ -16,7 +16,6 @@ const axios = require("axios");
 const { check, validationResult } = require("express-validator");
 const Joi = require("joi");
 const { Client } = require('@opensearch-project/opensearch');
-const Fuse = require('fuse.js');
 
 // User authentication exports
 const jwt = require("jsonwebtoken");
