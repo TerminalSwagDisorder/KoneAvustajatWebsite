@@ -13,7 +13,6 @@ const fs = require("fs");
 const cookieParser = require("cookie-parser");
 const multer = require("multer");
 const axios = require("axios");
-const { check, validationResult } = require("express-validator");
 const Joi = require("joi");
 const { Client } = require('@opensearch-project/opensearch');
 
@@ -263,14 +262,6 @@ const routePagination = (req, res, next) => {
 	req.pagination = { page, items, offset };
 	next();
 };
-
-const queryValidationRules = [
-	check("ID").optional().isNumeric().withMessage("ID must be a number"),
-	check("Url").optional().isURL().withMessage("Url must be a valid URL"),
-	check("Price").optional().isNumeric().withMessage("Price must be a number"),
-	check("Name").optional().isString().withMessage("Name must be a string"),
-	check("strict").optional().isBoolean().withMessage("strict must be true or false")
-];
 
 // Joi schemas
 const partSchema = Joi.object({
