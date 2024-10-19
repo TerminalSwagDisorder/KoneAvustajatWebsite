@@ -1774,7 +1774,7 @@ const buildWizardQuery = async (queryBody, partType, formFields, compatibleSocke
 						query: `${value} ${colorMap[value] || ""}`,
 						fields: ["name", "color"], // List the fields you want to match
 						fuzziness: "AUTO:2,4", // Enables fuzzy matching for typo-tolerance
-						boost: 2
+						boost: 1.5
 					}
 				});
 			}
@@ -1786,17 +1786,17 @@ const buildWizardQuery = async (queryBody, partType, formFields, compatibleSocke
 							query: "rgb",
 							fields: ["name", "color"], // Replace with fields relevant to your document schema
 							fuzziness: 1,
-							boost: 2
+							boost: 1.5
 						}
 					});
 				} else {
-					const boost = value === "maximumRgb" ? 3 : value === "largeRgb" ? 2 : 1;
+					const boost = value === "maximumRgb" ? 1.75 : value === "largeRgb" ? 1.5 : 1;
 					queryBody.bool.should.push({
 						multi_match: {
 							query: "rgb",
 							fields: ["name", "color"], // Replace with fields relevant to your document schema
 							fuzziness: 1,
-							boost: 2
+							boost: boost
 						}
 					});
 				}
@@ -2218,7 +2218,7 @@ const constraintComparator = async (queryBody, formFields, currentData, maxScore
 						const constraint = constraintFunction(partData, formFields);
 						if (constraint && constraint.bool) {
 							if (queryBody[relatedPart].function_score) {
-								queryBody[relatedPart].function_score.min_score = maxScores[relatedPart] * 0.75;
+								queryBody[relatedPart].function_score.min_score = maxScores[relatedPart] * 0.5;
 								if (constraint.bool.must) {
 									queryBody[relatedPart].function_score.query.bool.must.push(...constraint.bool.must);
 								}
@@ -2233,7 +2233,7 @@ const constraintComparator = async (queryBody, formFields, currentData, maxScore
 									);
 								}
 							} else {
-								queryBody[relatedPart].min_score = maxScores[relatedPart] * 0.75;
+								queryBody[relatedPart].min_score = maxScores[relatedPart] * 0.5;
 								if (constraint.bool.must) {
 									queryBody[relatedPart].bool.must.push(...constraint.bool.must);
 								}
@@ -2250,9 +2250,9 @@ const constraintComparator = async (queryBody, formFields, currentData, maxScore
 			}
 		}
 		if (queryBody[partType].function_score) {
-			queryBody[partType].function_score.min_score = maxScores[partType] * 0.75;
+			queryBody[partType].function_score.min_score = maxScores[partType] * 0.5;
 		} else {
-			queryBody[partType].min_score = maxScores[partType] * 0.75;
+			queryBody[partType].min_score = maxScores[partType] * 0.5;
 		}
 	}
 	return queryBody;
