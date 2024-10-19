@@ -74,19 +74,19 @@ export const checkSearchTerms = async (searchTerms) => {
     let correctSearchTerms = {};
 
     if (typeof searchTerms === "string" && searchTerms !== undefined && searchTerms !== null && searchTerms !== "") {
-        correctSearchTerms[searchTerms] = searchTerms;
+        correctSearchTerms.tableName = searchTerms;
     } else if (Array.isArray(searchTerms)) {
         for (const term of searchTerms) {
             if (typeof term === "string" && term !== undefined && term !== null && term !== "") {
-                correctSearchTerms[term] = term;
+                correctSearchTerms.tableName = term;
             } else {
                 throw new Error(`Invalid array element: ${term}. Expected a string.`);
             }
         }
     } else if (typeof searchTerms === "object" && searchTerms !== null) {
         for (const term in searchTerms) {
-            if (searchTerms[term] === undefined || searchTerms[term] === null || searchTerms[term] === "") {
-                delete searchTerms[term];
+            if (correctSearchTerms.tableName === undefined || correctSearchTerms.tableName === null || correctSearchTerms.tableName === "") {
+                delete correctSearchTerms.tableName;
             }
         }
         correctSearchTerms = searchTerms;
