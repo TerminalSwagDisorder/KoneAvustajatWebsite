@@ -321,7 +321,7 @@ const idSchema = Joi.object({
 });
 
 const opensearchSchemaBasic = Joi.object({
-	method: Joi.string().trim().required().valid("create", "insert", "purge", "delete"),
+	method: Joi.string().trim().required().valid("create", "insert", "purge", "delete", "reset"),
 	amount: Joi.string().trim().optional().valid("all", "single"),
 	type: Joi.string().trim().optional().valid("index", "template", "data", "document"), 
 	part: Joi.string().trim().optional().valid("chassis", "cpu", "cpu_cooler", "gpu", "memory", "motherboard", "psu", "storage", "part_inventory"),
@@ -329,7 +329,7 @@ const opensearchSchemaBasic = Joi.object({
 });
 
 const opensearchSchema = Joi.object({
-	method: Joi.string().trim().required().valid("create", "insert", "purge", "delete"),
+	method: Joi.string().trim().required().valid("create", "insert", "purge", "delete", "reset"),
 	amount: Joi.string()
 		.trim()
 		.optional()
@@ -866,6 +866,7 @@ const createPartIndex = async () => {
 		}
 	} catch (error) {
 		console.error(`Error creating index:`, error);
+		return null;
 	}
 };
 
@@ -1005,6 +1006,7 @@ const insertToPartIndex = async (items = 250) => {
 		console.log("All parts indexed succesfully!");
 	} catch (error) {
 		console.error("Error inserting data:", error);
+		return null;
 	}
 };
 
@@ -1050,6 +1052,7 @@ const purgePartIndices = async (confirmation) => {
 		console.log("All part indices have been purged.");
 	} catch (error) {
 		console.error(`Error deleting indices:`, error);
+		return null;
 	}
 };
 
@@ -2662,7 +2665,7 @@ app.get("/api/opensearch/manage", tableSearch("opensearch"), async (req, res) =>
 
 		if (method === "purge") {
 			await purgePartIndices("true");
-			operation = "Ran purgePartIndices";
+			operation = "purgePartIndices completed successfully";
 		}
 
 		if (method === "delete") {
@@ -2679,6 +2682,26 @@ app.get("/api/opensearch/manage", tableSearch("opensearch"), async (req, res) =>
 			}
 		}
 
+		if (method === "reset") {
+			let resetError = [];
+			const purge = await purgePartIndices("true");
+			if (purge === null) {
+				resetError.push(" 'Purging failed when trying to reset'");
+			}
+			const create = await createPartIndex();
+			if (create === null) {
+				resetError.push(" 'Creating indices failed when trying to reset'");
+			}
+			const insert = await insertToPartIndex();
+			if (insert === null) {
+				resetError.push(" 'Inserting to indices failed when trying to reset'");
+			}
+			if (resetError.length !== 0) {
+				operation = `Something went wrong with the reset, reason: ${resetError}`;
+				return res.status(400).json({ message: operation });
+			}
+			operation = "Resetting completed successfully";
+		}
 
 		return res.status(200).json({ message: operation });
 	} catch (error) {
