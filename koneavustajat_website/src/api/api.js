@@ -270,156 +270,71 @@ export const fetchServerRoutes = async () => {
 
 // Do all of the user data handling async
 // Signin
-export const handleSignin = async (event, formFields, handleUserChange, userType) => {
-	const email = event.target.email.value;
-	const password = event.target.password.value;
-	// Only allow the specified userTypes
-	const allowedUserTypes = ["otheruser", "user"];
-	if (!allowedUserTypes.includes(userType) || userType === "") {
-		console.error(`userType "${userType}" is not allowed!`);
-		alert(`userType "${userType}" is not allowed!`);
-	}
+export const handleSignin = async (event, formFields, handleUserChange) => {
+	const email = event.target.Email.value;
+	const password = event.target.Password.value;
 
 	// api call to the server to log in the user
 	try {
 		if (email && password) {
-		// Depending on usertype, create the endpoint
-			let responseEndpoint;
-			if (userType === "user") {
-				responseEndpoint = "users";
-			} else if (userType === "otheruser") {
-				responseEndpoint = "other/users";
-			}
+			if (formFields && typeof formFields === "object" && Array.isArray(formFields)) formFields = JSON.stringify(formFields);
 
-			if (formFields && typeof formFields === "object" && !Array.isArray(formFields)) formFields = JSON.stringify(formFields);
-
-			const response = await fetch(`http://localhost:4000/api/${responseEndpoint}/login`, {
+			const response = await fetch("http://localhost:4000/api/users/login", {
 				method: "POST",
 				headers: {
 					"Content-Type": "application/json"
 				},
 				credentials: "include", // For all fetch requests, do this!
-				body: JSON.stringify({ formFields, userType })
+				body: JSON.stringify({ formFields })
 			});
 			const data = await response.json();
-			//console.log("data.userData", data.user)
+			console.log(data.user);
 
-			// If successful, set the current user to the provided credentials and return the data
-			if (response.ok) {
-				alert("Successfully signed in!");
-				handleUserChange(data.user);
-				return data.user;
-			} else {
-				console.log(data);
-				if (data.message) {
-					alert(`HTTP error ${response.status}: ${data.message}`);
-					throw new Error(data.error);
-				} else {
-					alert("Failed sign in. Please try again.");
-					throw new Error(data.error);
-					}
-				}
+			if (!response.ok) {
+				alert(`HTTP error ${response.status}: ${response.message}`);
+				throw new Error(`HTTP error ${response.status}: ${response.message}`);
+			}
+
+			alert("Successfully signed in!");
+			handleUserChange(data.user);
+			return data.user;
+
 			}
 	} catch (error) {
 		console.error("Error signing user in:", error);
 	}
 };
 
-
-// Signup, alternative
-/*
+// Signup
 export const handleSignup = async (event, formFields) => {
 	try {
-		if (formFields && typeof formFields === "object" && !Array.isArray(formFields)) formFields = JSON.stringify(formFields);
-		console.log(formFields)
+		if (formFields && typeof formFields === "object" && Array.isArray(formFields)) formFields = JSON.stringify(formFields);
 		// api call to register a new user
-		const response = await fetch(`http://localhost:4000/api/users/signup`, {
+		const response = await fetch("http://localhost:4000/api/users/signup", {
 			method: "POST",
 			headers: {
 				"Content-Type": "application/json"
 			},
 			credentials: "include", // Important, because we're using cookies
-			body: JSON.stringify({ formFields }),
+			body: JSON.stringify({ formFields })
 		});
 
 		const data = await response.json();
 
-		if (response.ok) {
-			alert("Signed up successfully");
-			return true;
-		} else {
-			if (data.message) {
-				alert(`HTTP error ${response.status}: ${data.message}`)
-				throw new Error(data.error);
-			} else {
-				alert("Failed sign up. Please try again.");
-				throw new Error(data.error);
-			}
-		}
-	} catch (error) {
-		console.error("Error adding user:", error);
-		if (error.message) alert(error.message)
-		//throw new Error(error);
+        if (!response.ok) {
+            alert(`HTTP error ${response.status}: ${data.message}`);
+            throw new Error(`HTTP error ${response.status}: ${data.message}`);
+        }
 
-	}
-};
-*/
+		alert("Signed up successfully");
 
-// Signup
-export const handleSignup = async (event, userType, formFields) => {
-
-	// Only allow the specified userTypes
-	const allowedUserTypes = ["user", "otheruser"];
-	if (!allowedUserTypes.includes(userType) || userType === "") {
-		console.error(`userType "${userType}" is not allowed!`);
-		alert(`userType "${userType}" is not allowed!`);
-	}
-
-	//console.log(name, email, password)
-	try {
-		// Depending on usertype, create the endpoint
-		let responseEndpoint;
-		if (userType === "user") {
-			formFields.role = "user";
-			responseEndpoint = "users";
-		} else if (userType === "otheruser") {
-			formFields.role = "ambulance";
-			responseEndpoint = "other/users";
-		}
-
-		if (formFields && typeof formFields === "object" && !Array.isArray(formFields)) formFields = JSON.stringify(formFields);
-		console.log(formFields);
-		// api call to register a new user
-		const response = await fetch(`http://localhost:4000/api/${responseEndpoint}/signup`, {
-			method: "POST",
-			headers: {
-				"Content-Type": "application/json"
-			},
-			credentials: "include", // Important, because we're using cookies
-			body: JSON.stringify({ formFields }),
-		});
-
-		const data = await response.json();
-
-		if (response.ok) {
-			alert("Signed up successfully");
-			return true;
-		} else {
-			if (data.message) {
-				alert(`HTTP error ${response.status}: ${data.message}`);
-				throw new Error(data.error);
-			} else {
-				alert("Failed sign up. Please try again.");
-				throw new Error(data.error);
-			}
-		}
+		return true;
 	} catch (error) {
 		console.error("Error adding user:", error);
 		if (error.message) alert(error.message);
 
 	}
 };
-
 
 // Signout
 export const handleSignout = async (handleUserChange) => {

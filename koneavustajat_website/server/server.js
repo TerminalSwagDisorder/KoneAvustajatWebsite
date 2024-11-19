@@ -377,10 +377,10 @@ const tableNameSchema = Joi.string()
 	.default("cpu");
 
 const userFieldsSchema = Joi.string()
-	.valid("name", "email", "password", "currentPassword", "gender", "profileImage");
+	.valid("Name", "Email", "Password", "currentPassword", "Gender", "ProfileImage");
 
 const loginSchema = Joi.object({
-	email: Joi.string().trim()
+	Email: Joi.string().trim()
 		.required()
 		.email()
 		.messages({
@@ -388,7 +388,7 @@ const loginSchema = Joi.object({
 			"string.empty": "Email cannot be empty",
 			"any.required": "Email is required"
 		}),
-	password: Joi.string().trim()
+	Password: Joi.string().trim()
 		.required()
 		.pattern(/^(?=.*[A-Z])(?=.*\d)[A-Za-z\d]{9,}$/)
 		.messages({
@@ -399,14 +399,14 @@ const loginSchema = Joi.object({
 });
 
 const userSchema = Joi.object({
-	name: Joi.string().trim().min(3).max(50).required().messages({
+	Name: Joi.string().trim().min(3).max(50).required().messages({
 		"string.base": "Name must be a string",
 		"string.empty": "Name cannot be empty",
 		"string.min": "Name must be at least 3 characters long",
 		"string.max": "Name cannot exceed 50 characters",
 		"any.required": "Name is required"
 	}),
-	email: Joi.string().trim()
+	Email: Joi.string().trim()
 		.required()
 		.email() // Built in regex
 		.messages({
@@ -414,7 +414,7 @@ const userSchema = Joi.object({
 			"string.empty": "Email cannot be empty",
 			"any.required": "Email is required"
 		}),
-	password: Joi.string().trim()
+	Password: Joi.string().trim()
 		.required()
 		.pattern(/^(?=.*[A-Z])(?=.*\d)[A-Za-z\d]{9,}$/)
 		.messages({
@@ -425,20 +425,20 @@ const userSchema = Joi.object({
 });
 
 const userUpdateSchema = Joi.object({
-	name: Joi.string().trim().min(3).max(50).optional().messages({
+	Name: Joi.string().trim().min(3).max(50).optional().messages({
 		"string.base": "Name must be a string",
 		"string.empty": "Name cannot be empty",
 		"string.min": "Name must be at least 3 characters long",
 		"string.max": "Name cannot exceed 50 characters"
 	}),
-	email: Joi.string().trim()
+	Email: Joi.string().trim()
 		.email()
 		.optional()
 		.messages({
 			"string.email": "Invalid email format. Please enter a valid email address in the format: example@domain.com",
 			"string.empty": "Email cannot be empty"
 		}),
-	password: Joi.string().trim()
+	Password: Joi.string().trim()
 		.pattern(/^(?=.*[A-Z])(?=.*\d)[A-Za-z\d]{9,}$/)
 		.optional()
 		.messages({
@@ -454,11 +454,11 @@ const userUpdateSchema = Joi.object({
 			"string.empty": "Password cannot be empty",
 			"any.required": "Password is required"
 		}),
-	gender: Joi.string().trim().valid("male", "female").optional().messages({
+	Gender: Joi.string().trim().valid("male", "female").optional().messages({
 		"string.base": "Gender must be a string",
 		"any.only": "Gender must be one of either 'male' or 'female'"
 	}),
-	profileImage: Joi.string().trim()
+	ProfileImage: Joi.string().trim()
 		.optional()
 		.messages({
 			"string.base": "Profile image must be a valid filename",
@@ -645,14 +645,19 @@ const userValidator = (schema) => {
 		if (typeof formFields === "string") {
 			try {
 				formFields = JSON.parse(formFields);
-			} catch (error) {
-				return res.status(400).json({ message: "Invalid form data format" });
+			} catch (err) {
+				return res.status(400).json({ message: "Unable to parse data" });		
 			}
+		}
+
+		if (typeof formFields !== "object") {
+			return res.status(400).json({ message: "Invalid form data format" });
 		}
 
 		try {
 			const value = Joi.attempt(formFields, schema);
-			req.body = value;
+			
+			req.userData = value;
 			next();
 		} catch (error) {
 			return res.status(400).json({ message: error.details[0].message });
@@ -661,14 +666,21 @@ const userValidator = (schema) => {
 };
 
 const userFieldsValidator = (req, res, next) => {
-	let { formFields } = req.body;
+	let formFields = req.userData;
+	//console.log(req.body);
+	//console.log(req.userData);
 
 	if (typeof formFields === "string") {
 		try {
 			formFields = JSON.parse(formFields);
-		} catch (error) {
-			return res.status(400).json({ message: "Invalid form data format" });
+		} catch (err) {
+			return res.status(400).json({ message: "Unable to parse data" });		
 		}
+	}
+		//console.log(typeof formFields);
+		//console.log(formFields);
+	if (typeof formFields !== "object") {
+		return res.status(400).json({ message: "Invalid form data format" });
 	}
 
 	try {
@@ -710,24 +722,24 @@ const checkRegex = (req, res, next) => {
 	const emailRegex =
 		/^[-A-Za-z0-9!#$%&'*+/=?^_`{|}~]+(?:\.[-A-Za-z0-9!#$%&'*+/=?^_`{|}~]+)*@(?:[A-Za-z0-9](?:[-A-Za-z0-9]*[A-Za-z0-9])?\.)+[A-Za-z0-9](?:[-A-Za-z0-9]*[A-Za-z0-9])?$/; // Email according to the RFC 5322 standard
 
-	let email;
-	let password;
+	let Email;
+	let Password;
 	const { formFields } = req.body;
 	if (formFields) {
-		({ email, password } = JSON.parse(formFields));
+		({ Email, Password } = JSON.parse(formFields));
 	} else {
-		({ email, password } = req.body);
+		({ Email, Password } = req.body);
 	}
 
 	// Validate email
-	if (typeof email !== "undefined" && email !== "" && !emailRegex.test(email)) {
+	if (typeof Email !== "undefined" && Email !== "" && !emailRegex.test(Email)) {
 		return res.status(400).json({
 			message: "Invalid email format. Please enter a valid email address in the format: example@domain.com"
 		});
 	}
 
 	// Validate password
-	if (typeof password !== "undefined" && password !== "" && !passwordRegex.test(password)) {
+	if (typeof Password !== "undefined" && Password !== "" && !passwordRegex.test(Password)) {
 		return res.status(400).json({
 			message:
 				"Invalid password format. Password must be at least 9 characters long, include 1 capital letter, and 1 number."
@@ -2743,35 +2755,6 @@ app.get("/api/opensearch/backup", async (req, res) => {
 	}
 });
 
-app.post("/api/users/signup", userValidator(userSchema), userFieldsValidator, async (req, res) => {
-	console.log("API user signup accessed");
-
-	const { formFields } = req.body;
-	const jsonFormFields = JSON.parse(formFields);
-	const { name, email, password } = jsonFormFields;
-
-	try {
-		// Check if email exists
-		const emailCheckSql = "SELECT email FROM users WHERE Email = ?";
-		const [user] = await promisePool.query(emailCheckSql, [email]);
-		if (user.length > 0) {
-			return res.status(409).json({ message: "One or more fields already in use" });
-		}
-
-		// Hash password & insert data into db
-		const hashedPassword = await bcrypt.hash(password, 10);
-		const insertSql = "INSERT INTO users (name, email, password) VALUES (?, ?, ?)";
-		const [result] = await promisePool.query(insertSql, [name, email, hashedPassword]);
-		return res.status(200).json({ message: "User registered successfully", id: result.insertId });
-	} catch (error) {
-		console.error(error);
-		// If there is a status message or data then use that, otherwise the defaults
-		const message = error.response ? error.response.data : "Internal Server Error";
-		const status = error.response ? error.response.status : 500;
-		return res.status(status).json({ message: message });
-	}
-});
-
 app.post("/api/algorithm", routePagination, tableValidator(partNameSchema, "partName"), tableSearch(), async (req, res) => {
 	console.log("API algorithm accessed");
 	console.log("\n");
@@ -3094,22 +3077,20 @@ app.get("/api/users/id", idValidator, async (req, res) => {
 app.post("/api/users/signup", userValidator(userSchema), userFieldsValidator, async (req, res) => {
 	console.log("API user signup accessed");
 
-	const { formFields } = req.body;
-	const jsonFormFields = JSON.parse(formFields);
-	const { name, email, password } = jsonFormFields;
+	const { Name, Email, Password } = req.userData;
 
 	try {
 		// Check if email exists
-		const emailCheckSql = "SELECT email FROM users WHERE Email = ?";
-		const [user] = await promisePool.query(emailCheckSql, [email]);
+		const emailCheckSql = "SELECT Email FROM users WHERE Email = ?";
+		const [user] = await promisePool.query(emailCheckSql, [Email]);
 		if (user.length > 0) {
 			return res.status(409).json({ message: "One or more fields already in use" });
 		}
 
 		// Hash password & insert data into db
-		const hashedPassword = await bcrypt.hash(password, 10);
-		const insertSql = "INSERT INTO users (name, email, password) VALUES (?, ?, ?)";
-		const [result] = await promisePool.query(insertSql, [name, email, hashedPassword]);
+		const hashedPassword = await bcrypt.hash(Password, 10);
+		const insertSql = "INSERT INTO users (Name, Email, Password) VALUES (?, ?, ?)";
+		const [result] = await promisePool.query(insertSql, [Name, Email, hashedPassword]);
 		return res.status(200).json({ message: "User registered successfully", id: result.insertId });
 	} catch (error) {
 		console.error(error);
@@ -3122,26 +3103,24 @@ app.post("/api/users/signup", userValidator(userSchema), userFieldsValidator, as
 
 app.post("/api/users/login", userValidator(loginSchema), userFieldsValidator, async (req, res) => {
 	console.log("API users login accessed");
-	const { formFields, userType } = req.body;
-	const jsonFormFields = JSON.parse(formFields);
 
-	const { email, password } = jsonFormFields;
+	const { Email, Password } = req.userData;
 	const sql = "SELECT * FROM users WHERE Email = ?";
 
 	try {
 		// [[user]] takes the first user in the array wile [user] returns the whole array and you need to specify user[0] each time otherwise
-		const [[user], fields] = await promisePool.query(sql, [email]);
+		const [[user], fields] = await promisePool.query(sql, [Email]);
 
 		if (!user) {
 			return res.status(404).json({ message: "Email or password is incorrect" });
 		}
 
 		// If the email is not an exact match
-		if (user.Email !== email) {
+		if (user.Email !== Email) {
 			return res.status(404).json({ message: "Email or password is incorrect" });
 		}
 
-		const match = await bcrypt.compare(password, user.Password);
+		const match = await bcrypt.compare(Password, user.Password);
 		if (match) {
 			const isAdmin = user.RoleID === 4;
 			req.session.user = { ...user, isAdmin };
@@ -3193,19 +3172,6 @@ app.get("/api/profile", authenticateSession, (req, res) => {
 	});
 });
 
-// Logout route (Frontend will handle removing the token with JWT)
-app.post("/api/logout", (req, res) => {
-	console.log("API logout accessed");
-	req.session.destroy((error) => {
-		if (error) {
-			return res.status(500).json({ message: "Could not log out, please try again" });
-		} else {
-			res.clearCookie("session-id");
-			return res.status(200).json({ message: "Logged out successfully" });
-		}
-	});
-});
-
 /*
 app.post("/api/logout", (req, res) => {
 	console.log("API logout accessed")
@@ -3238,12 +3204,11 @@ app.get("/api/profile/refresh", authenticateSession, async (req, res) => {
 });
 
 // Update own user credentials
-app.patch( "/api/profile", authenticateSession, userValidator(userUpdateSchema), userFieldsValidator, profileImgUpload.single("profileImage"), async (req, res) => {
+app.patch( "/api/profile", authenticateSession, userValidator(userUpdateSchema), userFieldsValidator, profileImgUpload.single("ProfileImage"), async (req, res) => {
 		console.log("API update own credentials accessed");
 		console.log(req.user);
 		const userId = req.user.UserID;
-		const { formFields } = req.body; // Updated credentials  from request body
-		const jsonFormFields = JSON.parse(formFields);
+		const jsonFormFields = req.userData;
 		const ProfileImage = req.file; // Profile image
 
 		try {
@@ -3253,7 +3218,7 @@ app.patch( "/api/profile", authenticateSession, userValidator(userUpdateSchema),
 			}
 
 			let hashedPassword = null;
-			const allowedFields = ["name", "email", "password", "gender", "profileImage"];
+			const allowedFields = ["Name", "Email", "Password", "Gender", "ProfileImage"];
 
 			// SQL query to update user data
 			// updateQuery allows for multiple fields to be updated simultaneously
@@ -3267,7 +3232,7 @@ app.patch( "/api/profile", authenticateSession, userValidator(userUpdateSchema),
 					if (jsonFormFields.hasOwnProperty(key)) {
 						if (jsonFormFields[key] !== "") {
 							updateQuery += key.charAt(0).toUpperCase() + key.slice(1) + " = ?, "; // Since the first letters are capitalized in the db
-							if (key === "password") {
+							if (key === "Password") {
 								// Hash the new password before storing it
 								hashedPassword = await bcrypt.hash(jsonFormFields[key], 10);
 								queryParams.push(hashedPassword);

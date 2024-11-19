@@ -58,8 +58,6 @@ function App() {
 				// Refresh profile
 				const refreshedUserData = await refreshProfile();
 				setCurrentUser(refreshedUserData);
-				console.log("userData", userData); // note that userData remains the same until re-login
-				console.log("refreshedUserData", refreshedUserData); // Thats why we have refreshedUserData
 			} else {
 				setCurrentUser(null);
 			}

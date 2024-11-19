@@ -64,7 +64,7 @@ const NavBar = ({ currentUser, handleUserChange, handleSignout, ThemeContext }) 
 	const userNavbar = () => {
 		let adminCheck;
 		let userCheck;
-		if (currentUser && currentUser.role !== "user") {
+		if (currentUser && currentUser.RoleID === 4) {
 			adminCheck = (
 				<>
 					<Nav.Link as={Link} to="/admin/dashboard" className={activeLink === "/admin/dashboard" ? "active-navbar-link" : "navbar-link"} onClick={() => onUpdateActiveLink("/admin/dashboard")}>
