@@ -11,17 +11,18 @@ const ComputerWizardBuild = () => {
     const dispatch = useDispatch();
     const completedBuildItems = Object.values(completedBuild);
     const completedBuildEntries = Object.entries(completedBuild);
-    
-    console.log(completedBuildEntries);
-        
-    const totalPrice = completedBuildItems.reduce((acc, item) => {
-        return acc + (parseFloat(item.Price) || 0);
-    }, 0).toFixed(2);
+
+    const totalPrice = completedBuildItems
+        .filter(item => item && item.Price) // Filter out non-component entries
+        .reduce((acc, item) => {
+            return acc + (parseFloat(item.Price) || 0);
+        }, 0)
+        .toFixed(2);
 
 	const handleAddToCart = () => {
-        if (completedBuildEntries.length > 0) {
+        if (completedBuild.length > 0) {
             const newItem = {
-                ...completedBuildEntries,
+                ...completedBuild,
                 table: "completedBuild",
                 totalPrice: totalPrice
             };
@@ -41,6 +42,7 @@ const ComputerWizardBuild = () => {
     };
 
     const handleRemoveFromCompletedBuild = (itemId) => {
+        console.log("itemId", itemId);
         dispatch(removeFromCompletedBuild(itemId));
     };
 
@@ -64,10 +66,11 @@ const ComputerWizardBuild = () => {
     };
 
     const renderCompletedBuildItems = () => {
-        if (completedBuildEntries && completedBuildEntries.length > 0) {
+        const validParts = ["chassis", "cpu", "cpu_cooler", "gpu", "motherboard", "memory", "storage", "psu"];
+        if (completedBuild) {
             return (
                 <ListGroup className="completedBuild-details">
-                    {completedBuildEntries.map(([partKey, partVal]) => (
+                    {completedBuildEntries.map(([partKey, partVal]) => validParts.includes(partKey) && (
                         <ListGroup.Item key={partKey}>
                             <p>
                                 {partKey}: <b>{partVal.Name}</b> | <b>{parseFloat(partVal.Price).toFixed(2)}</b> €

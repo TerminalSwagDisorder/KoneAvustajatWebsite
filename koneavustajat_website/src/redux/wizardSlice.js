@@ -87,15 +87,24 @@ const wizardSlice = createSlice({
 		},
 
 		addToCompletedBuild: (state, action) => {
+			const validParts = ["chassis", "cpu", "cpu_cooler", "gpu", "motherboard", "memory", "storage", "psu"];
 			const item = action.payload;
-			const CID = mapCID(item);
-			if (state.completedBuild[CID]) {
-				const sameTable = checkTable(item, state.completedBuild[CID]);
-				if (sameTable) {
-					state.completedBuild[CID] = { ...item };
+			console.log(item.table);
+			console.log(item.partData);
+			if (item.table === "wizardBuild") {
+				console.log(item.build);
+				state.completedBuild = { ...item.build, ...item.totalPrice };				
+				console.log(state.completedBuild);
+			}
+
+			if (validParts.includes(item.table)) {
+				console.log("state.completedBuild[item.table]");
+				/*
+				if (state.completedBuild == undefined) {
+					state.completedBuild = {};
 				}
-			} else {
-				state.completedBuild[CID] = { ...item };
+				*/
+				state.completedBuild[item.table] = { ...item.partData };
 			}
 		},
 

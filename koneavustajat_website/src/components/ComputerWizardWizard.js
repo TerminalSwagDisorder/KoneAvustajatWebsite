@@ -46,13 +46,6 @@ const ComputerWizardWizard = ({ wizardAlgorithm }) => {
     }, 0).toFixed(2);
 
 	const handleAddToWizard = () => {
-		for (const item in wizardEntries) {
-			for (const i in currentBuild[item]) {
-				console.log(currentBuild[item][i]);
-				
-
-			}
-		}
 		const newItem = {
 			...currentBuild,
 			totalPrice: currentPrice,
@@ -75,7 +68,7 @@ const ComputerWizardWizard = ({ wizardAlgorithm }) => {
 			}
 		}
         const newItem = {
-            ...wizardEntries[0][1],
+            build: wizardEntries[0][1],
 			totalPrice: currentPrice,
             table: "wizardBuild",
         };

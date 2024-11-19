@@ -61,7 +61,7 @@ const ComputerWizardBrowse = ({ fetchDynamicData, fetchDataAmount }) => {
 
 	const handleAddToCompletedBuild = (item) => {
 		const newItem = {
-			...item,
+			partData: item,
 			table: partName.key,
 		};
 		console.log(newItem);
