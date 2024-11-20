@@ -18,7 +18,7 @@ import { useSelector, useDispatch } from "react-redux";
 import { addToShoppingCart, removeFromShoppingCart, clearShoppingCart } from "../redux/shoppingCartSlice";
 import { addToCompletedBuild, removeFromCompletedBuild, clearCompletedBuild } from "../redux/wizardSlice";
 
-const ComputerWizardBrowse = ({ fetchDynamicData, fetchDataAmount }) => {
+const ComputerWizardBrowse = ({ fetchDynamicData, fetchDataAmount, currentUser, updateDynamicData, deleteDynamicData }) => {
 	const [parts, setParts] = useState([]);
 	const [partName, setPartName] = useState({
 		key: "cpu",
@@ -30,6 +30,8 @@ const ComputerWizardBrowse = ({ fetchDynamicData, fetchDataAmount }) => {
 	const [page, setPage] = useState(1);
 	const [selectedPart, setSelectedPart] = useState("");
 	const [inputValue, setInputValue] = useState("");
+	const [currentOperation, setCurrentOperation] = useState("");
+	const [formFields, setFormFields] = useState({});
 	const shoppingCart = useSelector((state) => state.shoppingCart.shoppingCart);
 	const completedBuild = useSelector((state) => state.wizard.completedBuild);
 	const dispatch = useDispatch();
@@ -69,11 +71,15 @@ const ComputerWizardBrowse = ({ fetchDynamicData, fetchDataAmount }) => {
 	};
 
 	const closeForm = () => {
+		setFormFields({});
+		setCurrentOperation(null);
 		setSelectedPart(null);
 		//setFormFields({});
 	};
 
-	const handleSelectPart = (part) => {
+	const handleSelectPart = (part, operation) => {
+		setFormFields({});
+		setCurrentOperation(operation);
 		setSelectedPart(part);
 		window.scrollTo(0, 180);
 	};
@@ -102,14 +108,37 @@ const ComputerWizardBrowse = ({ fetchDynamicData, fetchDataAmount }) => {
 		}
 	};
 
+	const handleSubmit = async (event) => {
+		event.preventDefault();
+		try {
+			let success;
+			if (currentOperation === "modify") {
+				success = await updateDynamicData(formFields, "part", partName.key, selectedPart.ID);
+			} else if (currentOperation === "delete") {
+				success = await deleteDynamicData("part", partName.key, selectedPart.ID);
+			} else {
+				console.error("No valid part operation for submission");
+				alert("No valid part operation for submission");
+			}
+			if (success) {
+				await fetchData();
+				closeForm();
+				setFormFields({});
+			}
+		} catch (error) {
+			console.error("Error modifying data:", error);
+			alert("Error modifying data.");
+		}
+	};
+
 	const handleInputChange = (event) => {
 		setInputValue(event.target.value);
-		/*
+		
 		setFormFields((prevFields) => ({
 			...prevFields,
 			[event.target.name]: event.target.value,
 		}));
-		*/
+		
 		if (event.target.ID === "ID") {
 			let partId = parseInt(event.target.value, 10);
 
@@ -126,10 +155,93 @@ const ComputerWizardBrowse = ({ fetchDynamicData, fetchDataAmount }) => {
 				selectedPart = {
 					ID: partId,
 					Name: "Not a part",
-					Error: "InvalID part: User with the ID does not exist"
+					Error: "Invalid part: Part with the ID does not exist"
 				};
 			}
+			setCurrentOperation("view");
 			setSelectedPart(selectedPart);
+		}
+	};
+
+	const renderPartModification = () => {
+		if (currentUser && currentUser.RoleID === 4 && selectedPart && currentOperation === "modify") {
+			return (
+				<div id="partform" className="partform d-flex justify-content-center align-items-center">
+					<Form onSubmit={handleSubmit} className="adminForm border rounded shadow p-4 bg-opaque" style={{ wIDth: "400px" }}>
+						<div className="d-flex justify-content-end mb-3">
+							<CloseButton onClick={() => closeForm()} />
+						</div>
+						<h4 className=" mb-3">Modify part</h4>
+						{Object.keys(selectedPart).map((key, index) => (
+							<ul key={index}>
+									<b>{key}</b>:{" "}
+									{key === "Url" || key === "Image_Url" ? (
+										<a href={selectedPart[key]} target="_blank" rel="noopener noreferrer">
+											{selectedPart[key]}
+										</a>
+									) : key === "Image" ? (
+										<Image
+											src={process.env.PUBLIC_URL + "/product_images/" + selectedPart[key]}
+											alt={key}
+											style={{ width: "100px", height: "auto" }}
+										/>
+									) : key === "ID" ? (
+										selectedPart[key]
+									) : key === "Price" ? (
+										<Form.Group className="mb-3">
+											<Form.Control
+												type="number"
+												step={0.01}
+												min={0}
+												placeholder={selectedPart[key]}
+												name={key}
+												onChange={handleInputChange}
+											/>
+										</Form.Group>
+									) : (
+										<Form.Group className="mb-3">
+											<Form.Control
+												type="text"
+												placeholder={selectedPart[key]}
+												name={key}
+												onChange={handleInputChange}
+											/>
+										</Form.Group>
+									)}
+							</ul>
+						))}
+						<Button variant="primary" type="submit">
+							Modify part
+						</Button>
+					</Form>
+				</div>
+			);
+		}
+	};	
+
+	const renderPartDeletion = () => {
+		if (currentUser && currentUser.RoleID === 4 && selectedPart && currentOperation === "delete") {
+			return (
+				<div id="partform" className="partform d-flex justify-content-center align-items-center">
+					<Form onSubmit={handleSubmit} className="adminForm border rounded shadow p-4 bg-opaque">
+						<div className="d-flex justify-content-end mb-3">
+							<CloseButton onClick={() => closeForm()} />
+						</div>
+						<h4 className=" mb-3">Are you sure you want to delete this part?</h4>
+							<ul>
+								<p><b>Part type:</b> {partName.value} </p>
+								<p><b>ID:</b> {selectedPart.ID} </p>
+								<p><b>Name:</b> {selectedPart.Name} </p>
+							</ul>
+						<Button variant="primary" type="submit">
+							Yes
+						</Button>						
+						<Button variant="primary" style={{"background-color": "#990000"}} onClick={() => closeForm()}>
+							No
+						</Button>
+					</Form>
+				</div>
+			);
 		}
 	};
 
@@ -165,6 +277,23 @@ const ComputerWizardBrowse = ({ fetchDynamicData, fetchDataAmount }) => {
 			</>
 		);
 	};
+
+	const renderAdminButtons = (part) => {
+		if (currentUser && currentUser.RoleID === 4) {
+			return (
+				<>
+					<Button className="user-select-button" onClick={() => handleSelectPart(part, "delete")}>
+						Delete part
+					</Button>
+					<Button className="user-select-button" onClick={() => handleSelectPart(part, "modify")}>
+						Modify part
+					</Button>
+				</>
+			);
+		}
+		
+	};
+
 
 	const renderPagination = (page, totalPages) => {
 		return (
@@ -202,7 +331,8 @@ const ComputerWizardBrowse = ({ fetchDynamicData, fetchDataAmount }) => {
 							<td> {part.Name}</td>
 							<td> {part.Price} €</td>
 							<td>
-								<Button className="user-select-button" onClick={() => handleSelectPart(part)}>
+								{renderAdminButtons(part)}
+								<Button className="user-select-button" onClick={() => handleSelectPart(part, "view")}>
 									View part
 								</Button>
 								<Button className="user-select-button" onClick={() => handleAddToCart(part)}>
@@ -222,10 +352,10 @@ const ComputerWizardBrowse = ({ fetchDynamicData, fetchDataAmount }) => {
 	};
 
 	const renderBasedOnPart = () => {
-		if (selectedPart) {
+		if (selectedPart && currentOperation === "view") {
 			return (
-				<div ID="partform" className="d-flex justify-content-center align-items-center">
-					<Form className="adminForm border rounded shadow p-4 bg-opaque" style={{ wIDth: "400px" }}>
+				<div id="partform" className="partform d-flex justify-content-center align-items-center">
+					<Form className="adminForm border rounded shadow p-4 bg-opaque">
 						<div className="d-flex justify-content-end mb-3">
 							<CloseButton onClick={() => closeForm()} />
 						</div>
@@ -259,21 +389,28 @@ const ComputerWizardBrowse = ({ fetchDynamicData, fetchDataAmount }) => {
 					</Form>
 				</div>
 			);
-		} else {
+		}
+	};
+
+	const renderPartViewAlert = () => {
+		if (!currentOperation || !selectedPart) {
 			return (
 				<div className="userChangePrompt">
 					<Alert>
-						<CiDesktopMouse1 /> Select a part to view details.
+						<CiDesktopMouse1 /> Select a part to view or modify details.
 					</Alert>
 				</div>
 			);
 		}
-	};
+	}
 
 	return (
 		<div>
 			{renderPartChoice()}
+			{renderPartViewAlert()}
 			{renderBasedOnPart()}
+			{renderPartModification()}
+			{renderPartDeletion()}
 			{renderPagination(page, totalPages)}
 			<Table responsive="md" hover bordered className="table-striped">
 				<thead>

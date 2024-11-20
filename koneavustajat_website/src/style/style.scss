@@ -191,6 +191,21 @@ $dark_user_select_button: #697ef5;
 		}
 	}
 
+	#shopping-cart-top {
+		display: flex;
+		align-items: center; 
+		justify-content: space-between;
+		padding-right: 25px;
+		padding-left: 25px;
+		p {
+			padding-top: 20px;
+		}
+	} 
+	
+	.partform {
+		padding-right: 15%;
+	}
+
 	/*
  * // for CSS based on hover dropdown
 	.nav-item.dropdown:hover .dropdown-menu {

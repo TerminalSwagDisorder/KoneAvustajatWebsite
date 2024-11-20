@@ -157,6 +157,80 @@ export const fetchDynamicData = async (page, tableName, partName) => {
 	}
 };
 
+export const updateDynamicData = async (formFields, tableName, partName, id) => {
+	try {
+		console.log(`http://localhost:4000/api/${tableName}/update/${partName}/${id}`);
+		console.log(formFields);
+		await checkAllowedTableNames(tableName);
+		
+		if (partName) {
+			await checkAllowedPartNames(partName);
+		} else {
+			console.log("partName has no value. This might be intentional, but double check to be sure.");
+		}
+
+		if (formFields && typeof formFields === "object" && !Array.isArray(formFields)) formFields = JSON.stringify(formFields);
+		// api call to register a new user
+		const response = await fetch(`http://localhost:4000/api/${tableName}/update/${partName}/${id}`, {
+			method: "PATCH",
+			headers: {
+				"Content-Type": "application/json"
+			},
+			credentials: "include", // Important, because we're using cookies
+			body: formFields,
+		});
+
+		const data = await response.json();
+
+        if (!response.ok) {
+            alert(`HTTP error ${response.status}: ${data.message}`);
+            throw new Error(`HTTP error ${response.status}: ${data.message}`);
+        }
+		
+		alert(`Successfully updated ${partName} with id ${id} from ${tableName}`);
+
+		return data;
+	} catch (error) {
+		console.error("Error adding user:", error);
+		if (error.message) alert(error.message);
+
+	}
+};
+
+export const deleteDynamicData = async (tableName, partName, id) => {
+	try {
+		console.log(`http://localhost:4000/api/${tableName}/delete/${partName}/${id}`);
+		await checkAllowedTableNames(tableName);
+		
+		if (partName) {
+			await checkAllowedPartNames(partName);
+		} else {
+			console.log("partName has no value. This might be intentional, but double check to be sure.");
+		}
+
+		// api call to register a new user
+		const response = await fetch(`http://localhost:4000/api/${tableName}/delete/${partName}/${id}`, {
+			method: "DELETE",
+			headers: {
+				"Content-Type": "application/json"
+			},
+			credentials: "include", // Important, because we're using cookies
+		});
+
+		const data = await response;
+
+        if (!response.ok) {
+            alert(`HTTP error ${response.status}: ${data.message}`);
+            throw new Error(`HTTP error ${response.status}: ${data.message}`);
+        }
+		alert(`Successfully deleted ${partName} with id ${id} from ${tableName}`);
+		return true;
+	} catch (error) {
+		console.error("Error adding user:", error);
+		if (error.message) alert(error.message);
+
+	}
+};
 
 // Search function for users/otherusers
 export const fetchSearchData = async (searchTerms, tableName) => {

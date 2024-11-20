@@ -61,14 +61,15 @@ const ComputerWizardWizard = ({ wizardAlgorithm }) => {
 		} 
 		console.log("wizardEntries", wizardEntries);
 		console.log("wizardEntries", wizardEntries[0][1]);
-		for (const item in wizardEntries) {
-			for (const i in wizardEntries[item]) {
-				console.log(wizardEntries[item][i]);
-				
-			}
-		}
+
+		const modifiedWizardEntries = Object.fromEntries(
+			Object.entries(wizardEntries[0][1]).filter(
+				([, entry]) => !entry.ShortReason
+			)
+		);
+
         const newItem = {
-            build: wizardEntries[0][1],
+            build: modifiedWizardEntries,
 			totalPrice: currentPrice,
             table: "wizardBuild",
         };
@@ -213,7 +214,7 @@ const ComputerWizardWizard = ({ wizardAlgorithm }) => {
     				<br />
     				{Object.entries(partData).map(
     					([key, value], idx) =>
-    						key !== "ID" && (
+    						key !== "ID" && key !== "ShortReason" && (
     							<ListGroup.Item key={idx}>
     								{key === "Url" || key === "Image_Url" ? (
     									<span>

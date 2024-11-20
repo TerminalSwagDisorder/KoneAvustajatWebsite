@@ -749,6 +749,12 @@ const checkRegex = (req, res, next) => {
 	next();
 };
 
+const handleServerError = (error) => {
+	const message = error.response ? error.response.data : "Internal Server Error";
+	const status = error.response ? error.response.status : 500;
+	return [status, message];
+};
+
 const getAllRoutes = (app) => {
 	return app._router.stack
 		.filter((r) => r.route && r.route.path)
@@ -2637,9 +2643,9 @@ app.get("/api/routes", async (req, res) => {
 		const routeObj = { getRoutes: getRoutesArray, postRoutes: postRoutesArray, otherRoutes: otherRoutesArray };
 		return res.status(200).json(routeObj);
 	} catch (error) {
-		const message = error.response ? error.response.data : "Internal Server Error";
-		const status = error.response ? error.response.status : 500;
+		const [status, message] = handleServerError(error);
 		return res.status(status).json({ message: message });
+
 	}
 });
 
@@ -2717,8 +2723,7 @@ app.get("/api/opensearch/manage", tableSearch("opensearch"), async (req, res) =>
 
 		return res.status(200).json({ message: operation });
 	} catch (error) {
-		const message = error.response ? error.response.data : "Internal Server Error";
-		const status = error.response ? error.response.status : 500;
+		const [status, message] = handleServerError(error);
 		return res.status(status).json({ message: message });
 	}
 });
@@ -2733,8 +2738,7 @@ app.get("/api/opensearch/view", async (req, res) => {
 	} catch (error) {
 		console.error(error);
 		// If there is a status message or data then use that, otherwise the defaults
-		const message = error.response ? error.response.data : "Internal Server Error";
-		const status = error.response ? error.response.status : 500;
+		const [status, message] = handleServerError(error);
 		return res.status(status).json({ message: message });
 	}
 });
@@ -2749,8 +2753,7 @@ app.get("/api/opensearch/backup", async (req, res) => {
 	} catch (error) {
 		console.error(error);
 		// If there is a status message or data then use that, otherwise the defaults
-		const message = error.response ? error.response.data : "Internal Server Error";
-		const status = error.response ? error.response.status : 500;
+		const [status, message] = handleServerError(error);
 		return res.status(status).json({ message: message });
 	}
 });
@@ -2941,7 +2944,11 @@ app.post("/api/algorithm", routePagination, tableValidator(partNameSchema, "part
 
 		for (const item in partObj) {
 			if (partObj[item] === null || partObj[item].length === 0) {
-				partObj[item] = { Name: `${item} did not return any results with your current settings!` };
+				partObj[item] = { 
+									Name: `${item} did not return any results with your current settings!`,
+									Reason: "No compatible options found with the provided settings.",
+									ShortReason: "No match" 
+								};
 			}
 		}
 
@@ -2952,8 +2959,7 @@ app.post("/api/algorithm", routePagination, tableValidator(partNameSchema, "part
 	} catch (error) {
 		console.error(error);
 		// If there is a status message or data then use that, otherwise the defaults
-		const message = error.response ? error.response.data : "Internal Server Error";
-		const status = error.response ? error.response.status : 500;
+		const [status, message] = handleServerError(error);
 		return res.status(status).json({ message: message });
 	}
 });
@@ -2979,8 +2985,7 @@ app.get("/api/users", routePagination, async (req, res) => {
 	} catch (error) {
 		console.error(error);
 		// If there is a status message or data then use that, otherwise the defaults
-		const message = error.response ? error.response.data : "Internal Server Error";
-		const status = error.response ? error.response.status : 500;
+		const [status, message] = handleServerError(error);
 		return res.status(status).json({ message: message });
 	}
 });
@@ -3009,8 +3014,7 @@ app.get("/api/users/id", idValidator, async (req, res) => {
 	} catch (error) {
 		console.error(error);
 		// If there is a status message or data then use that, otherwise the defaults
-		const message = error.response ? error.response.data : "Internal Server Error";
-		const status = error.response ? error.response.status : 500;
+		const [status, message] = handleServerError(error);
 		return res.status(status).json({ message: message });
 	}
 });
@@ -3037,8 +3041,7 @@ app.get("/api/users", routePagination, async (req, res) => {
 	} catch (error) {
 		console.error(error);
 		// If there is a status message or data then use that, otherwise the defaults
-		const message = error.response ? error.response.data : "Internal Server Error";
-		const status = error.response ? error.response.status : 500;
+		const [status, message] = handleServerError(error);
 		return res.status(status).json({ message: message });
 	}
 });
@@ -3067,8 +3070,7 @@ app.get("/api/users/id", idValidator, async (req, res) => {
 	} catch (error) {
 		console.error(error);
 		// If there is a status message or data then use that, otherwise the defaults
-		const message = error.response ? error.response.data : "Internal Server Error";
-		const status = error.response ? error.response.status : 500;
+		const [status, message] = handleServerError(error);
 		return res.status(status).json({ message: message });
 	}
 });
@@ -3095,8 +3097,7 @@ app.post("/api/users/signup", userValidator(userSchema), userFieldsValidator, as
 	} catch (error) {
 		console.error(error);
 		// If there is a status message or data then use that, otherwise the defaults
-		const message = error.response ? error.response.data : "Internal Server Error";
-		const status = error.response ? error.response.status : 500;
+		const [status, message] = handleServerError(error);
 		return res.status(status).json({ message: message });
 	}
 });
@@ -3144,8 +3145,7 @@ app.post("/api/users/login", userValidator(loginSchema), userFieldsValidator, as
 	} catch (error) {
 		console.error(error);
 		// If there is a status message or data then use that, otherwise the defaults
-		const message = error.response ? error.response.data : "Internal Server Error";
-		const status = error.response ? error.response.status : 500;
+		const [status, message] = handleServerError(error);
 		return res.status(status).json({ message: message });
 	}
 });
@@ -3197,8 +3197,7 @@ app.get("/api/profile/refresh", authenticateSession, async (req, res) => {
 	} catch (error) {
 		console.error(error);
 		// If there is a status message or data then use that, otherwise the defaults
-		const message = error.response ? error.response.data : "Internal Server Error";
-		const status = error.response ? error.response.status : 500;
+		const [status, message] = handleServerError(error);
 		return res.status(status).json({ message: message });
 	}
 });
@@ -3338,8 +3337,29 @@ app.get("/api/part", routePagination, tableValidator(partNameSchema, "partName")
 	} catch (error) {
 		console.error(error);
 		// If there is a status message or data then use that, otherwise the defaults
-		const message = error.response ? error.response.data : "Internal Server Error";
-		const status = error.response ? error.response.status : 500;
+		const [status, message] = handleServerError(error);
+		return res.status(status).json({ message: message });
+	}
+});
+
+// Route for deleting parts
+app.delete("/api/part/delete/:part/:id", async (req, res) => {
+	console.log("API delete part accessed");
+	
+	const { part, id } = req.params; 
+	
+	const sql = `DELETE FROM ${part} WHERE ID = ?`;
+	try {
+		const [part] = await promisePool.query(sql, [id]);
+		if (!part.length) {
+			return res.status(404).json({ message: "Part not found" });
+		}
+
+		return res.status(200).json({ message: `${part} deleted succesfully` });
+	} catch (error) {
+		console.error(error);
+		// If there is a status message or data then use that, otherwise the defaults
+		const [status, message] = handleServerError(error);
 		return res.status(status).json({ message: message });
 	}
 });
@@ -3361,8 +3381,7 @@ app.get("/api/part/id", tableValidator(partNameSchema, "partName"), idValidator,
 	} catch (error) {
 		console.error(error);
 		// If there is a status message or data then use that, otherwise the defaults
-		const message = error.response ? error.response.data : "Internal Server Error";
-		const status = error.response ? error.response.status : 500;
+		const [status, message] = handleServerError(error);
 		return res.status(status).json({ message: message });
 	}
 });
@@ -3449,8 +3468,7 @@ app.get("/api/inventory", routePagination, tableSearch("inventory"), async (req,
 	} catch (error) {
 		console.error(error);
 		// If there is a status message or data then use that, otherwise the defaults
-		const message = error.response ? error.response.data : "Internal Server Error";
-		const status = error.response ? error.response.status : 500;
+		const [status, message] = handleServerError(error);
 		return res.status(status).json({ message: message });
 	}
 });
@@ -3477,8 +3495,7 @@ app.get("/api/inventory/id", idValidator, async (req, res) => {
 	} catch (error) {
 		console.error(error);
 		// If there is a status message or data then use that, otherwise the defaults
-		const message = error.response ? error.response.data : "Internal Server Error";
-		const status = error.response ? error.response.status : 500;
+		const [status, message] = handleServerError(error);
 		return res.status(status).json({ message: message });
 	}
 });
@@ -3503,8 +3520,7 @@ app.get("/api/orders", routePagination, async (req, res) => {
 	} catch (error) {
 		console.error(error);
 		// If there is a status message or data then use that, otherwise the defaults
-		const message = error.response ? error.response.data : "Internal Server Error";
-		const status = error.response ? error.response.status : 500;
+		const [status, message] = handleServerError(error);
 		return res.status(status).json({ message: message });
 	}
 });
@@ -3531,8 +3547,7 @@ app.get("/api/orders/id", idValidator, async (req, res) => {
 	} catch (error) {
 		console.error(error);
 		// If there is a status message or data then use that, otherwise the defaults
-		const message = error.response ? error.response.data : "Internal Server Error";
-		const status = error.response ? error.response.status : 500;
+		const [status, message] = handleServerError(error);
 		return res.status(status).json({ message: message });
 	}
 });
@@ -3592,8 +3607,7 @@ app.get("/api/users/customers", routePagination, async (req, res) => {
 	} catch (error) {
 		console.error(error);
 		// If there is a status message or data then use that, otherwise the defaults
-		const message = error.response ? error.response.data : "Internal Server Error";
-		const status = error.response ? error.response.status : 500;
+		const [status, message] = handleServerError(error);
 		return res.status(status).json({ message: message });
 	}
 });
@@ -3638,8 +3652,7 @@ app.get("/api/users/customers/id", idValidator, async (req, res) => {
 	} catch (error) {
 		console.error(error);
 		// If there is a status message or data then use that, otherwise the defaults
-		const message = error.response ? error.response.data : "Internal Server Error";
-		const status = error.response ? error.response.status : 500;
+		const [status, message] = handleServerError(error);
 		return res.status(status).json({ message: message });
 	}
 });
@@ -3658,8 +3671,7 @@ app.get("/api/users/customers/addresses", routePagination, async (req, res) => {
 	} catch (error) {
 		console.error(error);
 		// If there is a status message or data then use that, otherwise the defaults
-		const message = error.response ? error.response.data : "Internal Server Error";
-		const status = error.response ? error.response.status : 500;
+		const [status, message] = handleServerError(error);
 		return res.status(status).json({ message: message });
 	}
 });
@@ -3680,8 +3692,7 @@ app.get("/api/users/customers/addresses/id", idValidator, async (req, res) => {
 	} catch (error) {
 		console.error(error);
 		// If there is a status message or data then use that, otherwise the defaults
-		const message = error.response ? error.response.data : "Internal Server Error";
-		const status = error.response ? error.response.status : 500;
+		const [status, message] = handleServerError(error);
 		return res.status(status).json({ message: message });
 	}
 });
