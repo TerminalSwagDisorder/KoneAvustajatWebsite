@@ -3359,7 +3359,7 @@ app.delete("/api/part/delete/:part/:id", async (req, res) => {
 	}
 });
 
-app.patch("/api/part/update/:part/:id", /*authenticateSession,*/ tableValidator(partNameSchema, "partName"), profileImgUpload.single("ProductImage"), async (req, res) => {
+app.patch("/api/part/update/:part/:id", authenticateSession, tableValidator(partNameSchema, "partName"), profileImgUpload.single("ProductImage"), async (req, res) => {
 		console.log("API part accessed");
 		const { part, id } = req.params;
 		const { formFields } = req.body;
@@ -3371,12 +3371,12 @@ app.patch("/api/part/update/:part/:id", /*authenticateSession,*/ tableValidator(
 			const [allowedColumns] = await promisePool.query(allowedFieldsSql);
 			const allowedFields = allowedColumns.map(item => item.column_name);
 
-			// SQL query to update user data
+			// SQL query to update part data
 			// updateQuery allows for multiple fields to be updated simultaneously
 			let updateQuery = `UPDATE ${part} SET `;
 			let queryParams = [];
 
-			// More dynamic way of updating users
+			// More dynamic way of updating parts
 			for (const key in jsonFormFields) {
 				console.log(key);
 				if (allowedFields.includes(key)) {
@@ -3408,7 +3408,7 @@ app.patch("/api/part/update/:part/:id", /*authenticateSession,*/ tableValidator(
 				return res.status(404).json({ message: "Item not found" });
 			}
 
-			return res.status(200).json({ message: "User updated successfully" });
+			return res.status(200).json({ message: "Part updated successfully" });
 		} catch (error) {
 			console.error(error);
 			// If there is a status message or data then use that, otherwise the defaults
