@@ -3203,7 +3203,7 @@ app.get("/api/profile/refresh", authenticateSession, async (req, res) => {
 });
 
 // Update own user credentials
-app.patch( "/api/profile", authenticateSession, userValidator(userUpdateSchema), userFieldsValidator, profileImgUpload.single("ProfileImage"), async (req, res) => {
+app.patch("/api/profile", authenticateSession, userValidator(userUpdateSchema), userFieldsValidator, profileImgUpload.single("ProfileImage"), async (req, res) => {
 		console.log("API update own credentials accessed");
 		console.log(req.user);
 		const userId = req.user.UserID;
@@ -3266,14 +3266,9 @@ app.patch( "/api/profile", authenticateSession, userValidator(userUpdateSchema),
 		} catch (error) {
 			console.error(error);
 			// If there is a status message or data then use that, otherwise the defaults
-			const message = error.response ? error.response.data : "Internal Server Error";
-			const status = error.response ? error.response.status : 500;
+			const [status, message] = handleServerError(error);
 			return res.status(status).json({ message: message });
-			/*		
-		const message = error.message || "Internal Server Error";
-        const status = 500;
-		return res.status(status).json({ message: message });
-		*/
+
 		}
 	}
 );
@@ -3363,6 +3358,66 @@ app.delete("/api/part/delete/:part/:id", async (req, res) => {
 		return res.status(status).json({ message: message });
 	}
 });
+
+app.patch("/api/part/update/:part/:id", /*authenticateSession,*/ tableValidator(partNameSchema, "partName"), profileImgUpload.single("ProductImage"), async (req, res) => {
+		console.log("API part accessed");
+		const { part, id } = req.params;
+		const { formFields } = req.body;
+		const jsonFormFields = JSON.parse(formFields);
+		const ProductImage = req.file; // Product image
+		const allowedFieldsSql = `SELECT DISTINCT column_name FROM information_schema.columns WHERE table_name IN ('chassis', 'cpu', 'cpu_cooler', 'gpu', 'motherboard', 'memory', 'storage', 'psu') AND table_schema = '${process.env.DB_NAME}';`;
+
+		try {
+			const [allowedColumns] = await promisePool.query(allowedFieldsSql);
+			const allowedFields = allowedColumns.map(item => item.column_name);
+
+			// SQL query to update user data
+			// updateQuery allows for multiple fields to be updated simultaneously
+			let updateQuery = `UPDATE ${part} SET `;
+			let queryParams = [];
+
+			// More dynamic way of updating users
+			for (const key in jsonFormFields) {
+				console.log(key);
+				if (allowedFields.includes(key)) {
+					if (jsonFormFields.hasOwnProperty(key)) {
+						if (jsonFormFields[key] !== "") {
+							updateQuery += key.charAt(0).toUpperCase() + key.slice(1) + " = ?, "; // Since the first letters are capitalized in the db
+							queryParams.push(jsonFormFields[key]);
+						}
+					}
+				}
+			}
+
+			if (ProductImage) {
+				const ProductImage_name = ProductImage.filename;
+				updateQuery += "Image = ?, ";
+				queryParams.push(ProductImage_name);
+			}
+
+			// Remove trailing comma and space
+			if (queryParams.length > 0) {
+				updateQuery = updateQuery.slice(0, -2);
+			}
+
+			updateQuery += " WHERE ID = ?";
+			queryParams.push(parseInt(id));
+
+			const [result] = await promisePool.query(updateQuery, queryParams);
+			if (result.affectedRows === 0) {
+				return res.status(404).json({ message: "Item not found" });
+			}
+
+			return res.status(200).json({ message: "User updated successfully" });
+		} catch (error) {
+			console.error(error);
+			// If there is a status message or data then use that, otherwise the defaults
+			const [status, message] = handleServerError(error);
+			return res.status(status).json({ message: message });
+
+		}
+	}
+);
 
 app.get("/api/part/id", tableValidator(partNameSchema, "partName"), idValidator, async (req, res) => {
 	console.log("API search parts by id accessed");

@@ -161,7 +161,7 @@ export const updateDynamicData = async (formFields, tableName, partName, id) => 
 	try {
 		console.log(`http://localhost:4000/api/${tableName}/update/${partName}/${id}`);
 		console.log(formFields);
-		await checkAllowedTableNames(tableName);
+		await checkAllowedTableNames(["getroutes"], tableName);
 		
 		if (partName) {
 			await checkAllowedPartNames(partName);
@@ -177,7 +177,7 @@ export const updateDynamicData = async (formFields, tableName, partName, id) => 
 				"Content-Type": "application/json"
 			},
 			credentials: "include", // Important, because we're using cookies
-			body: formFields,
+			body: JSON.stringify({ formFields })
 		});
 
 		const data = await response.json();
