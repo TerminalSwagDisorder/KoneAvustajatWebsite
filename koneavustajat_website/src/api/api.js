@@ -161,7 +161,7 @@ export const updateDynamicData = async (formFields, tableName, partName, id) => 
 	try {
 		console.log(`http://localhost:4000/api/${tableName}/update/${partName}/${id}`);
 		console.log(formFields);
-		await checkAllowedTableNames(["getroutes"], tableName);
+		await checkAllowedTableNames(["patchroutes"], tableName);
 		
 		if (partName) {
 			await checkAllowedPartNames(partName);
@@ -200,7 +200,7 @@ export const updateDynamicData = async (formFields, tableName, partName, id) => 
 export const deleteDynamicData = async (tableName, partName, id) => {
 	try {
 		console.log(`http://localhost:4000/api/${tableName}/delete/${partName}/${id}`);
-		await checkAllowedTableNames(tableName);
+		await checkAllowedTableNames(["deleteroutes"], tableName);
 		
 		if (partName) {
 			await checkAllowedPartNames(partName);

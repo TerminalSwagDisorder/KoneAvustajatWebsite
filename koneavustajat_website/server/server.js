@@ -2626,6 +2626,8 @@ app.get("/api/routes", async (req, res) => {
 	console.log("API routes accessed");
 	const getRoutesArray = [];
 	const postRoutesArray = [];
+	const patchRoutesArray = [];
+	const deleteRoutesArray = [];
 	const otherRoutesArray = [];
 	try {
 		const routes = getAllRoutes(app);
@@ -2635,12 +2637,16 @@ app.get("/api/routes", async (req, res) => {
 				getRoutesArray.push(route);
 			} else if (route.method === "POST") {
 				postRoutesArray.push(route);
+			} else if (route.method === "PATCH") {
+				patchRoutesArray.push(route);
+			} else if (route.method === "DELETE") {
+				deleteRoutesArray.push(route);
 			} else {
 				otherRoutesArray.push(route);
 			}
 		}
 
-		const routeObj = { getRoutes: getRoutesArray, postRoutes: postRoutesArray, otherRoutes: otherRoutesArray };
+		const routeObj = { getRoutes: getRoutesArray, postRoutes: postRoutesArray, patchRoutes: patchRoutesArray, deleteRoutes: deleteRoutesArray, otherRoutes: otherRoutesArray };
 		return res.status(200).json(routeObj);
 	} catch (error) {
 		const [status, message] = handleServerError(error);
