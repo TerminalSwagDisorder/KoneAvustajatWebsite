@@ -2590,10 +2590,8 @@ app.get("/api/health", async (req, res) => {
 		return res.status(status).json({ message: message });
 	} catch (error) {
 		// Non-success message & status, with defaults
-		const message = error.response ? error.response?.data : "Internal Server Error";
-        const status = error.response ? error.response?.status : 500;
-        return res.status(status).json({ message: message });
-		
+		const [status, message] = handleServerError(error);
+		return res.status(status).json({ message: message });
 	}
 });
 
@@ -2618,8 +2616,8 @@ app.get("/api/count", routePagination, tableValidator(tableNameSchema, "tableNam
 		return res.status(200).json({ index: pages });
 	} catch (error) {
 		console.error(error);
-		return res.status(500).json({ message: "Internal Server Error", details: error.message });
-	}
+		const [status, message] = handleServerError(error);
+		return res.status(status).json({ message: message });	}
 });
 
 app.get("/api/routes", async (req, res) => {
