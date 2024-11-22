@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useState, useEffect } from "react";
 import { useSelector, useDispatch } from "react-redux";
 import { Container, Button, Image, CloseButton, ListGroup } from "react-bootstrap";
 import { addToWizard, removeFromWizard, clearWizard, addToCompletedBuild, removeFromCompletedBuild, clearCompletedBuild } from "../redux/wizardSlice";
@@ -11,6 +11,7 @@ const ComputerWizardBuild = () => {
     const dispatch = useDispatch();
     const completedBuildItems = Object.values(completedBuild);
     const completedBuildEntries = Object.entries(completedBuild);
+    const [chosenPart, setChosenPart] = useState("");
 
     const totalPrice = completedBuildItems
         .filter(item => item && item.Price) // Filter out non-component entries
@@ -50,6 +51,51 @@ const ComputerWizardBuild = () => {
         dispatch(clearCompletedBuild());
     };
 
+	const toggleChoosePart = (newChoice) => {
+		if (chosenPart === newChoice) {
+			setChosenPart("");
+		} else {
+			setChosenPart(newChoice);
+		}
+	};
+
+    const renderAdditionalInfo = (partData) => {
+    	if (chosenPart == partData.Name) {
+    		return (
+    			<ListGroup>
+    				<br />
+    				{Object.entries(partData).map(
+    					([key, value], idx) =>
+    						key !== "ID" && key !== "ShortReason" && (
+    							<ListGroup.Item key={idx}>
+    								{key === "Url" || key === "Image_Url" ? (
+    									<span>
+    										<a href={value} target="_blank" rel="noopener noreferrer">
+    											{value}
+    										</a>
+    									</span>
+    								) : key === "Image" ? (
+    									<Image
+    										src={process.env.PUBLIC_URL + "/product_images/" + value}
+    										alt={key}
+    										style={{ width: "100px", height: "auto" }}
+    									/>
+    								) : (
+    									<span>
+    										<b>{key}</b>:{" "}
+    										{typeof value === "object" && value !== null
+    											? renderAdditionalInfo(value)
+    											: value}
+    									</span>
+    								)}
+    							</ListGroup.Item>
+    						)
+    				)}
+    			</ListGroup>
+    		);
+    	}
+    };
+
     const renderNestedObject = (nestedObj) => {
         return (
             <ListGroup>
@@ -71,12 +117,13 @@ const ComputerWizardBuild = () => {
             return (
                 <ListGroup className="completedBuild-details">
                     {completedBuildEntries.map(([partKey, partVal]) => validParts.includes(partKey) && (
-                        <ListGroup.Item key={partKey}>
+                        <ListGroup.Item onClick={() => toggleChoosePart(partVal.Name)} key={partKey}>
                             <p>
                                 {partKey}: <b>{partVal.Name}</b> | <b>{parseFloat(partVal.Price).toFixed(2)}</b> €
                                 <Button className="user-select-button" onClick={() => handleRemoveFromCompletedBuild(partKey)}>
                                     <span>Remove</span>
                                 </Button>
+                                {renderAdditionalInfo(partVal)}
                             </p>
                         </ListGroup.Item>
                     ))}
