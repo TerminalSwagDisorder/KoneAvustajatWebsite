@@ -20,12 +20,6 @@ const DashboardAdmin = ({ setCurrentUser, currentUser }) => {
           <FaMagnifyingGlass />
         </Button>
       </Link>
-      <Link to="/admin/courses">
-        <Button className="adminDashboardButton" style={{ width: "100%" }}>
-          All courses &nbsp;
-          <LiaSchoolSolid />
-        </Button>
-      </Link>
       <Outlet />
     </div>
   );

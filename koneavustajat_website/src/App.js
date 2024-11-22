@@ -91,7 +91,7 @@ function App() {
 		{currentUser && currentUser.isAdmin && (
                             <Route path="admin" element={<Admin currentUser={currentUser} />}>
                                 <Route path="dashboard" element={<DashboardAdmin currentUser={currentUser} />} />
-                                <Route path="users" element={<UsersAdmin currentUser={currentUser} fetchUsers={fetchUsers} />} />
+                                <Route path="users" element={<UsersAdmin currentUser={currentUser} fetchDynamicData={fetchDynamicData} fetchDataAmount={fetchDataAmount} />} />
 								<Route path="parts" element={<PartsDisplay fetchDynamicData={fetchDynamicData} />} />
                             </Route>
 		)}

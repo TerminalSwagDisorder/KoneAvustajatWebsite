@@ -99,8 +99,8 @@ const NavBar = ({ currentUser, handleUserChange, handleSignout, ThemeContext }) 
 		}
 		return (
 			<>
-				{userCheck}
 				{adminCheck}
+				{userCheck}
 			</>
 		);
 	};

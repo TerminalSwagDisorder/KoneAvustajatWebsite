@@ -1,29 +1,35 @@
-import React, { useState, useEffect } from 'react';
-import { ListGroup, Col } from 'react-bootstrap';
-import renderUserData from './Profile';
-import renderUserForm from './Profile';
+import React, { useState, useEffect } from "react";
+import { ListGroup, Col } from "react-bootstrap";
+import renderUserData from "./Profile";
+import renderUserForm from "./Profile";
 
+const UsersAdmin = ({ currentUser, fetchDynamicData, fetchDataAmount }) => {
+	const [users, setUsers] = useState([]);
+	const [totalPages, setTotalPages] = useState(0);
+	const [page, setPage] = useState(1);
+	const [error, setError] = useState(null);
 
-const UsersAdmin = ( {fetchUsers, currentUser} ) => {
-  const [users, setUsers] = useState([]);
-  const [error, setError] = useState(null);
+	// Function to fetch data and set users state
+	const fetchData = async () => {
+		const data = await fetchDynamicData(page, "users", null);
+		setUsers(data);
+	};
 
-  // Function to fetch data and set users state
-  const fetchData = async () => {
-    try {
-      const usersData = await fetchUsers();
-      setUsers(usersData);
-    } catch (error) {
-      setError('Error fetching users');
-    }
-  };
+	const handlePagination = async () => {
+		const dataCount = await fetchDataAmount("users");
+		setTotalPages(dataCount.index);
+	};
 
-  // Use useEffect to fetch data on component mount
-  useEffect(() => {
-    fetchData();
-  }, []);
+	const handlePageChange = (newPage) => {
+		setPage(newPage);
+	};
 
-  /*
+	// Use useEffect to fetch data on component mount
+	useEffect(() => {
+		fetchData();
+	}, []);
+
+	/*
   const renderUserData = () => {
 		if (currentUser.role === "user") {
 			return (
@@ -41,28 +47,28 @@ const UsersAdmin = ( {fetchUsers, currentUser} ) => {
 		)}
 	};*/
 
-  if (error) {
-    return <div>{error}</div>;
-  }
+	if (error) {
+		return <div>{error}</div>;
+	}
 
-  if (!users.length) {
-    return <div>Loading users...</div>;
-  }
-  
-  return (
-    <div>
-      <h1>Manage Users</h1>
-      <ul>
-        {users.slice().map((user) => (
-          <li key={user.UserID}>
-            <strong>{user.Name || 'Unknown Name'}</strong> - {user.Email || 'No Email'}, {user.Gender || 'N/A'}, User id: {user.UserID || 'N/A'}, Role id: {user.RoleID  || 'N/A'}
-          </li>
-        ))}
-      </ul>
-    </div>
-  );
+	if (!users.length) {
+		return <div>Loading users...</div>;
+	}
+
+	return (
+		<div>
+			<h1>Manage Users</h1>
+			<ul>
+				{users.slice().map((user) => (
+					<li key={user.UserID}>
+						<strong>{user.Name || "Unknown Name"}</strong> - {user.Email || "No Email"},{" "}
+						{user.Gender || "N/A"}, User id: {user.UserID || "N/A"}, Role id: {user.RoleID || "N/A"}
+					</li>
+				))}
+			</ul>
+		</div>
+	);
 };
-
 
 /*
 return (
@@ -72,7 +78,7 @@ return (
     <Col md={8}>
 	  		
         {renderUserData()}
-        /*{/* User Form *//*}
+        /*{/* User Form */ /*}
         {renderUserForm()}
       </Col>
 
