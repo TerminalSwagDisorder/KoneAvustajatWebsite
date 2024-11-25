@@ -20,8 +20,24 @@ import UsedPartsPurchase from './components/UsedPartsPurchase';
 import UsedPartsBuild from './components/UsedPartsBuild';
 import UsedPartsModify from './components/UsedPartsModify';
 import ShoppingCart from './components/ShoppingCart';
-import { ThemeContext, ThemeProvider, fetchUsers, fetchDynamicData, fetchSearchIdData, fetchDataAmount, handleSignin, handleSignup, handleSignout, checkIfSignedIn, refreshProfile, handleCredentialChange, wizardAlgorithm, updateDynamicData, deleteDynamicData } from "./api/api";
-import { useSelector, useDispatch } from "react-redux";
+import {
+	ThemeContext,
+	ThemeProvider,
+	fetchUsers,
+	fetchDynamicData,
+	fetchSearchIdData,
+	fetchDataAmount,
+	handleSignin,
+	handleSignup,
+	handleSignout,
+	checkIfSignedIn,
+	refreshProfile,
+	handleCredentialChange,
+	wizardAlgorithm,
+	updateDynamicData,
+	deleteDynamicData,
+	fetchContent
+} from "./api/api";import { useSelector, useDispatch } from "react-redux";
 
 
 
@@ -86,7 +102,7 @@ function App() {
 		<BrowserRouter>
 		<NavBar currentUser={currentUser} handleUserChange={handleUserChange} handleSignout={handleSignout} ThemeContext={ThemeContext} /> 
 		<Routes>
-	  		<Route path="/" element={<Home />} />
+	  		<Route path="/" element={<Home fetchContent={fetchContent} />} />
 		{/*{currentUser && currentUser.role === "admin" && (*/}
 		{currentUser && currentUser.isAdmin && (
                             <Route path="admin" element={<Admin currentUser={currentUser} />}>

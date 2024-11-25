@@ -130,3 +130,31 @@ export const buildQuery = async (correctSearchTerms, itemsBool, page = null) => 
 
     return query;
 };
+
+export const validateIdentifiers = async (identifiers) => {
+    const hierarchy = ["page", "section", "specific"];
+    const identifierKeys = Object.keys(identifiers);
+
+    // Map keys to their corresponding hierarchy levels
+    const levels = identifierKeys.map((key) => hierarchy.indexOf(key));
+
+    // Check for invalid keys
+    if (levels.includes(-1)) {
+        console.error("Invalid keys found in identifiers");
+        return false;
+    }
+
+    // Sort the levels to ensure they are in order
+    levels.sort((a, b) => a - b);
+
+    // Check that levels are contiguous starting from 0
+    for (let i = 0; i < levels.length; i++) {
+        if (levels[i] !== i) {
+            console.error("Invalid hierarchy in identifiers");
+            return false;
+        }
+    }
+
+    // Identifiers are valid
+    return true;
+};

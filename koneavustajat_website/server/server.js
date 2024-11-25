@@ -497,6 +497,23 @@ const inventorySchema = Joi.object({
 
 });
 
+const contentSchema = Joi.object({
+	contentid: Joi.number().optional(),
+	site_identifier: Joi.string().trim().max(255).optional(),
+	main_tag: Joi.string().trim().max(20).optional(),
+	language: Joi.string().trim().max(10).optional(),
+	content_text: Joi.string().trim().optional(),
+	content_type: Joi.string().trim().max(20).optional(),
+	added_by: Joi.string().trim().optional(),
+	last_edited_by: Joi.string().trim().optional(),
+	created_at: Joi.date().optional(),
+	modified_at: Joi.date().optional(),
+	status: Joi.string().trim().max(10).optional(),
+	strict: Joi.boolean().optional(),
+	inverted: Joi.boolean().optional()
+
+});
+
 // Validators & searches
 const searchSanitization = (key, value, term) => {
 	if (value === undefined || value === null || value === "") {
@@ -582,6 +599,19 @@ const searchSanitization = (key, value, term) => {
 			"type",
 			"part",
 			"id",
+		],
+		content: [
+			"contentid",
+			"site_identifier",
+			"main_tag",
+			"language",
+			"content_text",
+			"content_type",
+			"added_by",
+			"last_edited_by",
+			"created_at",
+			"modified_at",
+			"status"
 		]
 
 	};
@@ -628,6 +658,9 @@ const tableSearch = (searchContext = "cpu") => {
 			if (partName === "opensearch") {
 				currentSchema = opensearchSchema;
 			}
+			if (partName === "content") {
+				currentSchema = contentSchema;
+			}
 			const validationResult = Joi.attempt(searchTerms, currentSchema);
 
 			req.searchTerms = validationResult;
@@ -638,7 +671,7 @@ const tableSearch = (searchContext = "cpu") => {
 	};
 };
 
-const userValidator = (schema) => {
+const formFieldsValidator = (schema) => {
 	return (req, res, next) => {
 		let { formFields } = req.body;
 		
@@ -657,7 +690,7 @@ const userValidator = (schema) => {
 		try {
 			const value = Joi.attempt(formFields, schema);
 			
-			req.userData = value;
+			req.validatedForm = value;
 			next();
 		} catch (error) {
 			return res.status(400).json({ message: error.details[0].message });
@@ -666,9 +699,9 @@ const userValidator = (schema) => {
 };
 
 const userFieldsValidator = (req, res, next) => {
-	let formFields = req.userData;
+	let formFields = req.validatedForm;
 	//console.log(req.body);
-	//console.log(req.userData);
+	//console.log(req.validatedForm);
 
 	if (typeof formFields === "string") {
 		try {
@@ -695,8 +728,9 @@ const userFieldsValidator = (req, res, next) => {
 
 const idValidator = (req, res, next) => {
 	try {
-		const value = Joi.attempt({ id: req.query.id }, idSchema);
-		req.query.id = value.id;
+		const id = req.query.id || req.params.id;
+		const value = Joi.attempt({ id: id }, idSchema);
+		req.validatedId = value.id;
 		next();
 	} catch (error) {
 		return res.status(400).json({ message: error.details[0].message });
@@ -750,6 +784,8 @@ const checkRegex = (req, res, next) => {
 };
 
 const handleServerError = (error) => {
+	console.error(error);
+	// If there is a status message or data then use that, otherwise the defaults
 	const message = error.response ? error.response.data : "Internal Server Error";
 	const status = error.response ? error.response.status : 500;
 	return [status, message];
@@ -2615,7 +2651,7 @@ app.get("/api/count", routePagination, tableValidator(tableNameSchema, "tableNam
 		console.log("Total pages calculated:", pages);
 		return res.status(200).json({ index: pages });
 	} catch (error) {
-		console.error(error);
+		
 		const [status, message] = handleServerError(error);
 		return res.status(status).json({ message: message });	}
 });
@@ -2740,8 +2776,6 @@ app.get("/api/opensearch/view", async (req, res) => {
 
 	return res.status(200).json(response);
 	} catch (error) {
-		console.error(error);
-		// If there is a status message or data then use that, otherwise the defaults
 		const [status, message] = handleServerError(error);
 		return res.status(status).json({ message: message });
 	}
@@ -2755,8 +2789,6 @@ app.get("/api/opensearch/backup", async (req, res) => {
 
 	return res.status(200).json(response);
 	} catch (error) {
-		console.error(error);
-		// If there is a status message or data then use that, otherwise the defaults
 		const [status, message] = handleServerError(error);
 		return res.status(status).json({ message: message });
 	}
@@ -2961,8 +2993,6 @@ app.post("/api/algorithm", routePagination, tableValidator(partNameSchema, "part
 
 		return res.status(200).json({partObj: partObj, totalPrice: totalPrice});
 	} catch (error) {
-		console.error(error);
-		// If there is a status message or data then use that, otherwise the defaults
 		const [status, message] = handleServerError(error);
 		return res.status(status).json({ message: message });
 	}
@@ -2977,7 +3007,7 @@ app.get("/api/users", routePagination, async (req, res) => {
 	const sql = "SELECT * FROM users LIMIT ? OFFSET ?";
 	try {
 		const [users] = await promisePool.query(sql, [items, offset]);
-		// Process each user to add isAdmin property
+		
 		const processedUsers = users.map((user) => {
 			const isAdmin = user.RoleID === 4;
 
@@ -2987,8 +3017,6 @@ app.get("/api/users", routePagination, async (req, res) => {
 		});
 		return res.status(200).json(processedUsers);
 	} catch (error) {
-		console.error(error);
-		// If there is a status message or data then use that, otherwise the defaults
 		const [status, message] = handleServerError(error);
 		return res.status(status).json({ message: message });
 	}
@@ -2997,7 +3025,7 @@ app.get("/api/users", routePagination, async (req, res) => {
 app.get("/api/users/id", idValidator, async (req, res) => {
 	console.log("API search users by id accessed");
 
-	const id = req.query.id;
+	const id = req.validatedId;
 
 	const sql = "SELECT * FROM users WHERE UserID = ?";
 	try {
@@ -3016,8 +3044,6 @@ app.get("/api/users/id", idValidator, async (req, res) => {
 
 		return res.status(200).json(processedUsers);
 	} catch (error) {
-		console.error(error);
-		// If there is a status message or data then use that, otherwise the defaults
 		const [status, message] = handleServerError(error);
 		return res.status(status).json({ message: message });
 	}
@@ -3033,7 +3059,7 @@ app.get("/api/users", routePagination, async (req, res) => {
 	const sql = "SELECT * FROM users LIMIT ? OFFSET ?";
 	try {
 		const [users] = await promisePool.query(sql, [items, offset]);
-		// Process each user to add isAdmin property
+		
 		const processedUsers = users.map((user) => {
 			const isAdmin = user.RoleID === 4;
 
@@ -3043,8 +3069,6 @@ app.get("/api/users", routePagination, async (req, res) => {
 		});
 		return res.status(200).json(processedUsers);
 	} catch (error) {
-		console.error(error);
-		// If there is a status message or data then use that, otherwise the defaults
 		const [status, message] = handleServerError(error);
 		return res.status(status).json({ message: message });
 	}
@@ -3053,7 +3077,7 @@ app.get("/api/users", routePagination, async (req, res) => {
 app.get("/api/users/id", idValidator, async (req, res) => {
 	console.log("API search users by id accessed");
 
-	const id = req.query.id;
+	const id = req.validatedId;
 
 	const sql = "SELECT * FROM users WHERE UserID = ?";
 	try {
@@ -3072,18 +3096,16 @@ app.get("/api/users/id", idValidator, async (req, res) => {
 
 		return res.status(200).json(processedUsers);
 	} catch (error) {
-		console.error(error);
-		// If there is a status message or data then use that, otherwise the defaults
 		const [status, message] = handleServerError(error);
 		return res.status(status).json({ message: message });
 	}
 });
 
 // Signing up
-app.post("/api/users/signup", userValidator(userSchema), userFieldsValidator, async (req, res) => {
+app.post("/api/users/signup", formFieldsValidator(userSchema), userFieldsValidator, async (req, res) => {
 	console.log("API user signup accessed");
 
-	const { Name, Email, Password } = req.userData;
+	const { Name, Email, Password } = req.validatedForm;
 
 	try {
 		// Check if email exists
@@ -3099,17 +3121,15 @@ app.post("/api/users/signup", userValidator(userSchema), userFieldsValidator, as
 		const [result] = await promisePool.query(insertSql, [Name, Email, hashedPassword]);
 		return res.status(200).json({ message: "User registered successfully", id: result.insertId });
 	} catch (error) {
-		console.error(error);
-		// If there is a status message or data then use that, otherwise the defaults
 		const [status, message] = handleServerError(error);
 		return res.status(status).json({ message: message });
 	}
 });
 
-app.post("/api/users/login", userValidator(loginSchema), userFieldsValidator, async (req, res) => {
+app.post("/api/users/login", formFieldsValidator(loginSchema), userFieldsValidator, async (req, res) => {
 	console.log("API users login accessed");
 
-	const { Email, Password } = req.userData;
+	const { Email, Password } = req.validatedForm;
 	const sql = "SELECT * FROM users WHERE Email = ?";
 
 	try {
@@ -3147,8 +3167,6 @@ app.post("/api/users/login", userValidator(loginSchema), userFieldsValidator, as
 			return res.status(401).json({ message: "Email or password is incorrect" });
 		}
 	} catch (error) {
-		console.error(error);
-		// If there is a status message or data then use that, otherwise the defaults
 		const [status, message] = handleServerError(error);
 		return res.status(status).json({ message: message });
 	}
@@ -3199,19 +3217,17 @@ app.get("/api/profile/refresh", authenticateSession, async (req, res) => {
 		const { ...userData } = user;
 		return res.status(200).json({ userData: { ...userData, isAdmin: isAdmin } });
 	} catch (error) {
-		console.error(error);
-		// If there is a status message or data then use that, otherwise the defaults
 		const [status, message] = handleServerError(error);
 		return res.status(status).json({ message: message });
 	}
 });
 
 // Update own user credentials
-app.patch("/api/profile", authenticateSession, userValidator(userUpdateSchema), userFieldsValidator, profileImgUpload.single("ProfileImage"), async (req, res) => {
+app.patch("/api/profile", authenticateSession, formFieldsValidator(userUpdateSchema), userFieldsValidator, profileImgUpload.single("ProfileImage"), async (req, res) => {
 		console.log("API update own credentials accessed");
 		console.log(req.user);
 		const userId = req.user.UserID;
-		const jsonFormFields = req.userData;
+		const jsonFormFields = req.validatedForm;
 		const ProfileImage = req.file; // Profile image
 
 		try {
@@ -3268,8 +3284,6 @@ app.patch("/api/profile", authenticateSession, userValidator(userUpdateSchema), 
 
 			return res.status(200).json({ message: "User updated successfully" });
 		} catch (error) {
-			console.error(error);
-			// If there is a status message or data then use that, otherwise the defaults
 			const [status, message] = handleServerError(error);
 			return res.status(status).json({ message: message });
 
@@ -3330,22 +3344,21 @@ app.get("/api/part", routePagination, tableValidator(partNameSchema, "partName")
 
 	try {
 		const [parts] = await promisePool.query(sql, sqlParams);
-		// Process each user to add isAdmin property
+		
 
 		return res.status(200).json(parts);
 	} catch (error) {
-		console.error(error);
-		// If there is a status message or data then use that, otherwise the defaults
 		const [status, message] = handleServerError(error);
 		return res.status(status).json({ message: message });
 	}
 });
 
 // Route for deleting parts
-app.delete("/api/part/delete/:part/:id", async (req, res) => {
+app.delete("/api/part/delete/:part/:id", idValidator, authenticateSession, async (req, res) => {
 	console.log("API delete part accessed");
 	
-	const { part, id } = req.params; 
+	const { part } = req.params; 
+	const id = req.validatedId;
 	
 	const sql = `DELETE FROM ${part} WHERE ID = ?`;
 	try {
@@ -3356,18 +3369,16 @@ app.delete("/api/part/delete/:part/:id", async (req, res) => {
 
 		return res.status(200).json({ message: `${part} deleted succesfully` });
 	} catch (error) {
-		console.error(error);
-		// If there is a status message or data then use that, otherwise the defaults
 		const [status, message] = handleServerError(error);
 		return res.status(status).json({ message: message });
 	}
 });
 
-app.patch("/api/part/update/:part/:id", authenticateSession, tableValidator(partNameSchema, "partName"), profileImgUpload.single("ProductImage"), async (req, res) => {
+app.patch("/api/part/update/:part/:id", authenticateSession, idValidator, tableValidator(partNameSchema, "partName"), formFieldsValidator(partSchema), profileImgUpload.single("ProductImage"), async (req, res) => {
 		console.log("API part accessed");
-		const { part, id } = req.params;
-		const { formFields } = req.body;
-		const jsonFormFields = JSON.parse(formFields);
+		const { part } = req.params;
+		const id = req.validatedId;
+		const jsonFormFields = req.validatedForm;
 		const ProductImage = req.file; // Product image
 		const allowedFieldsSql = `SELECT DISTINCT column_name FROM information_schema.columns WHERE table_name IN ('chassis', 'cpu', 'cpu_cooler', 'gpu', 'motherboard', 'memory', 'storage', 'psu') AND table_schema = '${process.env.DB_NAME}';`;
 
@@ -3414,8 +3425,6 @@ app.patch("/api/part/update/:part/:id", authenticateSession, tableValidator(part
 
 			return res.status(200).json({ message: "Part updated successfully" });
 		} catch (error) {
-			console.error(error);
-			// If there is a status message or data then use that, otherwise the defaults
 			const [status, message] = handleServerError(error);
 			return res.status(status).json({ message: message });
 
@@ -3426,7 +3435,7 @@ app.patch("/api/part/update/:part/:id", authenticateSession, tableValidator(part
 app.get("/api/part/id", tableValidator(partNameSchema, "partName"), idValidator, async (req, res) => {
 	console.log("API search parts by id accessed");
 
-	const id = req.query.id;
+	const id = req.validatedId;
 	const partName = req.query.partName; // Get the table name from the query
 
 	const sql = `SELECT * FROM ${partName} WHERE ID = ?`;
@@ -3438,8 +3447,6 @@ app.get("/api/part/id", tableValidator(partNameSchema, "partName"), idValidator,
 
 		return res.status(200).json(part);
 	} catch (error) {
-		console.error(error);
-		// If there is a status message or data then use that, otherwise the defaults
 		const [status, message] = handleServerError(error);
 		return res.status(status).json({ message: message });
 	}
@@ -3521,12 +3528,10 @@ app.get("/api/inventory", routePagination, tableSearch("inventory"), async (req,
 			additionaldetails: item.additionaldetails ? JSON.parse(item.additionaldetails) : null
 		}));
 
-		// Process each user to add isAdmin property
+		
 
 		return res.status(200).json(parseInventory);
 	} catch (error) {
-		console.error(error);
-		// If there is a status message or data then use that, otherwise the defaults
 		const [status, message] = handleServerError(error);
 		return res.status(status).json({ message: message });
 	}
@@ -3535,7 +3540,7 @@ app.get("/api/inventory", routePagination, tableSearch("inventory"), async (req,
 app.get("/api/inventory/id", idValidator, async (req, res) => {
 	console.log("API search parts by id accessed");
 
-	const id = req.query.id;
+	const id = req.validatedId;
 
 	const sql = "SELECT * FROM part_inventory WHERE PartID = ?";
 	try {
@@ -3552,8 +3557,6 @@ app.get("/api/inventory/id", idValidator, async (req, res) => {
 
 		return res.status(200).json(parseInventory);
 	} catch (error) {
-		console.error(error);
-		// If there is a status message or data then use that, otherwise the defaults
 		const [status, message] = handleServerError(error);
 		return res.status(status).json({ message: message });
 	}
@@ -3577,8 +3580,6 @@ app.get("/api/orders", routePagination, async (req, res) => {
 
 		return res.status(200).json(parseInventory);
 	} catch (error) {
-		console.error(error);
-		// If there is a status message or data then use that, otherwise the defaults
 		const [status, message] = handleServerError(error);
 		return res.status(status).json({ message: message });
 	}
@@ -3587,7 +3588,7 @@ app.get("/api/orders", routePagination, async (req, res) => {
 app.get("/api/orders/id", idValidator, async (req, res) => {
 	console.log("API search parts by id accessed");
 
-	const id = req.query.id;
+	const id = req.validatedId;
 
 	const sql = "SELECT * FROM orders WHERE PartID = ?";
 	try {
@@ -3604,8 +3605,6 @@ app.get("/api/orders/id", idValidator, async (req, res) => {
 
 		return res.status(200).json(parseInventory);
 	} catch (error) {
-		console.error(error);
-		// If there is a status message or data then use that, otherwise the defaults
 		const [status, message] = handleServerError(error);
 		return res.status(status).json({ message: message });
 	}
@@ -3664,8 +3663,6 @@ app.get("/api/users/customers", routePagination, async (req, res) => {
 
 		return res.status(200).json(parseCustomers);
 	} catch (error) {
-		console.error(error);
-		// If there is a status message or data then use that, otherwise the defaults
 		const [status, message] = handleServerError(error);
 		return res.status(status).json({ message: message });
 	}
@@ -3674,7 +3671,7 @@ app.get("/api/users/customers", routePagination, async (req, res) => {
 app.get("/api/users/customers/id", idValidator, async (req, res) => {
 	console.log("API search parts by id accessed");
 
-	const id = req.query.id;
+	const id = req.validatedId;
 
 	const sql = `SELECT c.*, u.*, a.* FROM customers c JOIN users u ON c.UserID = u.UserID JOIN addresses a ON c.CustomerID = a.CustomerID WHERE c.CustomerID = ? `;
 	try {
@@ -3709,8 +3706,6 @@ app.get("/api/users/customers/id", idValidator, async (req, res) => {
 
 		return res.status(200).json(parseCustomers);
 	} catch (error) {
-		console.error(error);
-		// If there is a status message or data then use that, otherwise the defaults
 		const [status, message] = handleServerError(error);
 		return res.status(status).json({ message: message });
 	}
@@ -3728,8 +3723,6 @@ app.get("/api/users/customers/addresses", routePagination, async (req, res) => {
 
 		return res.status(200).json(addresses);
 	} catch (error) {
-		console.error(error);
-		// If there is a status message or data then use that, otherwise the defaults
 		const [status, message] = handleServerError(error);
 		return res.status(status).json({ message: message });
 	}
@@ -3738,7 +3731,7 @@ app.get("/api/users/customers/addresses", routePagination, async (req, res) => {
 app.get("/api/users/customers/addresses/id", idValidator, async (req, res) => {
 	console.log("API search parts by id accessed");
 
-	const id = req.query.id;
+	const id = req.validatedId;
 
 	const sql = "SELECT * FROM addresses WHERE AddressID = ?";
 	try {
@@ -3749,12 +3742,128 @@ app.get("/api/users/customers/addresses/id", idValidator, async (req, res) => {
 
 		return res.status(200).json(addresses);
 	} catch (error) {
-		console.error(error);
-		// If there is a status message or data then use that, otherwise the defaults
 		const [status, message] = handleServerError(error);
 		return res.status(status).json({ message: message });
 	}
 });
+
+app.get("/api/text-content", routePagination, tableSearch("content"), async (req, res) => {
+	console.log("API content accessed");
+
+	const { items, offset } = req.pagination;
+	const searchTerms = req.searchTerms;
+	let sql;
+	let notOperator = "";
+	let sqlParams = [];
+
+	let searchQuery = " WHERE 1=1";
+	
+	if (searchTerms.inverted) {
+		notOperator = searchTerms.strict === true ? "!" : "NOT ";
+	}
+
+	const ignoreColumns = ["strict", "inverted"];
+
+	for (let [column, value] of Object.entries(searchTerms)) {
+		if (!ignoreColumns.includes(column)) {
+			if (searchTerms.strict && searchTerms.strict === true) {
+				searchQuery += ` AND ${column} ${notOperator}= ?`;
+			} else {
+				value = `%${value}%`;
+				searchQuery += ` AND ${column} ${notOperator}LIKE ?`;
+			}
+			sqlParams.push(value); // Push values to sqlParams array
+		}
+	}
+
+	sql = `SELECT * FROM content ${searchQuery} LIMIT ? OFFSET ?`;
+	sqlParams.push(items, offset); // Push pagination params after search params
+
+	try {
+		const [content] = await promisePool.query(sql, sqlParams);
+
+        const contentMap = {};
+		for (const row of content) {
+			if (!contentMap[row.Site_Identifier]) {
+				contentMap[row.Site_Identifier] = {};
+			}
+			contentMap[row.Site_Identifier][row.Language] = row.Content_Text;
+		}
+
+		return res.status(200).json({content: content, contentMap: contentMap});
+	} catch (error) {
+		const [status, message] = handleServerError(error);
+		return res.status(status).json({ message: message });
+	}
+});
+
+app.patch("/api/text-content/delete/:id", idValidator, authenticateSession, async (req, res) => {
+	console.log("API delete content accessed");
+	
+	const id = req.validatedId;
+	const sql = `UPDATE content SET Status = 'deleted' WHERE ContentID = ?`;
+	try {
+		const [content] = await promisePool.query(sql, [id]);
+		if (content.affectedRows === 0) {
+			return res.status(404).json({ message: "Content not found" });
+		}
+
+		return res.status(200).json({ message: `${content} deleted succesfully` });
+	} catch (error) {
+		const [status, message] = handleServerError(error);
+		return res.status(status).json({ message: message });
+	}
+});
+
+app.patch("/api/text-content/update/:id", authenticateSession, idValidator, formFieldsValidator(contentSchema), async (req, res) => {
+		console.log("API patch content accessed");
+		const id = req.validatedId;
+		const jsonFormFields = req.validatedForm;
+		const allowedFieldsSql = `SELECT DISTINCT column_name FROM information_schema.columns WHERE table_name IN ('content') AND table_schema = '${process.env.DB_NAME}';`;
+
+		try {
+			const [allowedColumns] = await promisePool.query(allowedFieldsSql);
+			const allowedFields = allowedColumns.map(item => item.column_name);
+
+			// SQL query to update part data
+			// updateQuery allows for multiple fields to be updated simultaneously
+			let updateQuery = `UPDATE content SET `;
+			let queryParams = [];
+
+			// More dynamic way of updating content
+			for (const key in jsonFormFields) {
+				console.log(key);
+				if (allowedFields.includes(key)) {
+					if (jsonFormFields.hasOwnProperty(key)) {
+						if (jsonFormFields[key] !== "") {
+							updateQuery += key.charAt(0).toUpperCase() + key.slice(1) + " = ?, "; // Since the first letters are capitalized in the db
+							queryParams.push(jsonFormFields[key]);
+						}
+					}
+				}
+			}
+
+			// Remove trailing comma and space
+			if (queryParams.length > 0) {
+				updateQuery = updateQuery.slice(0, -2);
+			}
+
+			updateQuery += " WHERE ContentID = ?";
+			queryParams.push(parseInt(id));
+
+			const [result] = await promisePool.query(updateQuery, queryParams);
+			if (result.affectedRows === 0) {
+				return res.status(404).json({ message: "Item not found" });
+			}
+
+			return res.status(200).json({ message: "Content updated successfully" });
+		} catch (error) {
+			const [status, message] = handleServerError(error);
+			return res.status(status).json({ message: message });
+
+		}
+	}
+);
 
 ////////////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////

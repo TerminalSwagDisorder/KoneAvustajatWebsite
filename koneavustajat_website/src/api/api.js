@@ -3,7 +3,7 @@
 // Desc: File containing code for api functionality
 
 import React, { useEffect, useState, createContext, useContext } from "react";
-import { checkAllowedTableNames, checkAllowedPartNames, checkSearchTerms, buildQuery } from "./helpers";
+import { checkAllowedTableNames, checkAllowedPartNames, checkSearchTerms, buildQuery, validateIdentifiers } from "./helpers";
 import "../style/style.scss";
 
 
@@ -340,6 +340,62 @@ export const fetchServerRoutes = async () => {
 		console.error("Error while getting pagination:", error);
 	}
     
+};
+
+export const fetchContent = async (identifiers) => {
+	try {
+		await checkAllowedTableNames(["getroutes"], "text-content");
+
+		if (!identifiers) {
+			throw new Error("No identifiers defined!");
+		}
+		
+		if (typeof identifiers !== "object") {
+			throw new Error("Identifiers must be an object!");
+		}
+
+		const identifierKeys = Object.keys(identifiers);
+		const validKeys = ["page", "section", "specific"];
+		if (identifierKeys.length > 3 || identifierKeys.length < 1) {
+			throw new Error("Identifier amount is not allowed");
+		}
+		if (identifierKeys.some((item) => !validKeys.includes(item))) {
+			throw new Error("Found invalid key in indentifiers");
+		}
+		const validIdentifiers = await validateIdentifiers(identifiers);
+		if (!validIdentifiers) {
+			throw new Error("Identifier hierarchy is incorrect");
+		}
+		
+		const identifierValues = validKeys
+			.map(key => identifiers[key])
+			.filter(value => value !== undefined && value !== "");
+		const contentIdentifier = identifierValues.join(".");
+
+		const correctSearchTerms = await checkSearchTerms({site_identifier: contentIdentifier});
+
+		const query = await buildQuery(correctSearchTerms, true);
+		
+		const response = await fetch(`http://localhost:4000/api/text-content?${query}`, {
+			method: "GET",
+			credentials: "include", // Important, because we're using cookies
+		});
+		const data = await response.json();
+
+        if (!response.ok) {
+            alert(`HTTP error ${response.status}: ${data.message}`);
+            throw new Error(`HTTP error ${response.status}: ${data.message}`);
+        }
+
+		// Return only data.contentMap
+		if (data.contentMap) {
+		  return data.contentMap;
+		}
+		
+		return data;
+	} catch (error) {
+		console.error(error);
+	}
 };
 
 // Do all of the user data handling async
