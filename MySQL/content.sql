@@ -3,7 +3,7 @@
 -- https://www.phpmyadmin.net/
 --
 -- Host: 127.0.0.1
--- Generation Time: Nov 25, 2024 at 10:48 AM
+-- Generation Time: Nov 25, 2024 at 03:45 PM
 -- Server version: 10.4.32-MariaDB
 -- PHP Version: 8.2.12
 
@@ -43,6 +43,25 @@ CREATE TABLE `content` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 --
+-- Dumping data for table `content`
+--
+
+INSERT INTO `content` (`ContentID`, `Site_Identifier`, `Main_Tag`, `Language`, `Content_Text`, `Content_Type`, `Version`, `Added_By`, `Last_Edited_By`, `Created_At`, `Modified_At`, `Status`) VALUES
+(1, 'home.header.welcome', 'h1', 'en', 'Welcome to Koneavustajat!', 'site_text', 1, 1, NULL, '2024-11-25 10:00:01', '2024-11-25 10:00:01', 'published'),
+(2, 'home.header.welcome', 'h1', 'fi', 'Tervetuloa Koneavustajille!', 'site_text', 1, 1, NULL, '2024-11-25 10:00:01', '2024-11-25 10:00:01', 'published'),
+(3, 'home.subheader.about', 'p', 'en', 'Your one-stop solution for finding the perfect computer parts.', 'site_text', 1, 1, NULL, '2024-11-25 10:00:01', '2024-11-25 10:00:01', 'published'),
+(4, 'home.subheader.about', 'p', 'fi', 'Paras paikka tietokoneosien löytämiseen.', 'site_text', 1, 1, NULL, '2024-11-25 10:00:01', '2024-11-25 10:00:01', 'published'),
+(5, 'about.header', 'h1', 'en', 'About Us', 'site_text', 1, 2, NULL, '2024-11-25 10:00:01', '2024-11-25 10:00:01', 'published'),
+(6, 'about.header', 'h1', 'fi', 'Tietoa meistä', 'site_text', 1, 2, NULL, '2024-11-25 10:00:01', '2024-11-25 10:00:01', 'published'),
+(7, 'about.body.mission', 'p', 'en', 'Our mission is to make computer building easy and accessible for everyone.', 'site_text', 1, 2, NULL, '2024-11-25 10:00:01', '2024-11-25 10:00:01', 'published'),
+(8, 'about.body.mission', 'p', 'fi', 'Tavoitteenamme on tehdä tietokoneen rakentamisesta helppoa ja kaikille saavutettavaa.', 'site_text', 1, 2, NULL, '2024-11-25 10:00:01', '2024-11-25 10:00:01', 'published'),
+(9, 'footer.contact', 'p', 'en', 'Contact us at support@koneavustajat.com', 'site_text', 1, 3, NULL, '2024-11-25 10:00:01', '2024-11-25 10:00:01', 'published'),
+(10, 'footer.contact', 'p', 'fi', 'Ota yhteyttä osoitteessa support@koneavustajat.com', 'site_text', 1, 3, NULL, '2024-11-25 10:00:01', '2024-11-25 10:00:01', 'published'),
+(11, 'footer.copyright', 'p', 'en', '© 2024 Koneavustajat. All rights reserved.', 'site_text', 1, 3, NULL, '2024-11-25 10:00:01', '2024-11-25 10:00:01', 'published'),
+(12, 'footer.copyright', 'p', 'fi', '© 2024 Koneavustajat. Kaikki oikeudet pidätetään.', 'site_text', 1, 3, NULL, '2024-11-25 10:00:01', '2024-11-25 10:00:01', 'published'),
+(13, 'draft.test', 'p', 'en', 'This is a draft content for testing purposes.', 'site_text', 1, 4, NULL, '2024-11-25 10:00:01', '2024-11-25 10:00:01', 'draft');
+
+--
 -- Indexes for dumped tables
 --
 
@@ -51,7 +70,6 @@ CREATE TABLE `content` (
 --
 ALTER TABLE `content`
   ADD PRIMARY KEY (`ContentID`),
-  ADD UNIQUE KEY `Site_Identifier` (`Site_Identifier`),
   ADD UNIQUE KEY `idx_unique_content` (`Site_Identifier`,`Language`,`Version`),
   ADD KEY `Added_By` (`Added_By`),
   ADD KEY `Last_Edited_By` (`Last_Edited_By`),
@@ -68,7 +86,7 @@ ALTER TABLE `content`
 -- AUTO_INCREMENT for table `content`
 --
 ALTER TABLE `content`
-  MODIFY `ContentID` int(11) NOT NULL AUTO_INCREMENT;
+  MODIFY `ContentID` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=14;
 
 --
 -- Constraints for dumped tables
