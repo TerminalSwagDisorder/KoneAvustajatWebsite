@@ -109,6 +109,23 @@ const ComputerWizardWizard = ({ wizardAlgorithm }) => {
 	const closeForm = () => {
 		setCurrentOperation("");
 	};
+	
+	const clearForm = () => {
+		setFormFields({
+			price: 0,
+			useCase: "noPreference",
+			performancePreference: "noPreference",
+			formFactor: "noPreference",
+			colorPreference: "noPreference",
+			otherColor: "",
+			rgbPreference: "noPreference",
+			cpuManufacturer: "noPreference",
+			gpuManufacturer: "noPreference",
+			psuBias: "noPreference",
+			storageBias: "noPreference",
+			additionalStorage: "noPreference"
+		});
+	};
 
 	const toggleChoosePart = (newChoice) => {
 		if (chosenPart === newChoice) {
@@ -275,6 +292,10 @@ const ComputerWizardWizard = ({ wizardAlgorithm }) => {
 							</Button>
 						</Col>
 						<h2>Computer Wizard</h2>
+						<p className="wizardNotice">
+							<b>Notice</b>: Depending on your wizard settings, some builds may not populate all parts. Certain combinations of preferences
+							might result in incomplete builds due to compatibility or availability limits.
+						</p>
 						<br />
 
 						{/* Max Price Field */}
@@ -400,6 +421,9 @@ const ComputerWizardWizard = ({ wizardAlgorithm }) => {
 
 						<Button variant="primary" type="submit">
 							Build computer!
+						</Button>
+						<Button variant="primary" onClick={() => clearForm()}>
+							Clear settings
 						</Button>
 					</Form>
 				</Container>
