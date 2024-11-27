@@ -21,12 +21,6 @@ import UsedPartsBuild from './components/UsedPartsBuild';
 import UsedPartsModify from './components/UsedPartsModify';
 import ShoppingCart from './components/ShoppingCart';
 import {
-	ThemeContext,
-	ThemeProvider,
-	useTheme,
-	useLanguage,
-	LanguageContext,
-	LanguageProvider,
 	fetchUsers,
 	fetchDynamicData,
 	fetchSearchIdData,
@@ -41,7 +35,17 @@ import {
 	updateDynamicData,
 	deleteDynamicData,
 	fetchContent
-} from "./api/api";import { useSelector, useDispatch } from "react-redux";
+} from "./api/api";
+import {
+	ThemeContext,
+	ThemeProvider,
+	useTheme,
+	useLanguage,
+	LanguageContext,
+	LanguageProvider,
+} from "./utils/Contexts";
+import { useRenderContent, fetchPageContent } from "./utils/ContentUtils";
+import { useSelector, useDispatch } from "react-redux";
 
 
 
@@ -107,7 +111,7 @@ function App() {
 			<BrowserRouter>
 			<NavBar currentUser={currentUser} handleUserChange={handleUserChange} handleSignout={handleSignout} useTheme={useTheme} useLanguage={useLanguage} /> 
 			<Routes>
-				<Route path="/" element={<Home fetchContent={fetchContent} useLanguage={useLanguage} />} />
+				<Route path="/" element={<Home fetchContent={fetchContent} useLanguage={useLanguage} useRenderContent={useRenderContent} fetchPageContent={fetchPageContent} />} />
 			{/*{currentUser && currentUser.role === "admin" && (*/}
 			{currentUser && currentUser.isAdmin && (
 								<Route path="admin" element={<Admin currentUser={currentUser} />}>
