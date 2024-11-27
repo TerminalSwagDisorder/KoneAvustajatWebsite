@@ -4,8 +4,9 @@ import { Nav, Navbar, NavDropdown, Button, Image } from "react-bootstrap";
 import { Link } from "react-router-dom";
 import { AiOutlineShoppingCart } from "react-icons/ai";
 import { useSelector, useDispatch } from "react-redux";
+import { useTheme, useLanguage } from "../utils/Contexts";
 
-const NavBar = ({ currentUser, handleUserChange, handleSignout, useTheme, useLanguage }) => {
+const NavBar = ({ currentUser, handleUserChange, handleSignout }) => {
 	const [activeLink, setActiveLink] = useState("home");
 	const [scrolled, setScrolled] = useState(false);
 	const [showDropdown, setShowDropdown] = useState(false);

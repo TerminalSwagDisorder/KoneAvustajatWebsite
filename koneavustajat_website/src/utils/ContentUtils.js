@@ -1,10 +1,11 @@
 import React, { useEffect, useState } from "react";
-import { useLanguage } from "./Contexts";
+import { useLanguage, useContent } from "./Contexts";
 
 export const useRenderContent = () => {
 	const { language } = useLanguage();
+	const { content } = useContent();
 
-	const renderContent = (content, identifier, fallback = "Content could not be loaded") => {
+	const renderContent = (identifier, fallback = "Content could not be loaded") => {
 		if (content && content[identifier]) {
 			return content[identifier][language] || fallback;
 		}
@@ -14,11 +15,11 @@ export const useRenderContent = () => {
 	return renderContent;
 };
 
-export const fetchPageContent = async (fetchContent, { page, section = "", specific = "" }, setContent) => {
-	try {
-		const data = await fetchContent({ page, section, specific });
-		setContent(data);
-	} catch (error) {
-		console.error(`Error while fetching content for ${page}:`, error);
-	}
+export const fetchPageContent = async (fetchContent, identifiers, setContent) => {
+    try {
+        const data = await fetchContent(identifiers);
+        setContent(data);
+    } catch (error) {
+        console.error(`Error while fetching content:`, error);
+    }
 };

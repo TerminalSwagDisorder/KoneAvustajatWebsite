@@ -1,12 +1,16 @@
 import React, { useEffect, useState, createContext, useContext } from "react";
+import { useLocation } from "react-router-dom";
 
-// Light & Darkmode switch
-// Create a context for the theme
-export const ThemeContext = createContext();
-export const LanguageContext = createContext();
+// Create contexts
+const ThemeContext = createContext();
+const LanguageContext = createContext();
+const ContentContext = createContext();
+
 
 export const useTheme = () => useContext(ThemeContext);
 export const useLanguage = () => useContext(LanguageContext);
+export const useContent = () => useContext(ContentContext);
+
 
 export const ThemeProvider = ({ children }) => {
     // Initialize theme from local storage or default to "light"
@@ -49,5 +53,32 @@ export const LanguageProvider = ({ children }) => {
 		<LanguageContext.Provider value={{ language, changeLanguage }}>
 			{children}
 		</LanguageContext.Provider>
+	);
+};
+
+export const ContentProvider = ({ fetchContent, children }) => {
+	const [content, setContent] = useState({});
+	const location = useLocation();
+
+	const fetchPageContent = async (page) => {
+		try {
+			const data = await fetchContent({ page });
+			setContent(data);
+		} catch (error) {
+			console.error(`Error fetching content for page ${page}:`, error);
+		}
+	};
+
+	useEffect(() => {
+		// Extract page name from the current route
+		const page = location.pathname === "/" ? "home" : location.pathname.slice(1);
+		fetchPageContent(page);
+        console.log(`Fetching content to: ${page}`);
+	}, [location]);
+
+	return (
+		<ContentContext.Provider value={{ content }}>
+			{children}
+		</ContentContext.Provider>
 	);
 };
