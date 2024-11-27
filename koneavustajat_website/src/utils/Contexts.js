@@ -42,7 +42,6 @@ export const LanguageProvider = ({ children }) => {
 	}, [language]);
 
 	const changeLanguage = (newLanguage) => {
-		console.log(language, newLanguage);
 		if (!["en", "fi"].includes(newLanguage)) {
 			console.error("Unsupported language:", newLanguage);
 		}
@@ -58,26 +57,43 @@ export const LanguageProvider = ({ children }) => {
 
 export const ContentProvider = ({ fetchContent, children }) => {
 	const [content, setContent] = useState({});
+	const [overridenContent, setOverridenContent] = useState({});
 	const location = useLocation();
 
-	const fetchPageContent = async (page) => {
+	const fetchPageContent = async (identifiers) => {
+        if (typeof identifiers !== "object") {
+            throw new Error(`Page identifiers should be an object with "page" (Required), "section" (Optional) & "specific" (Optional).`);
+        }
 		try {
-			const data = await fetchContent({ page });
+			const data = await fetchContent(identifiers);
 			setContent(data);
 		} catch (error) {
-			console.error(`Error fetching content for page ${page}:`, error);
+			console.error(`Error fetching content for page ${identifiers}:`, error);
+		}
+	};
+
+	const fetchPageContentOverride = async (identifiers) => {
+        if (typeof identifiers !== "object") {
+            throw new Error(`Page identifiers should be an object with "page" (Required), "section" (Optional) & "specific" (Optional).`);
+        }
+		try {
+			const data = await fetchContent(identifiers);
+            setOverridenContent(data);
+			return overridenContent;
+		} catch (error) {
+			console.error(`Error fetching content for page ${identifiers}:`, error);
 		}
 	};
 
 	useEffect(() => {
 		// Extract page name from the current route
 		const page = location.pathname === "/" ? "home" : location.pathname.slice(1);
-		fetchPageContent(page);
+		fetchPageContent({ page: page });
         console.log(`Fetching content to: ${page}`);
 	}, [location]);
 
 	return (
-		<ContentContext.Provider value={{ content }}>
+		<ContentContext.Provider value={{ content, overridenContent, fetchPageContentOverride }}>
 			{children}
 		</ContentContext.Provider>
 	);

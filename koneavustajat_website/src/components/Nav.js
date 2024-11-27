@@ -117,7 +117,7 @@ const NavBar = ({ currentUser, handleUserChange, handleSignout }) => {
 					Switch to {theme === "light" ? "Dark" : "Light"} Mode
 				</Button>
 				<Button className="languageSwitcher" onClick={() => changeLanguage(language === "en" ? "fi" : "en")}>
-					Switch to {language === "en" ? "fi" : "en"}
+					Lang: {language}
 				</Button>
 				<Navbar.Toggle aria-controls="basic-navbar-nav">
 					<span className="navbar-toggler-icon"></span>
