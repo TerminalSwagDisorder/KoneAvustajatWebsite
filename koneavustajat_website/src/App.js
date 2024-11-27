@@ -23,6 +23,10 @@ import ShoppingCart from './components/ShoppingCart';
 import {
 	ThemeContext,
 	ThemeProvider,
+	useTheme,
+	useLanguage,
+	LanguageContext,
+	LanguageProvider,
 	fetchUsers,
 	fetchDynamicData,
 	fetchSearchIdData,
@@ -98,42 +102,44 @@ function App() {
 
   return (
 	  <ThemeProvider>
-		<div className="App">
-		<BrowserRouter>
-		<NavBar currentUser={currentUser} handleUserChange={handleUserChange} handleSignout={handleSignout} ThemeContext={ThemeContext} /> 
-		<Routes>
-	  		<Route path="/" element={<Home fetchContent={fetchContent} />} />
-		{/*{currentUser && currentUser.role === "admin" && (*/}
-		{currentUser && currentUser.isAdmin && (
-                            <Route path="admin" element={<Admin currentUser={currentUser} />}>
-                                <Route path="dashboard" element={<DashboardAdmin currentUser={currentUser} />} />
-                                <Route path="users" element={<UsersAdmin currentUser={currentUser} fetchDynamicData={fetchDynamicData} fetchDataAmount={fetchDataAmount} />} />
-								<Route path="parts" element={<PartsDisplay fetchDynamicData={fetchDynamicData} />} />
-                            </Route>
-		)}
-		{currentUser ? (
-			<>
-			<Route path="profile" element={<Profile currentUser={currentUser} setCurrentUser={handleUserChange} handleCredentialChange={handleCredentialChange} handleSignout={handleSignout} refreshProfileData={refreshProfileData} />} />
-			</>
-		):(
-			<>
-			<Route path="signup" element={<Signup handleSignup={handleSignup} />} />
-			<Route path="Signin" element={<Signin handleUserChange={handleUserChange} currentUser={currentUser} handleSignin={handleSignin} checkIfSignedIn={checkIfSignedIn}/>} />
-			</>
-		)}
-			<Route path="computerwizard" element={<ComputerWizard />}>
-				<Route path="browse" element={<ComputerWizardBrowse fetchDynamicData={fetchDynamicData} fetchDataAmount={fetchDataAmount} currentUser={currentUser} updateDynamicData={updateDynamicData} deleteDynamicData={deleteDynamicData} />} />
-				<Route path="wizard" element={<ComputerWizardWizard wizardAlgorithm={wizardAlgorithm} />} />
-				<Route path="build" element={<ComputerWizardBuild />} />
-			</Route>
-			<Route path="usedparts" element={<UsedPartsBrowse fetchDynamicData={fetchDynamicData} fetchDataAmount={fetchDataAmount} />} />
-
-			{shoppingCart && totalCartItems && totalCartItems > 0 && (
-				<Route path="shoppingcart" element={<ShoppingCart />} />
+		  <LanguageProvider>
+			<div className="App">
+			<BrowserRouter>
+			<NavBar currentUser={currentUser} handleUserChange={handleUserChange} handleSignout={handleSignout} useTheme={useTheme} useLanguage={useLanguage} /> 
+			<Routes>
+				<Route path="/" element={<Home fetchContent={fetchContent} useLanguage={useLanguage} />} />
+			{/*{currentUser && currentUser.role === "admin" && (*/}
+			{currentUser && currentUser.isAdmin && (
+								<Route path="admin" element={<Admin currentUser={currentUser} />}>
+									<Route path="dashboard" element={<DashboardAdmin currentUser={currentUser} />} />
+									<Route path="users" element={<UsersAdmin currentUser={currentUser} fetchDynamicData={fetchDynamicData} fetchDataAmount={fetchDataAmount} />} />
+									<Route path="parts" element={<PartsDisplay fetchDynamicData={fetchDynamicData} />} />
+								</Route>
 			)}
-		</Routes>
-		</BrowserRouter>
-		</div>
+			{currentUser ? (
+				<>
+				<Route path="profile" element={<Profile currentUser={currentUser} setCurrentUser={handleUserChange} handleCredentialChange={handleCredentialChange} handleSignout={handleSignout} refreshProfileData={refreshProfileData} />} />
+				</>
+			):(
+				<>
+				<Route path="signup" element={<Signup handleSignup={handleSignup} />} />
+				<Route path="Signin" element={<Signin handleUserChange={handleUserChange} currentUser={currentUser} handleSignin={handleSignin} checkIfSignedIn={checkIfSignedIn}/>} />
+				</>
+			)}
+				<Route path="computerwizard" element={<ComputerWizard />}>
+					<Route path="browse" element={<ComputerWizardBrowse fetchDynamicData={fetchDynamicData} fetchDataAmount={fetchDataAmount} currentUser={currentUser} updateDynamicData={updateDynamicData} deleteDynamicData={deleteDynamicData} />} />
+					<Route path="wizard" element={<ComputerWizardWizard wizardAlgorithm={wizardAlgorithm} />} />
+					<Route path="build" element={<ComputerWizardBuild />} />
+				</Route>
+				<Route path="usedparts" element={<UsedPartsBrowse fetchDynamicData={fetchDynamicData} fetchDataAmount={fetchDataAmount} />} />
+
+				{shoppingCart && totalCartItems && totalCartItems > 0 && (
+					<Route path="shoppingcart" element={<ShoppingCart />} />
+				)}
+			</Routes>
+			</BrowserRouter>
+			</div>
+		</LanguageProvider>
 	</ThemeProvider>
   );
 }

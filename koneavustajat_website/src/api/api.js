@@ -10,6 +10,10 @@ import "../style/style.scss";
 // Light & Darkmode switch
 // Create a context for the theme
 export const ThemeContext = createContext();
+export const LanguageContext = createContext();
+
+export const useTheme = () => useContext(ThemeContext);
+export const useLanguage = () => useContext(LanguageContext);
 
 export const ThemeProvider = ({ children }) => {
     // Initialize theme from local storage or default to "light"
@@ -31,6 +35,30 @@ export const ThemeProvider = ({ children }) => {
         </ThemeContext.Provider>
     );
 };
+
+export const LanguageProvider = ({ children }) => {
+
+	const [language, setLanguage] = useState(localStorage.getItem("language") || "en");
+
+	useEffect(() => {
+		localStorage.setItem("language", language);
+	}, [language]);
+
+	const changeLanguage = (newLanguage) => {
+		console.log(language, newLanguage);
+		if (!["en", "fi"].includes(newLanguage)) {
+			console.error("Unsupported language:", newLanguage);
+		}
+		setLanguage(newLanguage);
+	};
+
+	return (
+		<LanguageContext.Provider value={{ language, changeLanguage }}>
+			{children}
+		</LanguageContext.Provider>
+	);
+};
+
 /*
 // Search function for users/otherusers
 export const wizardAlgorithm = async (formFields) => {

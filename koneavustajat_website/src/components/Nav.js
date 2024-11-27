@@ -1,15 +1,16 @@
-import { useEffect, useState, useContext } from "react";
+import { useEffect, useState } from "react";
 import Container from "react-bootstrap/Container";
 import { Nav, Navbar, NavDropdown, Button, Image } from "react-bootstrap";
 import { Link } from "react-router-dom";
 import { AiOutlineShoppingCart } from "react-icons/ai";
 import { useSelector, useDispatch } from "react-redux";
 
-const NavBar = ({ currentUser, handleUserChange, handleSignout, ThemeContext }) => {
+const NavBar = ({ currentUser, handleUserChange, handleSignout, useTheme, useLanguage }) => {
 	const [activeLink, setActiveLink] = useState("home");
 	const [scrolled, setScrolled] = useState(false);
 	const [showDropdown, setShowDropdown] = useState(false);
-	const { theme, toggleTheme } = useContext(ThemeContext);
+	const { theme, toggleTheme } = useTheme();
+	const { language, changeLanguage } = useLanguage();
 	const shoppingCart = useSelector((state) => state.shoppingCart.shoppingCart);
 	const dispatch = useDispatch();
 	const cartItems = Object.values(shoppingCart);
@@ -113,6 +114,9 @@ const NavBar = ({ currentUser, handleUserChange, handleSignout, ThemeContext }) 
 				</Navbar.Brand>
 				<Button className="themeSwitcher" onClick={toggleTheme}>
 					Switch to {theme === "light" ? "Dark" : "Light"} Mode
+				</Button>
+				<Button className="languageSwitcher" onClick={() => changeLanguage(language === "en" ? "fi" : "en")}>
+					Switch to {language === "en" ? "fi" : "en"}
 				</Button>
 				<Navbar.Toggle aria-controls="basic-navbar-nav">
 					<span className="navbar-toggler-icon"></span>
