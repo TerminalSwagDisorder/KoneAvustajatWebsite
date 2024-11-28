@@ -3865,6 +3865,152 @@ app.patch("/api/text-content/update/:id", authenticateSession, idValidator, form
 	}
 );
 
+/*
+// Check this updated patch route
+app.patch("/api/text-content/update/:id", authenticateSession, idValidator, formFieldsValidator(contentSchema), async (req, res) => {
+	console.log("API patch content accessed");
+	const id = req.validatedId;
+	const jsonFormFields = req.validatedForm;
+	const allowedFieldsSql = `
+		SELECT DISTINCT column_name 
+		FROM information_schema.columns 
+		WHERE table_name = 'content' 
+		  AND table_schema = ?
+	`;
+
+	try {
+		// Fetch allowed fields from the database schema
+		const [allowedColumns] = await promisePool.query(allowedFieldsSql, [process.env.DB_NAME]);
+		const allowedFields = allowedColumns.map(item => item.column_name);
+
+		// Dynamically construct fields and values for the update query
+		let fieldUpdates = [];
+		let queryParams = [];
+
+		for (const key in jsonFormFields) {
+			if (allowedFields.includes(key) && jsonFormFields[key] !== "") {
+				fieldUpdates.push(`${key.charAt(0).toUpperCase() + key.slice(1)} = ?`);
+				queryParams.push(jsonFormFields[key]);
+			}
+		}
+
+		// Ensure at least one field is being updated
+		if (fieldUpdates.length === 0) {
+			return res.status(400).json({ message: "No valid fields provided for update" });
+		}
+
+		// Add condition to update the specific content by ID
+		const updateQuery = `
+			UPDATE content 
+			SET ${fieldUpdates.join(", ")} 
+			WHERE ContentID = ?
+		`;
+		queryParams.push(parseInt(id));
+
+		// Execute the update query
+		const [result] = await promisePool.query(updateQuery, queryParams);
+		if (result.affectedRows === 0) {
+			return res.status(404).json({ message: "Item not found or no changes made" });
+		}
+
+		return res.status(200).json({ message: "Content updated successfully" });
+	} catch (error) {
+		const [status, message] = handleServerError(error);
+		return res.status(status).json({ message: message });
+	}
+});
+*/
+
+app.post("/api/text-content/add", formFieldsValidator(contentSchema), authenticateSession, async (req, res) => {
+	console.log("API add content accessed");
+
+	const userId = req.user.UserID;
+	const jsonFormFields = req.validatedForm;
+	const { Site_Identifier, Main_Tag, Language, Content_Text, Content_Type } = jsonFormFields;	
+	const allowedFields = ["Site_Identifier", "Main_Tag", "Language", "Content_Text", "Content_Type"];
+
+	try {
+		if (!Site_Identifier || !Content_Text) {
+			return res.status(400).json({ message: "All required form fields were not provided" });
+		}
+
+		let fieldKeys = [];
+		let valuePlaceholders = [];
+		let queryParams = [];
+
+		// Dynamically build fields and values for insertion
+		for (const key in jsonFormFields) {
+			if (allowedFields.includes(key) && jsonFormFields[key] !== "") {
+				fieldKeys.push(key.charAt(0).toUpperCase() + key.slice(1)); // Capitalize the first letter if needed
+				valuePlaceholders.push("?");
+				queryParams.push(jsonFormFields[key]);
+			}
+		}
+
+		// Add `Added_By` field
+		fieldKeys.push("Added_By");
+		valuePlaceholders.push("?");
+		queryParams.push(parseInt(userId));
+
+		// Construct final query
+		const insertQuery = `
+			INSERT INTO content (${fieldKeys.join(", ")})
+			VALUES (${valuePlaceholders.join(", ")})
+		`;
+
+		const [result] = await promisePool.query(insertQuery, queryParams);
+		return res.status(200).json({ message: "Added content successfully", id: result.insertId });
+	} catch (error) {
+		const [status, message] = handleServerError(error);
+		return res.status(status).json({ message: message });
+	}
+});
+
+/*
+// Similar way to update, worse than the other way
+app.post("/api/text-content/add", formFieldsValidator(contentSchema), authenticateSession, async (req, res) => {
+	console.log("API add content accessed");
+
+	const userId = req.user.UserID;
+	const jsonFormFields = req.validatedForm;
+	const { Site_Identifier, Main_Tag, Language, Content_Text, Content_Type } = jsonFormFields;	
+	const allowedFields = ["Site_Identifier", "Main_Tag", "Language", "Content_Text", "Content_Type"];
+
+	try {
+		if (!Site_Identifier || !Content_Text) {
+			return res.status(400).json({ message: "All required form fields were not provided" });
+		}
+
+		let insertQuery = `INSERT INTO content SET`;
+		let queryParams = [];
+
+		// More dynamic way of updating content
+		for (const key in jsonFormFields) {
+			console.log(key);
+			if (allowedFields.includes(key)) {
+				if (jsonFormFields[key] !== "") {
+					insertQuery += key.charAt(0).toUpperCase() + key.slice(1) + " = ?, ";
+					queryParams.push(jsonFormFields[key]);
+				}
+			}
+		}
+
+		if (queryParams.length > 0) {
+			insertQuery = insertQuery.slice(0, -2);
+		}
+
+		insertQuery += "Added_By = ?, ";
+		queryParams.push(parseInt(userId));
+
+		const [result] = await promisePool.query(insertQuery, queryParams);
+		return res.status(200).json({ message: "Added content successfully", id: result.insertId });
+	} catch (error) {
+		const [status, message] = handleServerError(error);
+		return res.status(status).json({ message: message });
+	}
+});
+*/
+
 ////////////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////
