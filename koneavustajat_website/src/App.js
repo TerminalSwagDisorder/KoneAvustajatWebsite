@@ -37,7 +37,9 @@ import {
 	deleteDynamicData,
 	fetchContent,
 	fetchContentIdentifiers,
-	fetchWholeContent
+	fetchWholeContent,
+	addContent,
+	updateContent
 } from "./api/api";
 import { ThemeProvider, LanguageProvider, ContentProvider, ModalProvider  } from "./utils/Contexts";
 import { useSelector, useDispatch } from "react-redux";
@@ -107,7 +109,7 @@ function App() {
 					<ContentProvider fetchContent={fetchContent}>
 					<div className="App">
 					<NavBar currentUser={currentUser} handleUserChange={handleUserChange} handleSignout={handleSignout} /> 
-					<ContentManagementModal fetchWholeContent={fetchWholeContent} fetchContentIdentifiers={fetchContentIdentifiers} />
+					<ContentManagementModal fetchWholeContent={fetchWholeContent} fetchContentIdentifiers={fetchContentIdentifiers} addContent={addContent} updateContent={updateContent} />
 					<Routes>
 						<Route path="/" element={<Home />} />
 					{/*{currentUser && currentUser.role === "admin" && (*/}

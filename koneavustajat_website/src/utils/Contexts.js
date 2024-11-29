@@ -94,7 +94,7 @@ export const ContentProvider = ({ fetchContent, children }) => {
 	}, [location]);
 
 	return (
-		<ContentContext.Provider value={{ content, overridenContent, fetchPageContentOverride }}>
+		<ContentContext.Provider value={{ content, fetchPageContent, overridenContent, fetchPageContentOverride }}>
 			{children}
 		</ContentContext.Provider>
 	);

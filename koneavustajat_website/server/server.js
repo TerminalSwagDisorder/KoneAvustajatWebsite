@@ -497,20 +497,41 @@ const inventorySchema = Joi.object({
 
 });
 
-const contentSchema = Joi.object({
+const contentSchemaMin = Joi.object({
 	contentid: Joi.number().optional(),
 	site_identifier: Joi.string().trim().max(255).optional(),
 	main_tag: Joi.string().trim().max(20).optional(),
 	language: Joi.string().trim().max(10).optional(),
 	content_text: Joi.string().trim().optional(),
 	content_type: Joi.string().trim().max(20).optional(),
-	added_by: Joi.string().trim().optional(),
-	last_edited_by: Joi.string().trim().optional(),
+	status: Joi.string().trim().max(10).optional(),
+	version: Joi.number().optional(),
+	added_by: Joi.number().optional(),
+	last_edited_by: Joi.number().optional(),
 	created_at: Joi.date().optional(),
 	modified_at: Joi.date().optional(),
 	status: Joi.string().trim().max(10).optional(),
 	strict: Joi.boolean().optional(),
 	inverted: Joi.boolean().optional()
+
+});
+
+const contentSchema = Joi.object({
+	ContentID: Joi.number().optional(),
+	Site_Identifier: Joi.string().trim().max(255).optional(),
+	Main_Tag: Joi.string().trim().max(20).optional(),
+	Language: Joi.string().trim().max(10).optional(),
+	Content_Text: Joi.string().trim().optional(),
+	Content_Type: Joi.string().trim().max(20).optional(),
+	Status: Joi.string().trim().max(10).optional(),
+	Version: Joi.number().optional(),
+	Added_By: Joi.number().optional(),
+	Last_Edited_By: Joi.number().optional(),
+	Created_At: Joi.date().optional(),
+	Modified_At: Joi.date().optional(),
+	Status: Joi.string().trim().max(10).optional(),
+	Strict: Joi.boolean().optional(),
+	Inverted: Joi.boolean().optional()
 
 });
 
@@ -659,7 +680,7 @@ const tableSearch = (searchContext = "cpu") => {
 				currentSchema = opensearchSchema;
 			}
 			if (partName === "content") {
-				currentSchema = contentSchema;
+				currentSchema = contentSchemaMin;
 			}
 			const validationResult = Joi.attempt(searchTerms, currentSchema);
 
@@ -3869,6 +3890,69 @@ app.patch("/api/text-content/update/:id", authenticateSession, idValidator, form
 
 			updateQuery += " WHERE ContentID = ?";
 			queryParams.push(parseInt(id));
+
+			const [result] = await promisePool.query(updateQuery, queryParams);
+			if (result.affectedRows === 0) {
+				return res.status(404).json({ message: "Item not found" });
+			}
+
+			return res.status(200).json({ message: "Content updated successfully" });
+		} catch (error) {
+			const [status, message] = handleServerError(error);
+			return res.status(status).json({ message: message });
+
+		}
+	}
+);
+
+app.patch("/api/text-content/update", authenticateSession, formFieldsValidator(contentSchema), async (req, res) => {
+		console.log("API patch content accessed");
+		const jsonFormFields = req.validatedForm;
+		const allowedFieldsSql = `SELECT DISTINCT column_name FROM information_schema.columns WHERE table_name IN ('content') AND table_schema = '${process.env.DB_NAME}';`;
+		const searchKeys = ["Site_Identifier", "Language", "Version"];
+
+		try {
+			if (jsonFormFields.Site_Identifier === "" || jsonFormFields.Language === "") {
+				return res.status(400).json({ message: "All identifier fields are not filled" });
+			}
+			
+			const [allowedColumns] = await promisePool.query(allowedFieldsSql);
+			//const allowedFields = allowedColumns.map(item => item.column_name);
+			const allowedFields = ["Main_Tag", "Content_Text", "Content_Type", "Status"];
+
+			// SQL query to update part data
+			// updateQuery allows for multiple fields to be updated simultaneously
+			let updateQuery = `UPDATE content SET `;
+			let queryParams = [];
+
+			// More dynamic way of updating content
+			for (const key in jsonFormFields) {
+				console.log(key);
+				if (allowedFields.includes(key)) {
+					if (jsonFormFields.hasOwnProperty(key)) {
+						if (jsonFormFields[key] !== "") {
+							updateQuery += key.charAt(0).toUpperCase() + key.slice(1) + " = ?, "; // Since the first letters are capitalized in the db
+							queryParams.push(jsonFormFields[key]);
+						}
+					}
+				}
+			}
+
+			// Remove trailing comma and space
+			if (queryParams.length > 0) {
+				updateQuery = updateQuery.slice(0, -2);
+			}
+
+			updateQuery += " WHERE Site_Identifier = ?";
+			queryParams.push(jsonFormFields.Site_Identifier);
+			
+			updateQuery += " AND Language = ?";
+			queryParams.push(jsonFormFields.Language);
+			
+			if (jsonFormFields.Version !== "") {
+				updateQuery += " AND Version = ?";
+				queryParams.push(jsonFormFields.Version);
+			}
 
 			const [result] = await promisePool.query(updateQuery, queryParams);
 			if (result.affectedRows === 0) {

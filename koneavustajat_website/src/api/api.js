@@ -450,7 +450,85 @@ export const fetchContentIdentifiers = async () => {
 	} catch (error) {
 		console.error("Error while getting content identifiers:", error);
 	}
-    
+};
+
+export const addContent = async (formFields) => {
+	try {
+		formFields = {
+			Site_Identifier: formFields.Site_Identifier,
+			Identifiers: { page: formFields.Identifiers.page, section: formFields.Identifiers.section, specific: formFields.Identifiers.specific },
+			Language: formFields.Language,
+			Version: formFields.Version,
+			Main_Tag: formFields.Main_Tag,
+			Content_Text: formFields.Content_Text,
+			Content_Type: formFields.Content_Type,
+			Status: formFields.Status	
+		};
+
+		await checkAllowedTableNames(["postroutes"], "text-content/add");
+
+		if (formFields && typeof formFields === "object" && !Array.isArray(formFields)) formFields = JSON.stringify(formFields);
+
+		const response = await fetch("http://localhost:4000/api/text-content/add", {
+			method: "POST",
+			headers: {
+				"Content-Type": "application/json"
+			},
+			credentials: "include", // For all fetch requests, do this!
+			body: JSON.stringify({ formFields })
+		});
+		const data = await response.json();
+
+        if (!response.ok) {
+            alert(`HTTP error ${response.status}: ${data.message}`);
+            throw new Error(`HTTP error ${response.status}: ${data.message}`);
+        }
+
+		return data;
+	} catch (error) {
+		console.error("Error while fetching build:", error);
+	}
+};
+
+export const updateContent = async (formFields) => {
+	try {
+		formFields = {
+			Site_Identifier: formFields.Site_Identifier,
+			Language: formFields.Language,
+			Version: formFields.Version,
+			Main_Tag: formFields.Main_Tag,
+			Content_Text: formFields.Content_Text,
+			Content_Type: formFields.Content_Type,
+			Status: formFields.Status	
+		};
+		console.log("Submitting form:", formFields);
+		if (formFields.Site_Identifier === "" || formFields.Language === "") throw new Error("Identifier fields not populated!");
+		await checkAllowedTableNames(["patchroutes"], "text-content/update");
+
+		if (formFields && typeof formFields === "object" && !Array.isArray(formFields)) formFields = JSON.stringify(formFields);
+		// api call to register a new user
+		const response = await fetch("http://localhost:4000/api/text-content/update", {
+			method: "PATCH",
+			headers: {
+				"Content-Type": "application/json"
+			},
+			credentials: "include", // Important, because we're using cookies
+			body: JSON.stringify({ formFields })
+		});
+
+		const data = await response.json();
+
+        if (!response.ok) {
+            alert(`HTTP error ${response.status}: ${data.message}`);
+            throw new Error(`HTTP error ${response.status}: ${data.message}`);
+        }
+
+		return data;
+	} catch (error) {
+		console.error("Error adding user:", error);
+		if (error.message) alert(error.message);
+
+	}
 };
 
 // Do all of the user data handling async

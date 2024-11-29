@@ -1,62 +1,63 @@
 // components/ContentManagementModal.js
 import React, { useState, useEffect } from "react";
 import { Modal, Button, Form, Alert } from "react-bootstrap";
-import { useModal, useLanguage } from "../utils/Contexts";
+import { useModal, useLanguage, useContent } from "../utils/Contexts";
 import { useLocation } from "react-router-dom";
 
-const ContentManagementModal = ({ fetchWholeContent, fetchContentIdentifiers }) => {
+const ContentManagementModal = ({ fetchWholeContent, fetchContentIdentifiers, addContent, updateContent}) => {
 	const { isOpen, modalContent, closeModal } = useModal();
-    const { language } = useLanguage();
+	const { fetchPageContent } = useContent();
+	const { language } = useLanguage();
 	const location = useLocation();
 	const [mode, setMode] = useState("add");
 	const [formFields, setFormFields] = useState({
-	    Site_Identifier: "",
-	    Identifiers: { page: "", section: "", specific: "" },
-	    Main_Tag: "p",
-	    Content_Text: "",
-	    Content_Type: "site_text"
+		Site_Identifier: "",
+		Identifiers: { page: "", section: "", specific: "" },
+		Main_Tag: "p",
+		Content_Text: "",
+		Content_Type: "site_text"
 	});
 	const [availableIdentifiers, setAvailableIdentifiers] = useState([]);
 	const [availableLanguages, setAvailableLanguages] = useState([]);
 	const [warning, setWarning] = useState("");
-    const [languageOverride, setLanguageOverride] = useState("");
-    const [wholeContent, setWholeContent] = useState([]);
+	const [languageOverride, setLanguageOverride] = useState("");
+	const [wholeContent, setWholeContent] = useState([]);
 
 	useEffect(() => {
 		if (mode === "update") {
 			fetchIdentifiers();
 		}
 		if (mode === "add") {
-            addMode();
-            /*
+			addMode();
+			/*
 			setFormFields((prev) => ({
 				...prev,
 				Site_Identifier: location.pathname === "/" ? "home" : location.pathname.slice(1),
 			}));
-            */
+			*/
 		}
 	}, [mode, location]);
 
 	useEffect(() => {
-        handleFormData();
+		handleFormData();
 	}, [languageOverride, wholeContent, language]);
 
-    const fetchIdentifiers = async () => {
-        const identifiers = await fetchContentIdentifiers();
-        setAvailableIdentifiers(identifiers[0]);
-        setAvailableLanguages(identifiers[1]);
-    };
+	const fetchIdentifiers = async () => {
+		const identifiers = await fetchContentIdentifiers();
+		setAvailableIdentifiers(identifiers[0]);
+		setAvailableLanguages(identifiers[1]);
+	};
 
-    const addMode = async () => {
+	const addMode = async () => {
 		setFormFields({
 			Site_Identifier: "",
-            Identifiers: { page: location.pathname === "/" ? "home" : location.pathname.slice(1), section: "", specific: "" },
+			Identifiers: { page: location.pathname === "/" ? "home" : location.pathname.slice(1), section: "", specific: "" },
 			Main_Tag: "p",
 			Content_Text: "",
 			Content_Type: "site_text",
 		});
-        setWarning("");
-    };
+		setWarning("");
+	};
 
 	const overrideLanguage = (event) => {
 		setLanguageOverride(event.target.value);
@@ -64,7 +65,7 @@ const ContentManagementModal = ({ fetchWholeContent, fetchContentIdentifiers }) 
 
 /*
 	const handleFormData = () => {
-        const langData = wholeContent?.find(item => item.Language === (languageOverride || language));
+		const langData = wholeContent?.find(item => item.Language === (languageOverride || language));
 		if (langData) {
 			setFormFields(langData);
 		}
@@ -72,21 +73,21 @@ const ContentManagementModal = ({ fetchWholeContent, fetchContentIdentifiers }) 
 */
 
 	const handleFormData = () => {
-        if (!wholeContent) return false;
-        const langData = wholeContent.find(item => item.Language === (languageOverride || language));
-        if (langData) {
-            setFormFields((prev) => ({
-                ...prev,
-                ...langData,
-                Language: langData.Language,
-            }));
-        } else {
-            setFormFields((prev) => ({
-                ...prev,
-                Content_Text: "",
-                Language: languageOverride || language,
-            }));
-        }
+		if (!wholeContent) return false;
+		const langData = wholeContent.find(item => item.Language === (languageOverride || language));
+		if (langData) {
+			setFormFields((prev) => ({
+				...prev,
+				...langData,
+				Language: langData.Language,
+			}));
+		} else {
+			setFormFields((prev) => ({
+				...prev,
+				Content_Text: "",
+				Language: languageOverride || language,
+			}));
+		}
 	};
 
 	const handleChange2 = (event) => {
@@ -112,21 +113,21 @@ const ContentManagementModal = ({ fetchWholeContent, fetchContentIdentifiers }) 
 	};
 
 	const handleIdentifierSelect = async (event) => {
-	    const identifier = event.target.value;
-	    setFormFields((prev) => ({ ...prev, Site_Identifier: identifier }));
+		const identifier = event.target.value;
+		setFormFields((prev) => ({ ...prev, Site_Identifier: identifier }));
 
-	    const identifiers = identifier.split(".");
-	    if (identifiers[0].length === 0) {
-	        return false;
-	    }
-	    const data = await fetchWholeContent({ page: identifiers[0], section: identifiers[1], specific: identifiers[2] });
-        if (Array.isArray(data)) setWholeContent(data);
+		const identifiers = identifier.split(".");
+		if (identifiers[0].length === 0) {
+			return false;
+		}
+		const data = await fetchWholeContent({ page: identifiers[0], section: identifiers[1], specific: identifiers[2] });
+		if (Array.isArray(data)) setWholeContent(data);
 
-	    if (identifier !== "" && !identifier.startsWith(location.pathname === "/" ? "home" : location.pathname.slice(1))) {
-	        setWarning("Warning: The selected identifier is outside the current page.");
-	    } else {
-	        setWarning("");
-	    }
+		if (identifier !== "" && !identifier.startsWith(location.pathname === "/" ? "home" : location.pathname.slice(1))) {
+			setWarning("Warning: The selected identifier is outside the current page.");
+		} else {
+			setWarning("");
+		}
 	};
 
 	// Handle mode toggle
@@ -134,7 +135,7 @@ const ContentManagementModal = ({ fetchWholeContent, fetchContentIdentifiers }) 
 		setMode((prev) => (prev === "add" ? "update" : "add"));
 		setFormFields({
 			Site_Identifier: "",
-            Identifiers: { page: "", section: "", specific: "" },
+			Identifiers: { page: "", section: "", specific: "" },
 			Main_Tag: "p",
 			Content_Text: "",
 			Content_Type: "site_text",
@@ -142,22 +143,51 @@ const ContentManagementModal = ({ fetchWholeContent, fetchContentIdentifiers }) 
 		setWarning("");
 	};*/
 
-    const toggleMode = () => {
-        setMode((prev) => (prev === "add" ? "update" : "add"));
-        setFormFields({
-            Site_Identifier: mode === "add" ? (location.pathname === "/" ? "home" : location.pathname.slice(1)) : "",
-            Identifiers: { page: location.pathname === "/" ? "home" : location.pathname.slice(1), section: "", specific: "" },
-            Main_Tag: "p",
-            Content_Text: "",
-            Content_Type: "site_text",
-        });
-        setWarning("");
-        setWholeContent([]);
-        setLanguageOverride("");
-    };
+	const toggleMode = () => {
+		setMode((prev) => (prev === "add" ? "update" : "add"));
+		setFormFields({
+			Site_Identifier: mode === "add" ? (location.pathname === "/" ? "home" : location.pathname.slice(1)) : "",
+			Identifiers: { page: location.pathname === "/" ? "home" : location.pathname.slice(1), section: "", specific: "" },
+			Main_Tag: "p",
+			Content_Text: "",
+			Content_Type: "site_text",
+		});
+		setWarning("");
+		setWholeContent([]);
+		setLanguageOverride("");
+	};
 
-	const handleSubmit = () => {
-		console.log("Submitting form:", formFields);
+	const handleSubmit = async () => {
+		try {
+			if (mode === "add") {
+				const success = await addContent(formFields);
+				if (success) {
+					console.log(success);
+					alert(success.message);
+				}
+			}
+
+			if (mode === "update") {
+				const identifiers = formFields.Site_Identifier.split(".");
+				if (identifiers[0].length === 0) {
+					return false;
+				}
+
+				const success = await updateContent(formFields);
+				if (success) {
+					console.log(success);
+					alert(success);
+					if (identifiers[0].startsWith(location.pathname === "/" ? "home" : location.pathname.slice(1))) {
+						await fetchPageContent({ page: identifiers[0] });
+					}
+
+					closeModal();
+				}
+			}
+			
+		} catch (error) {
+			console.error(error);
+		}
 	};
 
 	return (
@@ -176,29 +206,29 @@ const ContentManagementModal = ({ fetchWholeContent, fetchContentIdentifiers }) 
 					<Form.Group className="mb-3">
 						<Form.Label>Site Identifier</Form.Label>
 						{mode === "add" ? (
-                            <>
-                                <Form.Control
-                                    type="text"
-                                    name="Identifiers.page"
-                                    value={formFields.Identifiers.page}
-                                    onChange={handleChange}
-                                    placeholder="page"
-                                />
-                                <Form.Control
-                                    type="text"
-                                    name="Identifiers.section"
-                                    value={formFields.Identifiers.section}
-                                    onChange={handleChange}
-                                    placeholder="section"
-                                />
-                                <Form.Control
-                                    type="text"
-                                    name="Identifiers.specific"
-                                    value={formFields.Identifiers.specific}
-                                    onChange={handleChange}
-                                    placeholder="specific"
-                                />
-                            </>
+							<>
+								<Form.Control
+									type="text"
+									name="Identifiers.page"
+									value={formFields.Identifiers.page}
+									onChange={handleChange}
+									placeholder="page"
+								/>
+								<Form.Control
+									type="text"
+									name="Identifiers.section"
+									value={formFields.Identifiers.section}
+									onChange={handleChange}
+									placeholder="section"
+								/>
+								<Form.Control
+									type="text"
+									name="Identifiers.specific"
+									value={formFields.Identifiers.specific}
+									onChange={handleChange}
+									placeholder="specific"
+								/>
+							</>
 						) : (
 							<Form.Select value={formFields.Site_Identifier} onChange={handleIdentifierSelect}>
 								<option value="">Select an identifier</option>
@@ -211,14 +241,14 @@ const ContentManagementModal = ({ fetchWholeContent, fetchContentIdentifiers }) 
 						)}
 					</Form.Group>
 					<Form.Group className="mb-3">
-                    <Form.Label>Language</Form.Label>
-                    <Form.Select value={languageOverride || language} onChange={overrideLanguage}>
-                        {availableLanguages.map((id) => (
-                            <option key={id} value={id}>
-                                {id}
-                            </option>
-                        ))}
-                    </Form.Select>
+					<Form.Label>Language</Form.Label>
+					<Form.Select value={languageOverride || language} onChange={overrideLanguage}>
+						{availableLanguages.map((id) => (
+							<option key={id} value={id}>
+								{id}
+							</option>
+						))}
+					</Form.Select>
 					</Form.Group>
 					{["Main_Tag", "Content_Text", "Content_Type"].map((field) => (
 						<Form.Group className="mb-3" key={field}>
