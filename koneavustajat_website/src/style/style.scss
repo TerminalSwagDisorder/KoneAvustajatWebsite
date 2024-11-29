@@ -405,6 +405,12 @@ $dark_user_select_button: #697ef5;
 			color: $box_text;
 		}
 	}
+	.cms-modal {
+		.modal-content {
+			background-color: $bg_color;
+			color: $text_input_color;
+		}
+	}
 }
 
 :root {

@@ -20,6 +20,7 @@ import UsedPartsPurchase from './components/UsedPartsPurchase';
 import UsedPartsBuild from './components/UsedPartsBuild';
 import UsedPartsModify from './components/UsedPartsModify';
 import ShoppingCart from './components/ShoppingCart';
+import ContentManagementModal from './components/ContentManagementModal';
 import {
 	fetchUsers,
 	fetchDynamicData,
@@ -34,9 +35,11 @@ import {
 	wizardAlgorithm,
 	updateDynamicData,
 	deleteDynamicData,
-	fetchContent
+	fetchContent,
+	fetchContentIdentifiers,
+	fetchWholeContent
 } from "./api/api";
-import { ThemeProvider, LanguageProvider, ContentProvider } from "./utils/Contexts";
+import { ThemeProvider, LanguageProvider, ContentProvider, ModalProvider  } from "./utils/Contexts";
 import { useSelector, useDispatch } from "react-redux";
 
 
@@ -100,42 +103,45 @@ function App() {
 	  <ThemeProvider>
 		  <LanguageProvider>
 				<BrowserRouter>
-	  			<ContentProvider fetchContent={fetchContent}>
-				<div className="App">
-				<NavBar currentUser={currentUser} handleUserChange={handleUserChange} handleSignout={handleSignout} /> 
-				<Routes>
-					<Route path="/" element={<Home />} />
-				{/*{currentUser && currentUser.role === "admin" && (*/}
-				{currentUser && currentUser.isAdmin && (
-									<Route path="admin" element={<Admin currentUser={currentUser} />}>
-										<Route path="dashboard" element={<DashboardAdmin currentUser={currentUser} />} />
-										<Route path="users" element={<UsersAdmin currentUser={currentUser} fetchDynamicData={fetchDynamicData} fetchDataAmount={fetchDataAmount} />} />
-										<Route path="parts" element={<PartsDisplay fetchDynamicData={fetchDynamicData} />} />
-									</Route>
-				)}
-				{currentUser ? (
-					<>
-					<Route path="profile" element={<Profile currentUser={currentUser} setCurrentUser={handleUserChange} handleCredentialChange={handleCredentialChange} handleSignout={handleSignout} refreshProfileData={refreshProfileData} />} />
-					</>
-				):(
-					<>
-					<Route path="signup" element={<Signup handleSignup={handleSignup} />} />
-					<Route path="Signin" element={<Signin handleUserChange={handleUserChange} currentUser={currentUser} handleSignin={handleSignin} checkIfSignedIn={checkIfSignedIn}/>} />
-					</>
-				)}
-					<Route path="computerwizard" element={<ComputerWizard />}>
-						<Route path="browse" element={<ComputerWizardBrowse fetchDynamicData={fetchDynamicData} fetchDataAmount={fetchDataAmount} currentUser={currentUser} updateDynamicData={updateDynamicData} deleteDynamicData={deleteDynamicData} />} />
-						<Route path="wizard" element={<ComputerWizardWizard wizardAlgorithm={wizardAlgorithm} />} />
-						<Route path="build" element={<ComputerWizardBuild />} />
-					</Route>
-					<Route path="usedparts" element={<UsedPartsBrowse fetchDynamicData={fetchDynamicData} fetchDataAmount={fetchDataAmount} />} />
-
-					{shoppingCart && totalCartItems && totalCartItems > 0 && (
-						<Route path="shoppingcart" element={<ShoppingCart />} />
+	  			<ModalProvider>
+					<ContentProvider fetchContent={fetchContent}>
+					<div className="App">
+					<NavBar currentUser={currentUser} handleUserChange={handleUserChange} handleSignout={handleSignout} /> 
+					<ContentManagementModal fetchWholeContent={fetchWholeContent} fetchContentIdentifiers={fetchContentIdentifiers} />
+					<Routes>
+						<Route path="/" element={<Home />} />
+					{/*{currentUser && currentUser.role === "admin" && (*/}
+					{currentUser && currentUser.isAdmin && (
+										<Route path="admin" element={<Admin currentUser={currentUser} />}>
+											<Route path="dashboard" element={<DashboardAdmin currentUser={currentUser} />} />
+											<Route path="users" element={<UsersAdmin currentUser={currentUser} fetchDynamicData={fetchDynamicData} fetchDataAmount={fetchDataAmount} />} />
+											<Route path="parts" element={<PartsDisplay fetchDynamicData={fetchDynamicData} />} />
+										</Route>
 					)}
-				</Routes>
-				</div>
-			</ContentProvider>
+					{currentUser ? (
+						<>
+						<Route path="profile" element={<Profile currentUser={currentUser} setCurrentUser={handleUserChange} handleCredentialChange={handleCredentialChange} handleSignout={handleSignout} refreshProfileData={refreshProfileData} />} />
+						</>
+					):(
+						<>
+						<Route path="signup" element={<Signup handleSignup={handleSignup} />} />
+						<Route path="Signin" element={<Signin handleUserChange={handleUserChange} currentUser={currentUser} handleSignin={handleSignin} checkIfSignedIn={checkIfSignedIn}/>} />
+						</>
+					)}
+						<Route path="computerwizard" element={<ComputerWizard />}>
+							<Route path="browse" element={<ComputerWizardBrowse fetchDynamicData={fetchDynamicData} fetchDataAmount={fetchDataAmount} currentUser={currentUser} updateDynamicData={updateDynamicData} deleteDynamicData={deleteDynamicData} />} />
+							<Route path="wizard" element={<ComputerWizardWizard wizardAlgorithm={wizardAlgorithm} />} />
+							<Route path="build" element={<ComputerWizardBuild />} />
+						</Route>
+						<Route path="usedparts" element={<UsedPartsBrowse fetchDynamicData={fetchDynamicData} fetchDataAmount={fetchDataAmount} />} />
+
+						{shoppingCart && totalCartItems && totalCartItems > 0 && (
+							<Route path="shoppingcart" element={<ShoppingCart />} />
+						)}
+					</Routes>
+					</div>
+				</ContentProvider>
+			</ModalProvider>
 			</BrowserRouter>
 		</LanguageProvider>
 	</ThemeProvider>

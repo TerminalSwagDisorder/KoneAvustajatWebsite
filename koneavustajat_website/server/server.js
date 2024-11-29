@@ -3797,6 +3797,25 @@ app.get("/api/text-content", routePagination, tableSearch("content"), async (req
 	}
 });
 
+app.get("/api/text-content/identifiers", async (req, res) => {
+	console.log("API content accessed");
+	const sql = "SELECT DISTINCT Site_Identifier FROM content";
+	const sql2 = "SELECT DISTINCT Language FROM content";
+
+	try {
+		const [Site_Identifier] = await promisePool.query(sql);
+		const [Language] = await promisePool.query(sql2);
+		
+		const identifiersMap = Site_Identifier.map(item => item.Site_Identifier);
+		const LanguageMap = Language.map(item => item.Language);
+
+		return res.status(200).json({ identifiers: identifiersMap, language: LanguageMap  });
+	} catch (error) {
+		const [status, message] = handleServerError(error);
+		return res.status(status).json({ message: message });
+	}
+});
+
 app.patch("/api/text-content/delete/:id", idValidator, authenticateSession, async (req, res) => {
 	console.log("API delete content accessed");
 	
@@ -3920,7 +3939,7 @@ app.patch("/api/text-content/update/:id", authenticateSession, idValidator, form
 	}
 });
 */
-
+/*
 app.post("/api/text-content/add", formFieldsValidator(contentSchema), authenticateSession, async (req, res) => {
 	console.log("API add content accessed");
 
@@ -3965,8 +3984,8 @@ app.post("/api/text-content/add", formFieldsValidator(contentSchema), authentica
 		return res.status(status).json({ message: message });
 	}
 });
+*/
 
-/*
 // Similar way to update, worse than the other way
 app.post("/api/text-content/add", formFieldsValidator(contentSchema), authenticateSession, async (req, res) => {
 	console.log("API add content accessed");
@@ -3999,7 +4018,7 @@ app.post("/api/text-content/add", formFieldsValidator(contentSchema), authentica
 			insertQuery = insertQuery.slice(0, -2);
 		}
 
-		insertQuery += "Added_By = ?, ";
+		insertQuery += "Added_By = ?";
 		queryParams.push(parseInt(userId));
 
 		const [result] = await promisePool.query(insertQuery, queryParams);
@@ -4009,7 +4028,7 @@ app.post("/api/text-content/add", formFieldsValidator(contentSchema), authentica
 		return res.status(status).json({ message: message });
 	}
 });
-*/
+
 
 ////////////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////

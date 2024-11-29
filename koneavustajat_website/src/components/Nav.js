@@ -4,7 +4,7 @@ import { Nav, Navbar, NavDropdown, Button, Image } from "react-bootstrap";
 import { Link } from "react-router-dom";
 import { AiOutlineShoppingCart } from "react-icons/ai";
 import { useSelector, useDispatch } from "react-redux";
-import { useTheme, useLanguage } from "../utils/Contexts";
+import { useTheme, useLanguage, useModal } from "../utils/Contexts";
 
 const NavBar = ({ currentUser, handleUserChange, handleSignout }) => {
 	const [activeLink, setActiveLink] = useState("home");
@@ -12,6 +12,7 @@ const NavBar = ({ currentUser, handleUserChange, handleSignout }) => {
 	const [showDropdown, setShowDropdown] = useState(false);
 	const { theme, toggleTheme } = useTheme();
 	const { language, changeLanguage } = useLanguage();
+	const { openModal } = useModal();
 	const shoppingCart = useSelector((state) => state.shoppingCart.shoppingCart);
 	const dispatch = useDispatch();
 	const cartItems = Object.values(shoppingCart);
@@ -30,6 +31,15 @@ const NavBar = ({ currentUser, handleUserChange, handleSignout }) => {
 
 		return () => window.removeEventListener("scroll", onScroll);
 	}, []);
+
+	const handleOpenModal = () => {
+		openModal(
+			<div>
+				<h3>Manage Content</h3>
+				<p>Edit or update your content from here.</p>
+			</div>
+		);
+	};
 
 	const onUpdateActiveLink = (value) => {
 		setActiveLink(value);
@@ -119,6 +129,11 @@ const NavBar = ({ currentUser, handleUserChange, handleSignout }) => {
 				<Button className="languageSwitcher" onClick={() => changeLanguage(language === "en" ? "fi" : "en")}>
 					Lang: {language}
 				</Button>
+				{currentUser && currentUser.RoleID === 4 && (
+					<Button variant="primary" onClick={handleOpenModal}>
+						Manage Content
+					</Button>
+ 				)}
 				<Navbar.Toggle aria-controls="basic-navbar-nav">
 					<span className="navbar-toggler-icon"></span>
 				</Navbar.Toggle>

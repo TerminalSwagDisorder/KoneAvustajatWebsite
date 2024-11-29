@@ -5,11 +5,12 @@ import { useLocation } from "react-router-dom";
 const ThemeContext = createContext();
 const LanguageContext = createContext();
 const ContentContext = createContext();
-
+const ModalContext = createContext();
 
 export const useTheme = () => useContext(ThemeContext);
 export const useLanguage = () => useContext(LanguageContext);
 export const useContent = () => useContext(ContentContext);
+export const useModal = () => useContext(ModalContext);
 
 
 export const ThemeProvider = ({ children }) => {
@@ -96,5 +97,26 @@ export const ContentProvider = ({ fetchContent, children }) => {
 		<ContentContext.Provider value={{ content, overridenContent, fetchPageContentOverride }}>
 			{children}
 		</ContentContext.Provider>
+	);
+};
+
+export const ModalProvider = ({ children }) => {
+	const [isOpen, setIsOpen] = useState(false);
+	const [modalContent, setModalContent] = useState(null);
+
+	const openModal = (content) => {
+		setModalContent(content);
+		setIsOpen(true);
+	};
+
+	const closeModal = () => {
+		setModalContent(null);
+		setIsOpen(false);
+	};
+
+	return (
+		<ModalContext.Provider value={{ isOpen, modalContent, openModal, closeModal }}>
+			{children}
+		</ModalContext.Provider>
 	);
 };

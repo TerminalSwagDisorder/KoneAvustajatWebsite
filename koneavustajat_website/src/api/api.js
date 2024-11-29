@@ -270,7 +270,6 @@ export const fetchSearchIdData = async (id, tableName, partName) => {
 	}
 };
 
-
 // For pagination
 export const fetchDataAmount = async (tableName) => {
 	try {
@@ -371,6 +370,87 @@ export const fetchContent = async (identifiers) => {
 	} catch (error) {
 		console.error(error);
 	}
+};
+
+export const fetchWholeContent = async (identifiers) => {
+	try {
+		await checkAllowedTableNames(["getroutes"], "text-content");
+
+		if (!identifiers) {
+			throw new Error("No identifiers defined!");
+		}
+		
+		if (typeof identifiers !== "object") {
+			throw new Error("Identifiers must be an object!");
+		}
+
+		const identifierKeys = Object.keys(identifiers);
+		const validKeys = ["page", "section", "specific"];
+		if (identifierKeys.length > 3 || identifierKeys.length < 1) {
+			throw new Error("Identifier amount is not allowed");
+		}
+		if (identifierKeys.some((item) => !validKeys.includes(item))) {
+			throw new Error("Found invalid key in indentifiers");
+		}
+		const validIdentifiers = await validateIdentifiers(identifiers);
+		if (!validIdentifiers) {
+			throw new Error("Identifier hierarchy is incorrect");
+		}
+		
+		const identifierValues = validKeys
+			.map(key => identifiers[key])
+			.filter(value => value !== undefined && value !== "");
+		const contentIdentifier = identifierValues.join(".");
+
+		const correctSearchTerms = await checkSearchTerms({site_identifier: contentIdentifier});
+
+		const query = await buildQuery(correctSearchTerms, true);
+		
+		const response = await fetch(`http://localhost:4000/api/text-content?${query}`, {
+			method: "GET",
+			credentials: "include", // Important, because we're using cookies
+		});
+		const data = await response.json();
+
+        if (!response.ok) {
+            alert(`HTTP error ${response.status}: ${data.message}`);
+            throw new Error(`HTTP error ${response.status}: ${data.message}`);
+        }
+
+		// Return only data.contentMap
+		if (data.content) {
+		  return data.content;
+		}
+		
+		return data;
+	} catch (error) {
+		console.error(error);
+	}
+};
+
+export const fetchContentIdentifiers = async () => {
+	try {	
+		const response = await fetch("http://localhost:4000/api/text-content/identifiers", {
+			method: "GET",
+			credentials: "include", // Important, because we're using cookies
+		});
+
+        if (!response.ok) {
+			alert(`HTTP error ${response.status}: ${response.message}`);
+            throw new Error(`HTTP error ${response.status}: ${response.message}`);
+        }
+
+		const identifiers = await response.json();
+
+		if (typeof identifiers === "object") {
+			return Object.values(identifiers);
+		}
+		
+		return identifiers;
+	} catch (error) {
+		console.error("Error while getting content identifiers:", error);
+	}
+    
 };
 
 // Do all of the user data handling async
