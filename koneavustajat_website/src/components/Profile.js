@@ -20,8 +20,11 @@ import {
 	OverlayTrigger,
 	Tooltip
 } from "react-bootstrap";
+import { useAuth } from "../utils/Contexts";
 
-const Profile = ({ currentUser, setCurrentUser, handleCredentialChange, handleSignout, refreshProfileData }) => {
+
+const Profile = ({ handleCredentialChange, handleSignout }) => {
+	const { currentUser, handleUserChange, refreshProfileData } = useAuth();
 	const navigate = useNavigate();
 	const [currentOperation, setCurrentOperation] = useState("");
 	const [formFields, setFormFields] = useState({});

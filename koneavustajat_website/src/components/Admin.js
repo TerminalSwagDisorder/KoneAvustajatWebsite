@@ -1,10 +1,11 @@
 import React from "react";
 import { Outlet } from "react-router-dom";
 import { Container } from "react-bootstrap";
+import { useAuth } from "../utils/Contexts";
 
 
-
-const Admin = ({ setCurrentUser, currentUser }) => {
+const Admin = () => {
+  const { currentUser } = useAuth();
 
   return (
     <Container className="my-5 align-items-center">

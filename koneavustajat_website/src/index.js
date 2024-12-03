@@ -7,13 +7,20 @@ import { store, persistor } from "./redux/store";
 import { PersistGate } from "redux-persist/integration/react";
 import reportWebVitals from "./reportWebVitals";
 import "bootstrap/dist/css/bootstrap.min.css";
+import { AuthProvider, ThemeProvider, LanguageProvider } from "./utils/Contexts";
 
 const root = ReactDOM.createRoot(document.getElementById("root"));
 root.render(
 	<React.StrictMode>
 		<Provider store={store}>
 			<PersistGate loading={null} persistor={persistor}>
-				<App />
+			  <ThemeProvider>
+				  <LanguageProvider>
+						<AuthProvider>
+							<App />
+						</AuthProvider>
+					</LanguageProvider>
+				</ThemeProvider>
 			</PersistGate>
 		</Provider>
 	</React.StrictMode>

@@ -4,9 +4,12 @@
 import React, { useState } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import { Container, Button, Form, Spinner } from "react-bootstrap";
+import { useAuth } from "../utils/Contexts";
+
 
 // Function for signin in, take onSubmit and setting the current user as props
-export const Signin = ({ handleUserChange, currentUser, handleSignin, checkIfSignedIn }) => {
+export const Signin = ({ handleSignin, checkIfSignedIn }) => {
+	const { handleUserChange, currentUser } = useAuth();
 	const navigate = useNavigate();
 	const [Email, setEmail] = useState("");
 	const [Password, setPassword] = useState("");

@@ -4,15 +4,16 @@ import { Nav, Navbar, NavDropdown, Button, Image } from "react-bootstrap";
 import { Link } from "react-router-dom";
 import { AiOutlineShoppingCart } from "react-icons/ai";
 import { useSelector, useDispatch } from "react-redux";
-import { useTheme, useLanguage, useModal } from "../utils/Contexts";
+import { useTheme, useLanguage, useModal, useAuth } from "../utils/Contexts";
 
-const NavBar = ({ currentUser, handleUserChange, handleSignout }) => {
+const NavBar = ({ handleSignout }) => {
 	const [activeLink, setActiveLink] = useState("home");
 	const [scrolled, setScrolled] = useState(false);
 	const [showDropdown, setShowDropdown] = useState(false);
 	const { theme, toggleTheme } = useTheme();
 	const { language, changeLanguage } = useLanguage();
 	const { openModal } = useModal();
+	const { currentUser, handleUserChange } = useAuth();
 	const shoppingCart = useSelector((state) => state.shoppingCart.shoppingCart);
 	const dispatch = useDispatch();
 	const cartItems = Object.values(shoppingCart);

@@ -17,8 +17,11 @@ import { FaUserEdit } from "react-icons/fa";
 import { useSelector, useDispatch } from "react-redux";
 import { addToShoppingCart, removeFromShoppingCart, clearShoppingCart } from "../redux/shoppingCartSlice";
 import { addToCompletedBuild, removeFromCompletedBuild, clearCompletedBuild } from "../redux/wizardSlice";
+import { useAuth } from "../utils/Contexts";
 
-const ComputerWizardBrowse = ({ fetchDynamicData, fetchDataAmount, currentUser, updateDynamicData, deleteDynamicData }) => {
+
+const ComputerWizardBrowse = ({ fetchDynamicData, fetchDataAmount, updateDynamicData, deleteDynamicData }) => {
+	const { currentUser } = useAuth();
 	const [parts, setParts] = useState([]);
 	const [partName, setPartName] = useState({
 		key: "cpu",

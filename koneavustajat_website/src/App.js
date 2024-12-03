@@ -41,14 +41,15 @@ import {
 	addContent,
 	updateContent
 } from "./api/api";
-import { ThemeProvider, LanguageProvider, ContentProvider, ModalProvider  } from "./utils/Contexts";
+import { ContentProvider, ModalProvider, useAuth } from "./utils/Contexts";
+import { ProtectedRoute } from "./utils/AuthUtils";
 import { useSelector, useDispatch } from "react-redux";
 
 
 
 function App() {
-	const [currentUser, setCurrentUser] = useState(null);
-
+	const { currentUser } = useAuth();
+	
 	const shoppingCart = useSelector((state) => state.shoppingCart.shoppingCart);
 	const wizard = useSelector((state) => state.wizard.wizard);
 	const completedBuild = useSelector((state) => state.wizard.completedBuild);
@@ -70,83 +71,45 @@ function App() {
 	console.log("totalWizardItems ", totalWizardItems);
 	console.log("totalCompletedBuildItems ", totalCompletedBuildItems);
 
-	// Check if the user is signed in on page load
-	const fetchUserStatus = async () => {
-		try {
-			// Initialize currentUser with user data
-			const userData = await checkIfSignedIn();
-			if (userData) {
-				// Refresh profile
-				const refreshedUserData = await refreshProfile();
-				setCurrentUser(refreshedUserData);
-			} else {
-				setCurrentUser(null);
-			}
-		} catch (error) {
-			console.error("Error fetching user status:", error);
-			setCurrentUser(null);
-		}
-	};
-	useEffect(() => {
-		fetchUserStatus();
-	}, []);
-
-	const handleUserChange = (event) => {
-		setCurrentUser(event);
-	};
-	
-	const refreshProfileData = async () => {
-		const refreshedUserData = await refreshProfile();
-		setCurrentUser(refreshedUserData);
-		
-	}
-
   return (
-	  <ThemeProvider>
-		  <LanguageProvider>
-				<BrowserRouter>
-	  			<ModalProvider>
-					<ContentProvider fetchContent={fetchContent}>
-					<div className="App">
-					<NavBar currentUser={currentUser} handleUserChange={handleUserChange} handleSignout={handleSignout} /> 
-					<ContentManagementModal fetchWholeContent={fetchWholeContent} fetchContentIdentifiers={fetchContentIdentifiers} addContent={addContent} updateContent={updateContent} />
-					<Routes>
-						<Route path="/" element={<Home />} />
-					{/*{currentUser && currentUser.role === "admin" && (*/}
-					{currentUser && currentUser.isAdmin && (
-										<Route path="admin" element={<Admin currentUser={currentUser} />}>
-											<Route path="dashboard" element={<DashboardAdmin currentUser={currentUser} />} />
-											<Route path="users" element={<UsersAdmin currentUser={currentUser} fetchDynamicData={fetchDynamicData} fetchDataAmount={fetchDataAmount} />} />
-											<Route path="parts" element={<PartsDisplay fetchDynamicData={fetchDynamicData} />} />
-										</Route>
-					)}
-					{currentUser ? (
-						<>
-						<Route path="profile" element={<Profile currentUser={currentUser} setCurrentUser={handleUserChange} handleCredentialChange={handleCredentialChange} handleSignout={handleSignout} refreshProfileData={refreshProfileData} />} />
-						</>
-					):(
-						<>
-						<Route path="signup" element={<Signup handleSignup={handleSignup} />} />
-						<Route path="Signin" element={<Signin handleUserChange={handleUserChange} currentUser={currentUser} handleSignin={handleSignin} checkIfSignedIn={checkIfSignedIn}/>} />
-						</>
-					)}
-						<Route path="computerwizard" element={<ComputerWizard />}>
-							<Route path="browse" element={<ComputerWizardBrowse fetchDynamicData={fetchDynamicData} fetchDataAmount={fetchDataAmount} currentUser={currentUser} updateDynamicData={updateDynamicData} deleteDynamicData={deleteDynamicData} />} />
-							<Route path="wizard" element={<ComputerWizardWizard wizardAlgorithm={wizardAlgorithm} />} />
-							<Route path="build" element={<ComputerWizardBuild />} />
-						</Route>
-						<Route path="usedparts" element={<UsedPartsBrowse fetchDynamicData={fetchDynamicData} fetchDataAmount={fetchDataAmount} />} />
+		<BrowserRouter>
+			<ModalProvider>
+				<ContentProvider fetchContent={fetchContent}>
+				<div className="App">
+				<NavBar handleSignout={handleSignout} /> 
+				<ContentManagementModal fetchWholeContent={fetchWholeContent} fetchContentIdentifiers={fetchContentIdentifiers} addContent={addContent} updateContent={updateContent} />
+				<Routes>
+					<Route path="/" element={<Home />} />
+				{/*{currentUser && currentUser.role === "admin" && (*/}
+				 
+				<Route path="admin" element={<ProtectedRoute adminOnly><Admin /></ProtectedRoute>}>
+					<Route path="dashboard" element={<DashboardAdmin />} />
+					<Route path="users" element={<UsersAdmin fetchDynamicData={fetchDynamicData} fetchDataAmount={fetchDataAmount} />} />
+					<Route path="parts" element={<PartsDisplay fetchDynamicData={fetchDynamicData} />} />
+				</Route>
+				
+					<>
+					<Route path="profile" element={<ProtectedRoute><Profile handleCredentialChange={handleCredentialChange} handleSignout={handleSignout} /></ProtectedRoute>} />
+					</>
+					<>
+					<Route path="signup" element={<ProtectedRoute unloggedOnly><Signup handleSignup={handleSignup} /></ProtectedRoute>} />
+					<Route path="Signin" element={<ProtectedRoute unloggedOnly><Signin handleSignin={handleSignin} checkIfSignedIn={checkIfSignedIn}/></ProtectedRoute>} />
+					</>
+					<Route path="computerwizard" element={<ComputerWizard />}>
+						<Route path="browse" element={<ComputerWizardBrowse fetchDynamicData={fetchDynamicData} fetchDataAmount={fetchDataAmount} updateDynamicData={updateDynamicData} deleteDynamicData={deleteDynamicData} />} />
+						<Route path="wizard" element={<ComputerWizardWizard wizardAlgorithm={wizardAlgorithm} />} />
+						<Route path="build" element={<ComputerWizardBuild />} />
+					</Route>
+					<Route path="usedparts" element={<UsedPartsBrowse fetchDynamicData={fetchDynamicData} fetchDataAmount={fetchDataAmount} />} />
 
-						{shoppingCart && totalCartItems && totalCartItems > 0 && (
-							<Route path="shoppingcart" element={<ShoppingCart />} />
-						)}
-					</Routes>
-					</div>
-				</ContentProvider>
-			</ModalProvider>
-			</BrowserRouter>
-		</LanguageProvider>
-	</ThemeProvider>
+					{shoppingCart && totalCartItems && totalCartItems > 0 && (
+						<Route path="shoppingcart" element={<ShoppingCart />} />
+					)}
+				</Routes>
+				</div>
+			</ContentProvider>
+		</ModalProvider>
+	</BrowserRouter>
   );
 }
 
