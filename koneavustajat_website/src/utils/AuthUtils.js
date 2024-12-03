@@ -20,6 +20,5 @@ export const ProtectedRoute = ({ children, adminOnly = false, unloggedOnly = fal
 		return <Navigate to="/signin" />;
 	}
 
-	// Render the children if all checks pass
 	return children;
 };

@@ -88,23 +88,19 @@ function App() {
 					<Route path="parts" element={<PartsDisplay fetchDynamicData={fetchDynamicData} />} />
 				</Route>
 				
-					<>
-					<Route path="profile" element={<ProtectedRoute><Profile handleCredentialChange={handleCredentialChange} handleSignout={handleSignout} /></ProtectedRoute>} />
-					</>
-					<>
-					<Route path="signup" element={<ProtectedRoute unloggedOnly><Signup handleSignup={handleSignup} /></ProtectedRoute>} />
-					<Route path="Signin" element={<ProtectedRoute unloggedOnly><Signin handleSignin={handleSignin} checkIfSignedIn={checkIfSignedIn}/></ProtectedRoute>} />
-					</>
-					<Route path="computerwizard" element={<ComputerWizard />}>
-						<Route path="browse" element={<ComputerWizardBrowse fetchDynamicData={fetchDynamicData} fetchDataAmount={fetchDataAmount} updateDynamicData={updateDynamicData} deleteDynamicData={deleteDynamicData} />} />
-						<Route path="wizard" element={<ComputerWizardWizard wizardAlgorithm={wizardAlgorithm} />} />
-						<Route path="build" element={<ComputerWizardBuild />} />
-					</Route>
-					<Route path="usedparts" element={<UsedPartsBrowse fetchDynamicData={fetchDynamicData} fetchDataAmount={fetchDataAmount} />} />
+				<Route path="profile" element={<ProtectedRoute><Profile handleCredentialChange={handleCredentialChange} handleSignout={handleSignout} /></ProtectedRoute>} />
+				<Route path="signup" element={<ProtectedRoute unloggedOnly><Signup handleSignup={handleSignup} /></ProtectedRoute>} />
+				<Route path="Signin" element={<ProtectedRoute unloggedOnly><Signin handleSignin={handleSignin} checkIfSignedIn={checkIfSignedIn}/></ProtectedRoute>} />
+				<Route path="computerwizard" element={<ComputerWizard />}>
+					<Route path="browse" element={<ComputerWizardBrowse fetchDynamicData={fetchDynamicData} fetchDataAmount={fetchDataAmount} updateDynamicData={updateDynamicData} deleteDynamicData={deleteDynamicData} />} />
+					<Route path="wizard" element={<ComputerWizardWizard wizardAlgorithm={wizardAlgorithm} />} />
+					<Route path="build" element={<ComputerWizardBuild />} />
+				</Route>
+				<Route path="usedparts" element={<UsedPartsBrowse fetchDynamicData={fetchDynamicData} fetchDataAmount={fetchDataAmount} />} />
 
-					{shoppingCart && totalCartItems && totalCartItems > 0 && (
-						<Route path="shoppingcart" element={<ShoppingCart />} />
-					)}
+				{shoppingCart && totalCartItems && totalCartItems > 0 && (
+					<Route path="shoppingcart" element={<ShoppingCart />} />
+				)}
 				</Routes>
 				</div>
 			</ContentProvider>
