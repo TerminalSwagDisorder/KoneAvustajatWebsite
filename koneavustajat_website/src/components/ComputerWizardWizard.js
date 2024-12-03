@@ -41,9 +41,12 @@ const ComputerWizardWizard = ({ wizardAlgorithm }) => {
 	if (wizardEntries.length > 0) console.log(wizardEntries);
 	console.log(wizardEntries);
 
-    const totalPrice = wizardItems.reduce((acc, item) => {
-        return acc + (parseFloat(item.Price) || 0);
-    }, 0).toFixed(2);
+    const totalPrice = wizardItems
+        .filter(item => item && item.Price) // Filter out non-component entries
+        .reduce((acc, item) => {
+            return acc + (parseFloat(item.Price) || 0);
+        }, 0)
+        .toFixed(2);
 
 	const handleAddToWizard = () => {
 		const newItem = {
@@ -70,7 +73,6 @@ const ComputerWizardWizard = ({ wizardAlgorithm }) => {
 
         const newItem = {
             build: modifiedWizardEntries,
-			totalPrice: currentPrice,
             table: "wizardBuild",
         };
         dispatch(addToCompletedBuild(newItem));

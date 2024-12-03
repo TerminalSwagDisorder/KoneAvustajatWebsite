@@ -89,23 +89,19 @@ const wizardSlice = createSlice({
 		addToCompletedBuild: (state, action) => {
 			const validParts = ["chassis", "cpu", "cpu_cooler", "gpu", "motherboard", "memory", "storage", "psu"];
 			const item = action.payload;
-			console.log(item.table);
-			console.log(item.partData);
 			if (item.table === "wizardBuild") {
-				console.log(item.build);
-				state.completedBuild = { ...item.build, ...item.totalPrice };				
-				console.log(state.completedBuild);
+				state.completedBuild = { ...item.build };				
 			}
 
 			if (validParts.includes(item.table)) {
-				console.log("state.completedBuild[item.table]");
-				/*
-				if (state.completedBuild == undefined) {
-					state.completedBuild = {};
-				}
-				*/
 				state.completedBuild[item.table] = { ...item.partData };
 			}
+			const totalPrice = Object.values(state.completedBuild)
+				.filter(i => i && i.Price) // Filter out non-component entries
+				.reduce((acc, i) => acc + (parseFloat(i.Price) || 0), 0)
+			.toFixed(2);
+
+			state.completedBuild.totalPrice = totalPrice;
 		},
 
 		removeFromWizard: (state, action) => {

@@ -21,6 +21,7 @@ const ComputerWizardBuild = () => {
         .toFixed(2);
 
 	const handleAddToCart = () => {
+        console.log(completedBuild);
         if (completedBuild.length > 0) {
             const newItem = {
                 ...completedBuild,
