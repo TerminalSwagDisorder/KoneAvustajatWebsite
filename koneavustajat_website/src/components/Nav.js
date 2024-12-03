@@ -17,7 +17,8 @@ const NavBar = ({ handleSignout }) => {
 	const shoppingCart = useSelector((state) => state.shoppingCart.shoppingCart);
 	const dispatch = useDispatch();
 	const cartItems = Object.values(shoppingCart);
-  	const totalCartItems = cartItems.reduce((total, item) => total + item.quantity || 1, 0);
+  	const totalCartItems = cartItems.reduce((total, item) => total + (item.quantity || 1), 0);
+	console.log(totalCartItems);
 
 	useEffect(() => {
 		const onScroll = () => {
