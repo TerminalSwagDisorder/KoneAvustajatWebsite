@@ -116,7 +116,7 @@ const ComputerWizardBrowse = ({ fetchDynamicData, fetchDataAmount, updateDynamic
 		try {
 			let success;
 			if (currentOperation === "modify") {
-				success = await updateDynamicData(formFields, "part", partName.key, selectedPart.ID);
+				success = await updateDynamicData(formFields, "part/update", partName.key, selectedPart.ID);
 			} else if (currentOperation === "delete") {
 				success = await deleteDynamicData("part", partName.key, selectedPart.ID);
 			} else {

@@ -149,7 +149,7 @@ const NavBar = ({ handleSignout }) => {
 						<NavDropdown
 							title={
 								<Link
-									to="/computerwizard">
+									to="/computerwizard/browse">
 									Computer Wizard
 								</Link>
 							}
