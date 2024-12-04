@@ -6,38 +6,6 @@ import React, { useEffect, useState } from "react";
 import { checkAllowedTableNames, checkAllowedPartNames, checkSearchTerms, buildQuery, validateIdentifiers } from "./helpers";
 import "../style/style.scss";
 
-/*
-// Search function for users/otherusers
-export const wizardAlgorithm = async (formFields) => {
-	try {
-		await checkAllowedTableNames(["getroutes"], tableName);
-		const correctSearchTerms = await checkSearchTerms(searchTerms);
-		
-		const query = await buildQuery(correctSearchTerms, false);
-
-		const response = await fetch(`http://localhost:4000/api/${tableName}/search?${query}`, {
-			method: "GET",
-			credentials: "include", // Important, because we're using cookies
-		});
-		const data = await response.json();
-
-        if (!response.ok) {
-            alert(`HTTP error ${response.status}: ${data.message}`);
-            throw new Error(`HTTP error ${response.status}: ${data.message}`);
-        }
-
-		// If data is not correct format
-		if (!Array.isArray(data)) {
-		  return Object.values(data);
-		}
-		
-		return data;
-	} catch (error) {
-		console.error(error);
-	}
-};
-*/
-
 export const wizardAlgorithm = async (formFields) => {
 	try {
 		if (formFields && typeof formFields === "object" && !Array.isArray(formFields)) formFields = JSON.stringify(formFields);
@@ -53,8 +21,8 @@ export const wizardAlgorithm = async (formFields) => {
 		const data = await response.json();
 
         if (!response.ok) {
-            alert(`HTTP error ${response.status}: ${data.message}`);
-            throw new Error(`HTTP error ${response.status}: ${data.message}`);
+            alert(`HTTP error ${response.status}: ${data.message ? data.message : response.message}`);
+            throw new Error(`HTTP error ${response.status}: ${data.message ? data.message : response.message}`);
         }
 
 		console.log("api data", data);
@@ -78,8 +46,8 @@ export const fetchUsers = async (page) => {
 		const data = await response.json();
 
         if (!response.ok) {
-            alert(`HTTP error ${response.status}: ${data.message}`);
-            throw new Error(`HTTP error ${response.status}: ${data.message}`);
+            alert(`HTTP error ${response.status}: ${data.message ? data.message : response.message}`);
+            throw new Error(`HTTP error ${response.status}: ${data.message ? data.message : response.message}`);
         }
 
 		// If data is not correct format
@@ -117,8 +85,8 @@ export const fetchDynamicData = async (page, tableName, partName) => {
 		const data = await response.json();
 
         if (!response.ok) {
-            alert(`HTTP error ${response.status}: ${data.message}`);
-            throw new Error(`HTTP error ${response.status}: ${data.message}`);
+            alert(`HTTP error ${response.status}: ${data.message ? data.message : response.message}`);
+            throw new Error(`HTTP error ${response.status}: ${data.message ? data.message : response.message}`);
         }
 
 		// If data is not correct format
@@ -158,8 +126,8 @@ export const updateDynamicData = async (formFields, tableName, partName, id) => 
 		const data = await response.json();
 
         if (!response.ok) {
-            alert(`HTTP error ${response.status}: ${data.message}`);
-            throw new Error(`HTTP error ${response.status}: ${data.message}`);
+            alert(`HTTP error ${response.status}: ${data.message ? data.message : response.message}`);
+            throw new Error(`HTTP error ${response.status}: ${data.message ? data.message : response.message}`);
         }
 		
 		alert(`Successfully updated ${partName} with id ${id} from ${tableName}`);
@@ -192,11 +160,11 @@ export const deleteDynamicData = async (tableName, partName, id) => {
 			credentials: "include", // Important, because we're using cookies
 		});
 
-		const data = await response;
+		const data = await response.json();
 
         if (!response.ok) {
-            alert(`HTTP error ${response.status}: ${data.message}`);
-            throw new Error(`HTTP error ${response.status}: ${data.message}`);
+            alert(`HTTP error ${response.status}: ${data.message ? data.message : response.message}`);
+            throw new Error(`HTTP error ${response.status}: ${data.message ? data.message : response.message}`);
         }
 		alert(`Successfully deleted ${partName} with id ${id} from ${tableName}`);
 		return true;
@@ -222,8 +190,8 @@ export const fetchSearchData = async (searchTerms, tableName) => {
 		const data = await response.json();
 
         if (!response.ok) {
-            alert(`HTTP error ${response.status}: ${data.message}`);
-            throw new Error(`HTTP error ${response.status}: ${data.message}`);
+            alert(`HTTP error ${response.status}: ${data.message ? data.message : response.message}`);
+            throw new Error(`HTTP error ${response.status}: ${data.message ? data.message : response.message}`);
         }
 
 		// If data is not correct format
@@ -254,8 +222,8 @@ export const fetchSearchIdData = async (id, tableName, partName) => {
 		const data = await response.json(); // Note for some reason this is a different format from email search
 
         if (!response.ok) {
-            alert(`HTTP error ${response.status}: ${data.message}`);
-            throw new Error(`HTTP error ${response.status}: ${data.message}`);
+            alert(`HTTP error ${response.status}: ${data.message ? data.message : response.message}`);
+            throw new Error(`HTTP error ${response.status}: ${data.message ? data.message : response.message}`);
         }
 
 		// If data is not correct format
@@ -282,14 +250,15 @@ export const fetchDataAmount = async (tableName) => {
 			method: "GET",
 			credentials: "include", // Important, because we're using cookies
 		});
-
+		
+		const data = await response.json();
+		
         if (!response.ok) {
-			alert(`HTTP error ${response.status}: ${response.message}`);
-            throw new Error(`HTTP error ${response.status}: ${response.message}`);
+			alert(`HTTP error ${response.status}: ${data.message ? data.message : response.message}`);
+            throw new Error(`HTTP error ${response.status}: ${data.message ? data.message : response.message}`);
         }
 
-		const count = await response.json();
-		return count;
+		return data;
 	} catch (error) {
 		console.error("Error while getting pagination:", error);
 	}
@@ -303,13 +272,14 @@ export const fetchServerRoutes = async () => {
 			credentials: "include", // Important, because we're using cookies
 		});
 
+		const data = await response.json();
+
         if (!response.ok) {
-			alert(`HTTP error ${response.status}: ${response.message}`);
-            throw new Error(`HTTP error ${response.status}: ${response.message}`);
+			alert(`HTTP error ${response.status}: ${data.message ? data.message : response.message}`);
+            throw new Error(`HTTP error ${response.status}: ${data.message ? data.message : response.message}`);
         }
 
-		const routes = await response.json();
-		return routes;
+		return data;
 	} catch (error) {
 		console.error("Error while getting pagination:", error);
 	}
@@ -357,8 +327,8 @@ export const fetchContent = async (identifiers) => {
 		const data = await response.json();
 
         if (!response.ok) {
-            alert(`HTTP error ${response.status}: ${data.message}`);
-            throw new Error(`HTTP error ${response.status}: ${data.message}`);
+            alert(`HTTP error ${response.status}: ${data.message ? data.message : response.message}`);
+            throw new Error(`HTTP error ${response.status}: ${data.message ? data.message : response.message}`);
         }
 
 		// Return only data.contentMap
@@ -413,8 +383,8 @@ export const fetchWholeContent = async (identifiers) => {
 		const data = await response.json();
 
         if (!response.ok) {
-            alert(`HTTP error ${response.status}: ${data.message}`);
-            throw new Error(`HTTP error ${response.status}: ${data.message}`);
+            alert(`HTTP error ${response.status}: ${data.message ? data.message : response.message}`);
+            throw new Error(`HTTP error ${response.status}: ${data.message ? data.message : response.message}`);
         }
 
 		// Return only data.contentMap
@@ -434,19 +404,19 @@ export const fetchContentIdentifiers = async () => {
 			method: "GET",
 			credentials: "include", // Important, because we're using cookies
 		});
+		
+		const data = await response.json();
 
         if (!response.ok) {
-			alert(`HTTP error ${response.status}: ${response.message}`);
-            throw new Error(`HTTP error ${response.status}: ${response.message}`);
+			alert(`HTTP error ${response.status}: ${data.message ? data.message : response.message}`);
+            throw new Error(`HTTP error ${response.status}: ${data.message ? data.message : response.message}`);
         }
 
-		const identifiers = await response.json();
-
-		if (typeof identifiers === "object") {
-			return Object.values(identifiers);
+		if (typeof data === "object") {
+			return Object.values(data);
 		}
 		
-		return identifiers;
+		return data;
 	} catch (error) {
 		console.error("Error while getting content identifiers:", error);
 	}
@@ -480,8 +450,8 @@ export const addContent = async (formFields) => {
 		const data = await response.json();
 
         if (!response.ok) {
-            alert(`HTTP error ${response.status}: ${data.message}`);
-            throw new Error(`HTTP error ${response.status}: ${data.message}`);
+            alert(`HTTP error ${response.status}: ${data.message ? data.message : response.message}`);
+            throw new Error(`HTTP error ${response.status}: ${data.message ? data.message : response.message}`);
         }
 
 		return data;
@@ -519,8 +489,8 @@ export const updateContent = async (formFields) => {
 		const data = await response.json();
 
         if (!response.ok) {
-            alert(`HTTP error ${response.status}: ${data.message}`);
-            throw new Error(`HTTP error ${response.status}: ${data.message}`);
+            alert(`HTTP error ${response.status}: ${data.message ? data.message : response.message}`);
+            throw new Error(`HTTP error ${response.status}: ${data.message ? data.message : response.message}`);
         }
 
 		return data;
@@ -554,8 +524,9 @@ export const handleSignin = async (event, formFields, handleUserChange) => {
 			console.log(data.user);
 
 			if (!response.ok) {
-				alert(`HTTP error ${response.status}: ${response.message}`);
-				throw new Error(`HTTP error ${response.status}: ${response.message}`);
+				console.log(data);
+				alert(`HTTP error ${response.status}: ${data.message ? data.message : response.message}`);
+				throw new Error(`HTTP error ${response.status}: ${data.message ? data.message : response.message}`);
 			}
 
 			alert("Successfully signed in!");
@@ -585,8 +556,8 @@ export const handleSignup = async (event, formFields) => {
 		const data = await response.json();
 
         if (!response.ok) {
-            alert(`HTTP error ${response.status}: ${data.message}`);
-            throw new Error(`HTTP error ${response.status}: ${data.message}`);
+            alert(`HTTP error ${response.status}: ${data.message ? data.message : response.message}`);
+            throw new Error(`HTTP error ${response.status}: ${data.message ? data.message : response.message}`);
         }
 
 		alert("Signed up successfully");
@@ -700,8 +671,8 @@ export const handleCredentialChange = async (event, formFields) => {
 			alert("Successfully changed credentials!");
 			return true;
 		} else {
-			if (data.message) {
-				alert(`HTTP error ${response.status}: ${data.message}`);
+			if (data.message ? data.message : response.message) {
+				alert(`HTTP error ${response.status}: ${data.message ? data.message : response.message}`);
 				throw new Error(data.error);
 			} else {
 				alert("Failed change credentials. Please try again.");
