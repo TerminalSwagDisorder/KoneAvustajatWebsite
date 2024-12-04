@@ -16,9 +16,9 @@ const DashboardAdmin = () => {
 					<FaUsersCog />
 				</Button>
 			</Link>
-			<Link to="/admin/parts">
+			<Link to="/computerwizard/browse">
 				<Button className="adminDashboardButton" style={{ width: "100%" }}>
-					All parts &nbsp;
+					Modify parts &nbsp;
 					<FaMagnifyingGlass />
 				</Button>
 			</Link>

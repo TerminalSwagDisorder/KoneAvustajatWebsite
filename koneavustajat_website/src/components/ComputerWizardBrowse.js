@@ -400,7 +400,7 @@ const ComputerWizardBrowse = ({ fetchDynamicData, fetchDataAmount, updateDynamic
 			return (
 				<div className="userChangePrompt">
 					<Alert>
-						<CiDesktopMouse1 /> Select a part to view or modify details.
+						<CiDesktopMouse1 /> Select a part to view or add to cart & build. {currentUser && currentUser.RoleID === 4 && ("As admin you are able to modify details.")}
 					</Alert>
 				</div>
 			);
