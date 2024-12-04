@@ -265,53 +265,53 @@ const routePagination = (req, res, next) => {
 
 // Joi schemas
 const partSchema = Joi.object({
-	id: Joi.number().optional(),
-	url: Joi.string().uri().optional(),
-	price: Joi.number().optional(),
-	pricerange: Joi.string().trim()
+	ID: Joi.number().optional(),
+	Url: Joi.string().uri().optional(),
+	Price: Joi.number().optional(),
+	priceRange: Joi.string().trim()
 		.pattern(/^\d+-\d+$/)
 		.optional()
 		.messages({
 			"string.pattern.base": "Invalid range format format. Range must include number hyphen (-) number.",
 		}),
-	pricemin: Joi.number().optional(),
-	pricemax: Joi.number().optional(),
-	name: Joi.string().trim().optional(),
-	manufacturer: Joi.string().trim().optional(),
-	image: Joi.string().optional(),
-	image_Url: Joi.string().uri().optional(),
-	chassis_type: Joi.string().trim().optional(),
-	dimensions: Joi.string().trim().optional(),
-	color: Joi.string().trim().optional(),
-	compatibility: Joi.string().trim().optional(),
-	cooling_Potential: Joi.string().trim().optional(),
-	fan_RPM: Joi.number().optional(),
-	noise_Level: Joi.string().trim().optional(),
-	cores: Joi.number().optional(),
-	core_Clock: Joi.string().trim().optional(),
-	memory: Joi.string().trim().optional(),
-	interface: Joi.string().trim().optional(),
-	tdp: Joi.string().trim().optional(),
-	type: Joi.string().trim().optional(),
-	amount: Joi.number().optional(),
-	speed: Joi.string().trim().optional(),
-	latency: Joi.string().trim().optional(),
-	chipset: Joi.string().trim().optional(),
-	form_Factor: Joi.string().trim().optional(),
-	memory_Compatibility: Joi.string().trim().optional(),
-	is_atx12v: Joi.string().trim().optional(),
-	efficiency: Joi.string().trim().optional(),
-	modular: Joi.string().trim().optional(),
-	capacity: Joi.string().trim().optional(),
-	cache: Joi.string().trim().optional(),
-	flash: Joi.string().trim().optional(),
-	tbw: Joi.string().trim().optional(),
-	core_Count: Joi.number().optional(),
-	thread_Count: Joi.number().optional(),
-	base_Clock: Joi.string().trim().optional(),
-	socket: Joi.string().trim().optional(),
-	cpu_cooler: Joi.string().trim().optional(),
-	integrated_gpu: Joi.string().trim().optional(),
+	priceMin: Joi.number().optional(),
+	priceMax: Joi.number().optional(),
+	Name: Joi.string().trim().optional(),
+	Manufacturer: Joi.string().trim().optional(),
+	Image: Joi.string().optional(),
+	Image_Url: Joi.string().uri().optional(),
+	Chassis_Type: Joi.string().trim().optional(),
+	Dimensions: Joi.string().trim().optional(),
+	Color: Joi.string().trim().optional(),
+	Compatibility: Joi.string().trim().optional(),
+	Cooling_Potential: Joi.string().trim().optional(),
+	Fan_RPM: Joi.number().optional(),
+	Noise_Level: Joi.string().trim().optional(),
+	Cores: Joi.number().optional(),
+	Core_Clock: Joi.string().trim().optional(),
+	Memory: Joi.string().trim().optional(),
+	Interface: Joi.string().trim().optional(),
+	TDP: Joi.string().trim().optional(),
+	Type: Joi.string().trim().optional(),
+	Amount: Joi.number().optional(),
+	Speed: Joi.string().trim().optional(),
+	Latency: Joi.string().trim().optional(),
+	Chipset: Joi.string().trim().optional(),
+	Form_Factor: Joi.string().trim().optional(),
+	Memory_Compatibility: Joi.string().trim().optional(),
+	Is_ATX12V: Joi.string().trim().optional(),
+	Efficiency: Joi.string().trim().optional(),
+	Modular: Joi.string().trim().optional(),
+	Capacity: Joi.string().trim().optional(),
+	Cache: Joi.string().trim().optional(),
+	Flash: Joi.string().trim().optional(),
+	TBW: Joi.string().trim().optional(),
+	Core_Count: Joi.number().optional(),
+	Thread_Count: Joi.number().optional(),
+	Base_Clock: Joi.string().trim().optional(),
+	Socket: Joi.string().trim().optional(),
+	Cpu_Cooler: Joi.string().trim().optional(),
+	Integrated_GPU: Joi.string().trim().optional(),
 	strict: Joi.boolean().optional(),
 	inverted: Joi.boolean().optional()
 });
@@ -466,32 +466,32 @@ const userUpdateSchema = Joi.object({
 });
 
 const inventorySchema = Joi.object({
-	partid: Joi.number().optional(),
-	parttypeid: Joi.number().optional(),
-	modelnumber: Joi.string().trim().optional(),
-	serialnumber: Joi.string().trim().optional(),
-	available: Joi.number().optional(),
-	dateadded: Joi.string().trim().optional(),
-	additionaldetails: Joi.string().trim().optional(),
-	price: Joi.number().optional(),
-	pricerange: Joi.string().trim()
+	PartID: Joi.number().optional(),
+	PartTypeID: Joi.number().optional(),
+	ModelNumber: Joi.string().trim().optional(),
+	SerialNumber: Joi.string().trim().optional(),
+	Available: Joi.number().optional(),
+	DateAdded: Joi.string().trim().optional(),
+	AdditionalDetails: Joi.string().trim().optional(),
+	Price: Joi.number().optional(),
+	priceRange: Joi.string().trim()
 		.pattern(/^\d+-\d+$/)
 		.optional()
 		.messages({
 			"string.pattern.base": "Invalid range format format. Range must include number hyphen (-) number.",
 		}),
-	availablerange: Joi.string().trim()
+	availableRange: Joi.string().trim()
 		.pattern(/^\d+-\d+$/)
 		.optional()
 		.messages({
 			"string.pattern.base": "Invalid range format format. Range must include number hyphen (-) number.",
 		}),
-	pricemin: Joi.number().optional(),
-	availablemin: Joi.number().optional(),
-	pricemax: Joi.number().optional(),
-	availablemax: Joi.number().optional(),
-	name: Joi.string().trim().optional(),
-	manufacturer: Joi.string().trim().optional(),
+	priceMin: Joi.number().optional(),
+	availableMin: Joi.number().optional(),
+	priceMax: Joi.number().optional(),
+	availableMax: Joi.number().optional(),
+	Name: Joi.string().trim().optional(),
+	Manufacturer: Joi.string().trim().optional(),
 	strict: Joi.boolean().optional(),
 	inverted: Joi.boolean().optional()
 
@@ -510,7 +510,6 @@ const contentSchemaMin = Joi.object({
 	last_edited_by: Joi.number().optional(),
 	created_at: Joi.date().optional(),
 	modified_at: Joi.date().optional(),
-	status: Joi.string().trim().max(10).optional(),
 	strict: Joi.boolean().optional(),
 	inverted: Joi.boolean().optional()
 
@@ -529,9 +528,8 @@ const contentSchema = Joi.object({
 	Last_Edited_By: Joi.number().optional(),
 	Created_At: Joi.date().optional(),
 	Modified_At: Joi.date().optional(),
-	Status: Joi.string().trim().max(10).optional(),
-	Strict: Joi.boolean().optional(),
-	Inverted: Joi.boolean().optional()
+	strict: Joi.boolean().optional(),
+	inverted: Joi.boolean().optional()
 
 });
 
@@ -680,7 +678,7 @@ const tableSearch = (searchContext = "cpu") => {
 				currentSchema = opensearchSchema;
 			}
 			if (partName === "content") {
-				currentSchema = contentSchemaMin;
+				currentSchema = contentSchema;
 			}
 			const validationResult = Joi.attempt(searchTerms, currentSchema);
 
