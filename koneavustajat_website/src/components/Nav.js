@@ -5,9 +5,10 @@ import { Link } from "react-router-dom";
 import { AiOutlineShoppingCart } from "react-icons/ai";
 import { useSelector, useDispatch } from "react-redux";
 import { useTheme, useLanguage, useModal, useAuth } from "../utils/Contexts";
+import { useLocation } from "react-router-dom";
 
 const NavBar = ({ handleSignout }) => {
-	const [activeLink, setActiveLink] = useState("home");
+	const location = useLocation();
 	const [scrolled, setScrolled] = useState(false);
 	const [showDropdown, setShowDropdown] = useState(false);
 	const { theme, toggleTheme } = useTheme();
@@ -18,9 +19,9 @@ const NavBar = ({ handleSignout }) => {
 	const dispatch = useDispatch();
 	const cartItems = Object.values(shoppingCart);
   	const totalCartItems = cartItems.reduce((total, item) => total + (item.quantity || 1), 0);
-	console.log(totalCartItems);
 
 	useEffect(() => {
+		console.log("location: ", location.pathname);
 		const onScroll = () => {
 			if (window.scrollY > 50) {
 				setScrolled(true);
@@ -43,10 +44,6 @@ const NavBar = ({ handleSignout }) => {
 		);
 	};
 
-	const onUpdateActiveLink = (value) => {
-		setActiveLink(value);
-	};
-
 	// Async function for signout
 	const handleLogout = async () => {
 		try {
@@ -67,7 +64,7 @@ const NavBar = ({ handleSignout }) => {
 	const shoppingCartNavbar = () => {
 		if (totalCartItems || totalCartItems > 0) {
 			return (
-				<Nav.Link as={Link} to="/shoppingcart" className={activeLink === "/shoppingcart" ? "active-navbar-link" : "navbar-link"} onClick={() => onUpdateActiveLink("/shoppingcart")}>
+				<Nav.Link as={Link} to="/shoppingcart" className={location.pathname === "/shoppingcart" ? "active-navbar-link" : "navbar-link"}>
 					View Cart <AiOutlineShoppingCart /> {totalCartItems}
 				</Nav.Link>
 			);
@@ -81,7 +78,7 @@ const NavBar = ({ handleSignout }) => {
 		if (currentUser && currentUser.RoleID === 4) {
 			adminCheck = (
 				<>
-					<Nav.Link as={Link} to="/admin/dashboard" className={activeLink === "/admin/dashboard" ? "active-navbar-link" : "navbar-link"} onClick={() => onUpdateActiveLink("/admin/dashboard")}>
+					<Nav.Link as={Link} to="/admin/dashboard" className={location.pathname === "/admin/dashboard" ? "active-navbar-link" : "navbar-link"}>
 						Dashboard
 					</Nav.Link>
 				</>
@@ -102,10 +99,10 @@ const NavBar = ({ handleSignout }) => {
 			userCheck = (
 				// If false do this
 				<>
-					<Nav.Link as={Link} to="/signin" className={activeLink === "/signin" ? "active-navbar-link" : "navbar-link"} onClick={() => onUpdateActiveLink("/signin")}>
+					<Nav.Link as={Link} to="/signin" className={location.pathname === "/signin" ? "active-navbar-link" : "navbar-link"}>
 						Not signed in
 					</Nav.Link>
-					<Nav.Link as={Link} to="/signup" className={activeLink === "/signup" ? "active-navbar-link" : "navbar-link"} onClick={() => onUpdateActiveLink("/signup")}>
+					<Nav.Link as={Link} to="/signup" className={location.pathname === "/signup" ? "active-navbar-link" : "navbar-link"}>
 						Signup
 					</Nav.Link>
 				</>
@@ -122,7 +119,7 @@ const NavBar = ({ handleSignout }) => {
 	return (
 		<Navbar expand="md" className={scrolled ? "scrolled" : ""}>
 			<Container>
-				<Navbar.Brand as={Link} to="/" onClick={() => onUpdateActiveLink("/")}>
+				<Navbar.Brand as={Link} to="/">
 					KoneAvustajat
 				</Navbar.Brand>
 				<Button className="themeSwitcher" onClick={toggleTheme}>
@@ -132,10 +129,11 @@ const NavBar = ({ handleSignout }) => {
 					Lang: {language}
 				</Button>
 				{currentUser && currentUser.RoleID === 4 && (
+					<p></p>
+ 				)}
 					<Button variant="primary" onClick={handleOpenModal}>
 						Manage Content
 					</Button>
- 				)}
 				<Navbar.Toggle aria-controls="basic-navbar-nav">
 					<span className="navbar-toggler-icon"></span>
 				</Navbar.Toggle>
@@ -144,16 +142,14 @@ const NavBar = ({ handleSignout }) => {
 						<Nav.Link
 							as={Link}
 							to="/"
-							className={activeLink === "/" ? "active-navbar-link" : "navbar-link"}
-							onClick={() => onUpdateActiveLink("/")}>
+							className={location.pathname === "/" ? "active-navbar-link" : "navbar-link"}>
 							Home
 						</Nav.Link>
 
 						<NavDropdown
 							title={
 								<Link
-									to="/computerwizard"
-									onClick={() => onUpdateActiveLink("/computerwizard")}>
+									to="/computerwizard">
 									Computer Wizard
 								</Link>
 							}
@@ -163,7 +159,7 @@ const NavBar = ({ handleSignout }) => {
 									"/computerwizard/browse",
 									"/computerwizard/wizard",
 									"/computerwizard/build"
-								].includes(activeLink)
+								].includes(location.pathname)
 									? "active-navbar-link"
 									: "navbar-link"
 							}
@@ -176,35 +172,31 @@ const NavBar = ({ handleSignout }) => {
 								as={Link}
 								to="/computerwizard/browse"
 								className={
-									activeLink === "/computerwizard/browse" ? "active-navbar-link" : "navbar-link"
-								}
-								onClick={() => onUpdateActiveLink("/computerwizard/browse")}>
+									location.pathname === "/computerwizard/browse" ? "active-navbar-link" : "navbar-link"
+								}>
 								Browse
 							</NavDropdown.Item>
 							<NavDropdown.Item
 								as={Link}
 								to="/computerwizard/wizard"
 								className={
-									activeLink === "/computerwizard/wizard" ? "active-navbar-link" : "navbar-link"
-								}
-								onClick={() => onUpdateActiveLink("/computerwizard/wizard")}>
+									location.pathname === "/computerwizard/wizard" ? "active-navbar-link" : "navbar-link"
+								}>
 								Wizard
 							</NavDropdown.Item>
 							<NavDropdown.Item
 								as={Link}
 								to="/computerwizard/build"
 								className={
-									activeLink === "/computerwizard/build" ? "active-navbar-link" : "navbar-link"
-								}
-								onClick={() => onUpdateActiveLink("/computerwizard/build")}>
+									location.pathname === "/computerwizard/build" ? "active-navbar-link" : "navbar-link"
+								}>
 								Build
 							</NavDropdown.Item>
 						</NavDropdown>
 						<Nav.Link
 							as={Link}
 							to="/usedparts"
-							className={activeLink === "/usedparts" ? "active-navbar-link" : "navbar-link"}
-							onClick={() => onUpdateActiveLink("/usedparts")}>
+							className={location.pathname === "/usedparts" ? "active-navbar-link" : "navbar-link"}>
 							Used parts
 						</Nav.Link>
 					</Nav>
