@@ -20,7 +20,17 @@ export const checkAllowedTableNames = async (routeTypeArr, tableName) => {
     for (let route in allRoutes) {
         if (transformRouteTypes.includes(route.toLowerCase())) {
             for (let r of allRoutes[route]) {
-                const path = r.path.toLowerCase().includes("/api/") ? r.path.split("/api/")[1] : r.path;
+                let path = r.path.toLowerCase();
+
+                // Remove "/api/" prefix if present
+                path = path.includes("/api/") ? path.split("/api/")[1] : path;
+
+                // Remove dynamic parts (e.g., ":id")
+                path = path
+                    .split("/")
+                    .filter((segment) => !segment.startsWith(":"))
+                    .join("/");
+
                 allowedTableNamesArray.push(path);
             }
         }

@@ -114,7 +114,7 @@ export const updateDynamicData = async (formFields, tableName, partName, id) => 
 
 		if (formFields && typeof formFields === "object" && !Array.isArray(formFields)) formFields = JSON.stringify(formFields);
 		// api call to register a new user
-		const response = await fetch(`http://localhost:4000/api/${tableName}/update/${partName}/${id}`, {
+		const response = await fetch(`http://localhost:4000/api/${tableName}${tableName.includes("/update") ? "" : "/update"}/${partName}/${id}`, {
 			method: "PATCH",
 			headers: {
 				"Content-Type": "application/json"
@@ -134,7 +134,7 @@ export const updateDynamicData = async (formFields, tableName, partName, id) => 
 
 		return data;
 	} catch (error) {
-		console.error("Error adding user:", error);
+		console.error("Error updating data:", error);
 		if (error.message) alert(error.message);
 
 	}
@@ -316,7 +316,7 @@ export const fetchContent = async (identifiers) => {
 			.filter(value => value !== undefined && value !== "");
 		const contentIdentifier = identifierValues.join(".");
 
-		const correctSearchTerms = await checkSearchTerms({site_identifier: contentIdentifier});
+		const correctSearchTerms = await checkSearchTerms({Site_Identifier: contentIdentifier});
 
 		const query = await buildQuery(correctSearchTerms, true);
 		
