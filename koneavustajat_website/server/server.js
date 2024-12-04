@@ -4084,7 +4084,7 @@ app.post("/api/text-content/add", formFieldsValidator(contentSchema), authentica
 			return res.status(400).json({ message: "All required form fields were not provided" });
 		}
 
-		let insertQuery = `INSERT INTO content SET`;
+		let insertQuery = `INSERT INTO content SET `;
 		let queryParams = [];
 
 		// More dynamic way of updating content
@@ -4102,7 +4102,7 @@ app.post("/api/text-content/add", formFieldsValidator(contentSchema), authentica
 			insertQuery = insertQuery.slice(0, -2);
 		}
 
-		insertQuery += "Added_By = ?";
+		insertQuery += ", Added_By = ?";
 		queryParams.push(parseInt(userId));
 
 		const [result] = await promisePool.query(insertQuery, queryParams);
