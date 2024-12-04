@@ -142,10 +142,17 @@ export const ContentProvider = ({ fetchContent, children }) => {
 };
 
 export const ModalProvider = ({ children }) => {
+	const { currentUser } = useAuth();
 	const [isOpen, setIsOpen] = useState(false);
 	const [modalContent, setModalContent] = useState(null);
 
 	const openModal = (content) => {
+        if (!currentUser || currentUser.RoleID !== 4) {
+			setModalContent(null);
+			setIsOpen(false);
+            console.warn("Unauthorized attempt to open modal.");
+            return;
+        }
 		setModalContent(content);
 		setIsOpen(true);
 	};
