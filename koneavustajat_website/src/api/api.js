@@ -424,9 +424,13 @@ export const fetchContentIdentifiers = async () => {
 
 export const addContent = async (formFields) => {
 	try {
+
+		if (formFields && formFields.Identifiers) {
+			formFields.Site_Identifier = `${formFields.Identifiers.page}.${formFields.Identifiers.section}.${formFields.Identifiers.specific}`;
+		}
+
 		formFields = {
 			Site_Identifier: formFields.Site_Identifier,
-			Identifiers: { page: formFields.Identifiers.page, section: formFields.Identifiers.section, specific: formFields.Identifiers.specific },
 			Language: formFields.Language,
 			Version: formFields.Version,
 			Main_Tag: formFields.Main_Tag,
@@ -456,7 +460,7 @@ export const addContent = async (formFields) => {
 
 		return data;
 	} catch (error) {
-		console.error("Error while fetching build:", error);
+		console.error("Error while adding content:", error);
 	}
 };
 

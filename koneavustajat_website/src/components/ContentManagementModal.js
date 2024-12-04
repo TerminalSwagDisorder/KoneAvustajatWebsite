@@ -15,7 +15,8 @@ const ContentManagementModal = ({ fetchWholeContent, fetchContentIdentifiers, ad
 		Identifiers: { page: "", section: "", specific: "" },
 		Main_Tag: "p",
 		Content_Text: "",
-		Content_Type: "site_text"
+		Content_Type: "site_text", 
+		Status: ""
 	});
 	const [availableIdentifiers, setAvailableIdentifiers] = useState([]);
 	const [availableLanguages, setAvailableLanguages] = useState([]);
@@ -24,9 +25,7 @@ const ContentManagementModal = ({ fetchWholeContent, fetchContentIdentifiers, ad
 	const [wholeContent, setWholeContent] = useState([]);
 
 	useEffect(() => {
-		if (mode === "update") {
-			fetchIdentifiers();
-		}
+		fetchIdentifiers();
 		if (mode === "add") {
 			addMode();
 			/*
@@ -54,7 +53,8 @@ const ContentManagementModal = ({ fetchWholeContent, fetchContentIdentifiers, ad
 			Identifiers: { page: location.pathname === "/" ? "home" : location.pathname.slice(1), section: "", specific: "" },
 			Main_Tag: "p",
 			Content_Text: "",
-			Content_Type: "site_text",
+			Content_Type: "site_text", 
+			Status: "",
 		});
 		setWarning("");
 	};
@@ -104,6 +104,11 @@ const ContentManagementModal = ({ fetchWholeContent, fetchContentIdentifiers, ad
 					[key]: event.target.value,
 				},
 			}));
+		} else if (event.target.name.includes("Status")) {
+			setFormFields((prev) => ({
+				...prev,
+				[event.target.name]: event.target.checked ? "published" : "draft",
+			}));
 		} else {
 			setFormFields((prev) => ({
 				...prev,
@@ -138,7 +143,8 @@ const ContentManagementModal = ({ fetchWholeContent, fetchContentIdentifiers, ad
 			Identifiers: { page: "", section: "", specific: "" },
 			Main_Tag: "p",
 			Content_Text: "",
-			Content_Type: "site_text",
+			Content_Type: "site_text", 
+			Status: "",
 		});
 		setWarning("");
 	};*/
@@ -150,7 +156,8 @@ const ContentManagementModal = ({ fetchWholeContent, fetchContentIdentifiers, ad
 			Identifiers: { page: location.pathname === "/" ? "home" : location.pathname.slice(1), section: "", specific: "" },
 			Main_Tag: "p",
 			Content_Text: "",
-			Content_Type: "site_text",
+			Content_Type: "site_text", 
+			Status: "",
 		});
 		setWarning("");
 		setWholeContent([]);
@@ -162,8 +169,16 @@ const ContentManagementModal = ({ fetchWholeContent, fetchContentIdentifiers, ad
 			if (mode === "add") {
 				const success = await addContent(formFields);
 				if (success) {
+					console.log(success.message);
 					console.log(success);
-					alert(success.message);
+					closeModal();
+					setFormFields({
+						Site_Identifier: "",
+						Identifiers: { page: "", section: "", specific: "" },
+						Main_Tag: "p",
+						Content_Text: "",
+						Content_Type: "site_text", 
+						Status: ""})
 				}
 			}
 
@@ -176,12 +191,19 @@ const ContentManagementModal = ({ fetchWholeContent, fetchContentIdentifiers, ad
 				const success = await updateContent(formFields);
 				if (success) {
 					console.log(success);
-					alert(success);
+					alert(success.message);
 					if (identifiers[0].startsWith(location.pathname === "/" ? "home" : location.pathname.slice(1))) {
 						await fetchPageContent({ page: identifiers[0] });
 					}
 
 					closeModal();
+					setFormFields({
+						Site_Identifier: "",
+						Identifiers: { page: "", section: "", specific: "" },
+						Main_Tag: "p",
+						Content_Text: "",
+						Content_Type: "site_text", 
+						Status: ""})
 				}
 			}
 			
@@ -261,6 +283,15 @@ const ContentManagementModal = ({ fetchWholeContent, fetchContentIdentifiers, ad
 							/>
 						</Form.Group>
 					))}
+					<Form.Group className="mb-3">
+						<Form.Check
+							onChange={handleChange}
+							checked={formFields.Status === "published"}
+							type="checkbox"
+							name="Status"
+							label="Publish"
+						/>
+					</Form.Group>
 				</Form>
 			</Modal.Body>
 			<Modal.Footer>
