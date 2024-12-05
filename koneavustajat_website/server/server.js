@@ -530,7 +530,17 @@ const contentSchema = Joi.object({
 	Modified_At: Joi.date().optional(),
 	strict: Joi.boolean().optional(),
 	inverted: Joi.boolean().optional()
+});
 
+const addressSchema = Joi.object({
+	AddressID: Joi.number().optional(),
+	CustomerID: Joi.number().optional(),
+	AddressTypeID: Joi.number().optional(),
+	Street: Joi.string().trim().max(100).optional(),
+	City: Joi.string().trim().max(100).optional(),
+	State: Joi.string().trim().max(100).optional(),
+	PostalCode: Joi.string().trim().max(20).optional(),
+	Country: Joi.string().trim().max(100).optional()
 });
 
 // Validators & searches
@@ -679,6 +689,9 @@ const tableSearch = (searchContext = "cpu") => {
 			}
 			if (partName === "content") {
 				currentSchema = contentSchema;
+			}
+			if (partName === "address") {
+				currentSchema = addressSchema;
 			}
 			const validationResult = Joi.attempt(searchTerms, currentSchema);
 
@@ -3136,8 +3149,10 @@ app.post("/api/users/signup", formFieldsValidator(userSchema), userFieldsValidat
 
 		// Hash password & insert data into db
 		const hashedPassword = await bcrypt.hash(Password, 10);
-		const insertSql = "INSERT INTO users (Name, Email, Password) VALUES (?, ?, ?)";
-		const [result] = await promisePool.query(insertSql, [Name, Email, hashedPassword]);
+		const insertSql = "INSERT INTO users (Name, Email, Password, RoleID) VALUES (?, ?, ?, ?)";
+		const [result] = await promisePool.query(insertSql, [Name, Email, hashedPassword, 2]); // 2 = Customer
+		const insertCustomer = "INSERT INTO customers (UserID) VALUES (?)";
+		const [customer] = await promisePool.query(insertCustomer, result.insertId);
 		return res.status(200).json({ message: "User registered successfully", id: result.insertId });
 	} catch (error) {
 		const [status, message] = handleServerError(error);
@@ -3417,7 +3432,7 @@ app.patch("/api/part/update/:part/:id", authenticateSession, idValidator, tableV
 					if (jsonFormFields.hasOwnProperty(key)) {
 						if (jsonFormFields[key] !== "") {
 							updateQuery += key.charAt(0).toUpperCase() + key.slice(1) + " = ?, "; // Since the first letters are capitalized in the db
-							queryParams.push(jsonFormFields[key]);
+							queryParams.push(jsonFormFields[key]);	
 						}
 					}
 				}
@@ -3556,7 +3571,7 @@ app.get("/api/inventory", routePagination, tableSearch("inventory"), async (req,
 	}
 });
 
-app.get("/api/inventory/id", idValidator, async (req, res) => {
+app.get("/api/inventory/:id", idValidator, async (req, res) => {
 	console.log("API search parts by id accessed");
 
 	const id = req.validatedId;
@@ -3604,7 +3619,7 @@ app.get("/api/orders", routePagination, async (req, res) => {
 	}
 });
 
-app.get("/api/orders/id", idValidator, async (req, res) => {
+app.get("/api/orders/:id", idValidator, async (req, res) => {
 	console.log("API search parts by id accessed");
 
 	const id = req.validatedId;
@@ -3634,8 +3649,9 @@ app.get("/api/users/customers", routePagination, async (req, res) => {
 	console.log("API inventory accessed");
 
 	const { items, offset } = req.pagination;
+	const sql = `SELECT c.CustomerID AS CustomerID, c.*, u.*, a.AddressID, a.AddressTypeID, a.Street, a.City, a.State, a.PostalCode, a.Country, o.OrderID, o.OrderTypeID, o.ReceiptID ,o.OrderDate, o.Status, o.TotalPrice, o.Items, o.PaymentMethod, o.PaymentStatus FROM customers c LEFT JOIN users u ON c.UserID = u.UserID LEFT JOIN addresses a ON c.CustomerID = a.CustomerID LEFT JOIN orders o ON c.CustomerID = o.CustomerID LIMIT ? OFFSET ?`;	
+	//const sql = `SELECT c.*, u.*, a.* FROM customers c LEFT JOIN users u ON c.UserID = u.UserID LEFT JOIN addresses a ON c.CustomerID = a.CustomerID LIMIT ? OFFSET ?`;
 
-	const sql = `SELECT c.*, u.*, a.* FROM customers c JOIN users u ON c.UserID = u.UserID JOIN addresses a ON c.CustomerID = a.CustomerID LIMIT ? OFFSET ?`;
 	try {
 		const [customers] = await promisePool.query(sql, [items, offset]);
 
@@ -3655,12 +3671,21 @@ app.get("/api/users/customers", routePagination, async (req, res) => {
 				State,
 				PostalCode,
 				Country,
+				OrderID,
+				OrderTypeID,
+				ReceiptID,
+				OrderDate,
+				Status,
+				TotalPrice,
+				Items,
+				PaymentMethod,
+				PaymentStatus,
 				...customerData
 			} = item;
 			return {
-				...customerData,
-				UserData: { Name, Gender, ProfileImage, RoleID, Email, Password },
-				AddressData: { AddressID, AddressTypeID, Street, City, State, PostalCode, Country }
+				UserData: { ...customerData, Name, Gender, ProfileImage, RoleID, Email, Password },
+				AddressData: { AddressID, AddressTypeID, Street, City, State, PostalCode, Country },
+				OrderData: {OrderID, OrderTypeID, ReceiptID, OrderDate, Status, TotalPrice, Items, PaymentMethod, PaymentStatus }
 			};
 		});
 
@@ -3687,12 +3712,13 @@ app.get("/api/users/customers", routePagination, async (req, res) => {
 	}
 });
 
-app.get("/api/users/customers/id", idValidator, async (req, res) => {
+app.get("/api/users/customers/:id", idValidator, async (req, res) => {
 	console.log("API search parts by id accessed");
 
 	const id = req.validatedId;
+	const sql = `SELECT c.CustomerID AS CustomerID, c.*, u.*, a.AddressID, a.AddressTypeID, a.Street, a.City, a.State, a.PostalCode, a.Country, o.OrderID, o.OrderTypeID, o.ReceiptID ,o.OrderDate, o.Status, o.TotalPrice, o.Items, o.PaymentMethod, o.PaymentStatus FROM customers c LEFT JOIN users u ON c.UserID = u.UserID LEFT JOIN addresses a ON c.CustomerID = a.CustomerID LEFT JOIN orders o ON c.CustomerID = o.CustomerID LIMIT ? OFFSET ? WHERE c.CustomerID = ?`;
+	//const sql = `SELECT c.*, u.*, a.* FROM customers c LEFT JOIN users u ON c.UserID = u.UserID LEFT JOIN addresses a ON c.CustomerID = a.CustomerID WHERE c.CustomerID = ? `;
 
-	const sql = `SELECT c.*, u.*, a.* FROM customers c JOIN users u ON c.UserID = u.UserID JOIN addresses a ON c.CustomerID = a.CustomerID WHERE c.CustomerID = ? `;
 	try {
 		const [customers] = await promisePool.query(sql, [id]);
 		if (!customers.length) {
@@ -3714,11 +3740,10 @@ app.get("/api/users/customers/id", idValidator, async (req, res) => {
 				State,
 				PostalCode,
 				Country,
-				...customerData
+				CustomerID,
 			} = item;
 			return {
-				...customerData,
-				UserData: { Name, Gender, ProfileImage, RoleID, Email, Password },
+				UserData: { CustomerID, Name, Gender, ProfileImage, RoleID, Email, Password },
 				AddressData: { AddressID, AddressTypeID, Street, City, State, PostalCode, Country }
 			};
 		});
@@ -3747,7 +3772,7 @@ app.get("/api/users/customers/addresses", routePagination, async (req, res) => {
 	}
 });
 
-app.get("/api/users/customers/addresses/id", idValidator, async (req, res) => {
+app.get("/api/users/customers/addresses/:id", idValidator, async (req, res) => {
 	console.log("API search parts by id accessed");
 
 	const id = req.validatedId;
@@ -3765,6 +3790,98 @@ app.get("/api/users/customers/addresses/id", idValidator, async (req, res) => {
 		return res.status(status).json({ message: message });
 	}
 });
+
+app.post("/api/users/customers/addresses/add", formFieldsValidator(addressSchema), authenticateSession, async (req, res) => {
+	console.log("API add content accessed");
+
+	const userId = req.user.UserID;
+	const jsonFormFields = req.validatedForm;
+	const { CustomerID, AddressTypeID, Street, City, State, PostalCode, Country } = jsonFormFields;	
+	const allowedFields = ["AddressID", "CustomerID", "AddressTypeID", "Street", "City", "State", "PostalCode", "Country"];
+
+	try {
+		if (!Street || !City || !PostalCode || !Country) {
+			return res.status(400).json({ message: "All required form fields were not provided" });
+		}
+
+		let insertQuery = `INSERT INTO addresses SET `;
+		let queryParams = [];
+
+		// More dynamic way of updating content
+		for (const key in jsonFormFields) {
+			console.log(key);
+			if (allowedFields.includes(key)) {
+				if (jsonFormFields[key] !== "") {
+					insertQuery += key.charAt(0).toUpperCase() + key.slice(1) + " = ?, ";
+					queryParams.push(jsonFormFields[key]);
+				}
+			}
+		}
+
+		if (queryParams.length > 0) {
+			insertQuery = insertQuery.slice(0, -2);
+		}
+
+		insertQuery += ", CustomerID = ?";
+		queryParams.push(parseInt(userId));
+
+		const [result] = await promisePool.query(insertQuery, queryParams);
+		return res.status(200).json({ message: "Added address successfully", id: result.insertId });
+	} catch (error) {
+		const [status, message] = handleServerError(error);
+		return res.status(status).json({ message: message });
+	}
+});
+
+
+app.patch("/api/users/customers/addresses/update", authenticateSession, formFieldsValidator(addressSchema), async (req, res) => {
+	console.log("API patch content accessed");
+
+	const userId = req.user.UserID;
+	const jsonFormFields = req.validatedForm;
+	const { AddressTypeID, Street, City, State, PostalCode, Country } = jsonFormFields;	
+	const allowedFields = ["AddressID", "CustomerID", "AddressTypeID", "Street", "City", "State", "PostalCode", "Country"];
+
+	try {
+		// SQL query to update part data
+		// updateQuery allows for multiple fields to be updated simultaneously
+		let updateQuery = `UPDATE addresses SET `;
+		let queryParams = [];
+
+		// More dynamic way of updating content
+		for (const key in jsonFormFields) {
+			console.log(key);
+			if (allowedFields.includes(key)) {
+				if (jsonFormFields.hasOwnProperty(key)) {
+					if (jsonFormFields[key] !== "") {
+						updateQuery += key.charAt(0).toUpperCase() + key.slice(1) + " = ?, "; // Since the first letters are capitalized in the db
+						queryParams.push(jsonFormFields[key]);
+					}
+				}
+			}
+		}
+
+		// Remove trailing comma and space
+		if (queryParams.length > 0) {
+			updateQuery = updateQuery.slice(0, -2);
+		}
+
+		updateQuery += " WHERE CustomerID = ?";
+		queryParams.push(parseInt(userId));
+
+		const [result] = await promisePool.query(updateQuery, queryParams);
+		if (result.affectedRows === 0) {
+			return res.status(404).json({ message: "Item not found" });
+		}
+
+		return res.status(200).json({ message: "Address updated successfully" });
+	} catch (error) {
+		const [status, message] = handleServerError(error);
+		return res.status(status).json({ message: message });
+
+	}
+});
+
 
 app.get("/api/text-content", routePagination, tableSearch("content"), async (req, res) => {
 	console.log("API content accessed");
