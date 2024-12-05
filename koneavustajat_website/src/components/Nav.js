@@ -129,11 +129,10 @@ const NavBar = ({ handleSignout }) => {
 					Lang: {language}
 				</Button>
 				{currentUser && currentUser.RoleID === 4 && (
-					<p></p>
- 				)}
 					<Button variant="primary" onClick={handleOpenModal}>
 						Manage Content
 					</Button>
+ 				)}
 				<Navbar.Toggle aria-controls="basic-navbar-nav">
 					<span className="navbar-toggler-icon"></span>
 				</Navbar.Toggle>

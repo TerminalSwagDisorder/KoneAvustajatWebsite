@@ -25,7 +25,6 @@ export const wizardAlgorithm = async (formFields) => {
             throw new Error(`HTTP error ${response.status}: ${data.message ? data.message : response.message}`);
         }
 
-		console.log("api data", data);
 		alert("Build fetched.");
 		return data;
 	} catch (error) {
