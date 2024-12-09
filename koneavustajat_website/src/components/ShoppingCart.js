@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useState } from "react";
 import { useSelector, useDispatch } from "react-redux";
 import { Container, Button, Image, CloseButton, ListGroup } from "react-bootstrap";
 import {
@@ -13,7 +13,7 @@ const ShoppingCart = () => {
 	const dispatch = useDispatch();
 	const cartItems = Object.values(shoppingCart);
 	const cartEntries = Object.entries(shoppingCart);
-
+	const [chosenPart, setChosenPart] = useState("");
 
 	const sortingId = (key) => parseInt(key.split('_')[1], 10);
 	const usedPartsItems = cartEntries
@@ -30,7 +30,13 @@ const ShoppingCart = () => {
 	});
 
 	const sortedItems = [...usedPartsItems, ...orderedItems];
-	console.log(orderedItems);
+
+	console.log(sortedItems.map(item => item[1].Price || item[1].totalPrice));
+
+	const totalPrice = sortedItems.map(item => item[1])
+		.filter(i => i && i.Price || i.totalPrice) // Filter out non-component entries
+		.reduce((acc, i) => acc + (parseFloat(i.Price || i.totalPrice) || 0), 0)
+	.toFixed(2);
 
 
 	const handleAddToCart = (item) => {
@@ -54,7 +60,15 @@ const ShoppingCart = () => {
 		dispatch(clearShoppingCart());
 	};
 	
-
+	const toggleChoosePart = (newChoice) => {
+		if (chosenPart === newChoice) {
+			setChosenPart("");
+		} else {
+			setChosenPart(newChoice);
+		}
+	};
+	
+	const formatString = str => str.replace(/_/g, " ").replace(/([a-z])([A-Z])/g, "$1 $2").toLowerCase().replace(/^./, c => c.toUpperCase());
 
 	const renderNestedObject = (nestedObj) => {
 		return (
@@ -81,11 +95,13 @@ const ShoppingCart = () => {
 				<ListGroup className="parts-details">
 					{sortedItems.map(([partKey, partVal]) => (
 						<ListGroup key={partKey} className="mb-4">
-							{Object.keys(partVal).map((key, idx) => (
-								<ListGroup.Item key={idx}>
+							<ListGroup.Item onClick={() => toggleChoosePart(partVal.Name)}>{formatString(partKey)}: <b>{partVal.Name}</b> | <b>{parseFloat(partVal.Price || partVal.totalPrice).toFixed(2)}</b>€ | <b># {partVal.quantity || 1}</b></ListGroup.Item>
+								{Object.keys(partVal).map((key, idx) => chosenPart === partVal.Name && (
+								<ListGroup.Item onClick={() => toggleChoosePart(partVal.Name)} key={idx}>
 									<span>
-										<b>{key}</b>:{" "}
+										<b>{formatString(key)}</b>:{" "}
 									</span>
+						
 									{key === "Image" ? (
 										<Image
 											src={process.env.PUBLIC_URL + "/product_images/" + partVal[key]}
@@ -97,6 +113,7 @@ const ShoppingCart = () => {
 										<a href={partVal[key]} target="_blank" rel="noopener noreferrer">
 											{partVal[key]}
 										</a>
+									//) : partVal.table === "completedBuild" ? (
 									) : typeof partVal[key] === "object" && partVal[key] !== null ? (
 										renderNestedObject(partVal[key])
 									) : (
@@ -104,14 +121,25 @@ const ShoppingCart = () => {
 									)}
 								</ListGroup.Item>
 							))}
-							<Button className="user-select-button" onClick={() => handleRemoveOneFromCart(partKey)}>
-								Remove 1 {partKey} from cart
-							</Button>
+							{partKey !== "completedBuild" && (
+								<Button className="user-select-button" onClick={() => handleRemoveOneFromCart(partKey)}>
+									Remove 1 "{formatString(partKey)}" from cart
+								</Button>
+							)}
 							<Button className="user-select-button" onClick={() => handleRemoveFromCart(partKey)}>
-								Remove all {partKey} from cart
+								Remove all "{formatString(partKey)}" from cart
 							</Button>
 						</ListGroup>
 					))}
+                    <ListGroup.Item>
+                        {(totalPrice && totalPrice > 0) ? (
+                            <p>
+                                Total price: <b>{totalPrice}</b> €
+                            </p>
+                        ) : (
+                            <p>No price could be calculated!</p>
+                        )}
+                    </ListGroup.Item>
 				</ListGroup>
 			);
 		} else {
@@ -129,6 +157,7 @@ const ShoppingCart = () => {
 			<br />
 			<br />
 			{renderShoppingCartItems()}
+			
 		</div>
 	);
 };
