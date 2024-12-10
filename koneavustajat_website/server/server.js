@@ -443,16 +443,15 @@ const userUpdateSchema = Joi.object({
 		.optional()
 		.messages({
 			"string.pattern.base": "Invalid password format. Password must be at least 9 characters long, include 1 capital letter, and 1 number.",
-			"string.empty": "Password cannot be empty",
-			"any.required": "Password is required"
+			"string.empty": "Password cannot be empty"
 		}),
 	currentPassword: Joi.string().trim()
 		.pattern(/^(?=.*[A-Z])(?=.*\d)[A-Za-z\d]{9,}$/)
 		.required()
 		.messages({
-			"string.pattern.base": "Invalid password format. Password must be at least 9 characters long, include 1 capital letter, and 1 number.",
-			"string.empty": "Password cannot be empty",
-			"any.required": "Password is required"
+			"string.pattern.base": "Invalid password format for current password.",
+			"string.empty": "Current password cannot be empty",
+			"any.required": "Current password is required"
 		}),
 	Gender: Joi.string().trim().valid("male", "female").optional().messages({
 		"string.base": "Gender must be a string",

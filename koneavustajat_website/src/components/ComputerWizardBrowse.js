@@ -263,7 +263,7 @@ const ComputerWizardBrowse = ({ fetchDynamicData, fetchDataAmount, updateDynamic
 		return (
 			<>
 				<Dropdown>
-					<Dropdown.Toggle variant="success" ID="dropdown-basic">
+					<Dropdown.Toggle variant="success" id="dropdown-basic">
 						{partName.value + " chosen" || "Choose Part type"}
 					</Dropdown.Toggle>
 

@@ -41,16 +41,16 @@ const Profile = ({ handleCredentialChange, handleSignout }) => {
 			[event.target.name]: event.target.value
 		}));
 
-		if (event.target.name === "email") {
+		if (event.target.name === "Email") {
 			setEmailValid(emailRegex.test(event.target.value));
 		}
 
-		if (event.target.name === "password") {
+		if (event.target.name === "Password") {
 			setPasswordValid(passwordRegex.test(event.target.value));
 		}
 	};
 
-	console.log(currentUser);
+
 	const closeForm = () => {
 		setCurrentOperation("");
 		setFormFields({});
@@ -68,27 +68,39 @@ const Profile = ({ handleCredentialChange, handleSignout }) => {
 		</Tooltip>
 	);
 
-	const renderUserForm = () => {
-		if (currentOperation === "edit") {
-			if (currentUser.role === "user") {
-				// For modifying existing users
-				return (
-					<div className="d-flex justify-content-center align-items-center">
-						<Form onSubmit={handleSubmit}>
-							<CloseButton onClick={closeForm} />
-							<Form.Group className="mb-3">
+const renderUserForm = () => {
+		if (currentUser && currentOperation === "edit") {
+			return (
+				<div id="partform" className="partform d-flex justify-content-center align-items-center">
+					<Form onSubmit={handleSubmit} className="adminForm border rounded shadow p-4 bg-opaque" style={{ wIDth: "400px" }}>
+						<div className="d-flex justify-content-end mb-3">
+							<CloseButton onClick={() => closeForm()} />
+						</div>
+						<h4 className=" mb-3">Edit profile</h4>
+						<Form.Group className="mb-3">
 								<Form.Control
 									type="text"
 									placeholder="Enter new name"
-									name="name"
+									name="Name"
 									onChange={handleInputChange}
 								/>
+							</Form.Group>
+							<Form.Group className="mb-3">
+								<Form.Select name="Gender" onChange={handleInputChange}>
+									<option value="">Select new gender</option>
+									<option value="male">
+										Male
+									</option>
+									<option value="female">
+										Female
+									</option>
+								</Form.Select>
 							</Form.Group>
 							<Form.Group className="mb-3">
 								<Form.Control
 									type="email"
 									placeholder="Enter new email"
-									name="email"
+									name="Email"
 									onChange={handleInputChange}
 									className={emailValid ? "valid-input" : "invalid-input"}
 								/>
@@ -98,7 +110,7 @@ const Profile = ({ handleCredentialChange, handleSignout }) => {
 									<Form.Control
 										type="password"
 										placeholder="Enter new password"
-										name="password"
+										name="Password"
 										onChange={handleInputChange}
 										className={passwordValid ? "valid-input" : "invalid-input"}
 									/>
@@ -113,61 +125,12 @@ const Profile = ({ handleCredentialChange, handleSignout }) => {
 									required
 								/>
 							</Form.Group>
-							<Button variant="primary" type="submit">
-								Change credentials
-							</Button>
-						</Form>
-					</div>
-				);
-			} else if (currentUser.role !== "user") {
-				return (
-					<div className="d-flex justify-content-center align-items-center">
-						<Form onSubmit={handleSubmit}>
-							<CloseButton onClick={closeForm} />
-							<Form.Group className="mb-3">
-								<Form.Control
-									type="text"
-									placeholder="Enter new name"
-									name="name"
-									onChange={handleInputChange}
-								/>
-							</Form.Group>
-							<Form.Group className="mb-3">
-								<Form.Control
-									type="email"
-									placeholder="Enter new email"
-									name="email"
-									onChange={handleInputChange}
-									className={emailValid ? "valid-input" : "invalid-input"}
-								/>
-							</Form.Group>
-							<Form.Group className="mb-3">
-								<OverlayTrigger placement="right" delay={{ hide: 400 }} overlay={renderTooltip}>
-									<Form.Control
-										type="password"
-										placeholder="Enter new password"
-										name="password"
-										onChange={handleInputChange}
-										className={passwordValid ? "valid-input" : "invalid-input"}
-									/>
-								</OverlayTrigger>
-							</Form.Group>
-							<Form.Group className="mb-3">
-								<Form.Control
-									type="password"
-									placeholder="Enter current password"
-									name="currentPassword"
-									onChange={handleInputChange}
-									required
-								/>
-							</Form.Group>
-							<Button variant="primary" type="submit">
-								Change credentials
-							</Button>
-						</Form>
-					</div>
-				);
-			}
+						<Button variant="primary" type="submit">
+							Change credentials
+						</Button>
+					</Form>
+				</div>
+			);
 		} else {
 			return (
 				<div style={{ textAlign: "center" }} className="userCredentialChange">
@@ -177,7 +140,7 @@ const Profile = ({ handleCredentialChange, handleSignout }) => {
 				</div>
 			);
 		}
-	};
+	};	
 
 	const renderUserData = () => {
 		if (currentUser) {
@@ -221,25 +184,24 @@ const Profile = ({ handleCredentialChange, handleSignout }) => {
 	// Function for when the user submits the sign in form
 	const handleSubmit = async (event) => {
 		event.preventDefault();
-		const newName = event.target.name.value;
-		const newEmail = event.target.email.value;
-		const newPassword = event.target.password.value;
 
-		const currentPassword = event.target.currentPassword.value;
+		const fieldsToChange = Object.entries(formFields).filter(([key, value]) => value && key !== "currentPassword");
+		console.log(fieldsToChange);
+		console.log(fieldsToChange.length);
 
 		// Check if any field is filled
-		if (!newName && !newEmail && !newPassword) {
+		if (fieldsToChange.length === 0) {
 			alert("No credentials entered!");
 			return;
 		}
 
 		// Check for changes in name and email
-		if (newName === currentUser.Name || newEmail === currentUser.Email) {
+		if (formFields.Name === currentUser.Name || formFields.Email === currentUser.Email) {
 			alert("You cannot use the same credentials!");
 			return;
 		}
 
-		if (!currentPassword) {
+		if (!formFields.currentPassword) {
 			alert("You must enter your current password!");
 		}
 
@@ -248,9 +210,6 @@ const Profile = ({ handleCredentialChange, handleSignout }) => {
 			if (success) {
 				await refreshProfileData();
 				closeForm();
-				setFormFields({});
-				setEmailValid(false);
-				setPasswordValid(false);
 			}
 		} catch (error) {
 			console.error("Error updating credentials:", error);
