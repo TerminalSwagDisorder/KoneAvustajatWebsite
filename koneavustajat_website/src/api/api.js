@@ -655,16 +655,18 @@ export const refreshProfile = async () => {
 export const handleCredentialChange = async (event, formFields) => {
     event.preventDefault();
     try {
-		if (formFields.currentPassword === "" || formFields.currentPassword === undefined) throw new Error("Current password is required when submitting new profile info!");
-		if (formFields && typeof formFields === "object" && !Array.isArray(formFields)) formFields = JSON.stringify(formFields);
+		const formData = new FormData();
 
+		for (const [key, value] of Object.entries(formFields)) {
+			if (value) formData.append(key, value);
+		}
+		
+		if (formFields.currentPassword === "" || formFields.currentPassword === undefined) throw new Error("Current password is required when submitting new profile info!");
+		
 		const response = await fetch("http://localhost:4000/api/profile", {
 				method: "PATCH",
-				headers: {
-					"Content-Type": "application/json"
-				},
 				credentials: "include", // Important, because we're using cookies
-				body: JSON.stringify({ formFields }),
+				body: formData,
 			});
 
 		const data = await response.json();

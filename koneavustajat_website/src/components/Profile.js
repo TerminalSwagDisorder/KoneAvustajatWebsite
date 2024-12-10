@@ -38,9 +38,9 @@ const Profile = ({ handleCredentialChange, handleSignout }) => {
 	const handleInputChange = (event) => {
 		setFormFields((prevFields) => ({
 			...prevFields,
-			[event.target.name]: event.target.value
+			[event.target.name]: event.target.type === "file" ? event.target.files[0] : event.target.value
 		}));
-
+		
 		if (event.target.name === "Email") {
 			setEmailValid(emailRegex.test(event.target.value));
 		}
@@ -49,7 +49,6 @@ const Profile = ({ handleCredentialChange, handleSignout }) => {
 			setPasswordValid(passwordRegex.test(event.target.value));
 		}
 	};
-
 
 	const closeForm = () => {
 		setCurrentOperation("");
@@ -77,6 +76,10 @@ const renderUserForm = () => {
 							<CloseButton onClick={() => closeForm()} />
 						</div>
 						<h4 className=" mb-3">Edit profile</h4>
+						<Form.Group className="mb-3">
+							<Form.Label htmlFor="ProfileImage"><FaCameraRetro /> Change profile picture</Form.Label>
+							<Form.Control type="file" name="ProfileImage" accept="image/png, image/jpeg, image/gif" onChange={handleInputChange} />
+						</Form.Group>
 						<Form.Group className="mb-3">
 								<Form.Control
 									type="text"
@@ -157,8 +160,7 @@ const renderUserForm = () => {
 										{key === "ProfileImage" ? (
 											<Image
 												src={
-													process.env.PUBLIC_URL + "/profile_images/" + currentUser[key] ||
-													process.env.PUBLIC_URL + "/profile_images/" + "default-profile.png"
+													process.env.PUBLIC_URL + "/profile_images/" + (currentUser[key] || "default-profile.png")
 												}
 												alt={key}
 												className="profile-image mb-3"
@@ -223,21 +225,9 @@ const renderUserForm = () => {
 				<Col lg={8}>
 					<h6 className="persInfo">Personal information</h6>
 					<Row className="align-items-center border border-1">
-						<Col md={4} className="text-center">
-							<div>
-								<Button>
-									<FaCameraRetro /> Change picture
-								</Button>
-								<Button className="btn-danger">
-									<AiTwotoneDelete /> Remove
-								</Button>
-							</div>
-						</Col>
-						<Col md={8}>
-							{renderUserData()}
-							{/* User Form */}
-							{renderUserForm()}
-						</Col>
+					{renderUserData()}
+					{/* User Form */}
+					{renderUserForm()}
 					</Row>
 				</Col>
 			</Row>

@@ -219,9 +219,9 @@ const imageFileFilter = (req, file, cb) => {
 };
 
 // Config for multer
-const storage = multer.diskStorage({
+const profileStorage = multer.diskStorage({
 	destination: function (req, file, cb) {
-		cb(null, "public/images");
+		cb(null, "public/profile_images");
 	},
 	filename: function (req, file, cb) {
 		const uniqueSuffix = Date.now() + "-" + Math.round(Math.random() * 1e9);
@@ -230,8 +230,47 @@ const storage = multer.diskStorage({
 	}
 });
 
-const profileImgUpload = multer({ storage: storage, fileFilter: imageFileFilter });
-const otherFileUpload = multer({ storage: storage });
+const productStorage = multer.diskStorage({
+	destination: function (req, file, cb) {
+		cb(null, "public/product_images");
+	},
+	filename: function (req, file, cb) {
+		const uniqueSuffix = Date.now() + "-" + Math.round(Math.random() * 1e9);
+		const extension = path.extname(file.originalname);
+		cb(null, "ProductImage" + "-" + uniqueSuffix + extension);
+	}
+});
+
+const otherStorage = multer.diskStorage({
+	destination: function (req, file, cb) {
+		cb(null, "public");
+	},
+	filename: function (req, file, cb) {
+		const uniqueSuffix = Date.now() + "-" + Math.round(Math.random() * 1e9);
+		const extension = path.extname(file.originalname);
+		cb(null, "File" + "-" + uniqueSuffix + extension);
+	}
+});
+
+const profileImgUpload = multer({ storage: profileStorage, fileFilter: imageFileFilter });
+const productImgUpload = multer({ storage: productStorage, fileFilter: imageFileFilter });
+const otherFileUpload = multer({ storage: otherStorage });
+
+const deleteFile = async (filePath) => {
+    try {
+        await fs.promises.access(filePath);
+        await fs.promises.unlink(filePath);
+        console.log("Successfully deleted file:", filePath);
+        return true;
+    } catch (error) {
+        if (error.code === "ENOENT") {
+            console.warn("File does not exist:", filePath);
+            return true;
+        }
+		console.error("Error deleting file:", error);
+		return false;
+    }
+};
 
 const paginationSchema = Joi.object({
 	page: Joi.number().min(1).default(1),
@@ -704,6 +743,45 @@ const tableSearch = (searchContext = "cpu") => {
 
 const formFieldsValidator = (schema) => {
 	return (req, res, next) => {
+		let unvalidatedData;
+
+		if (req.headers["content-type"] && req.headers["content-type"].includes("multipart/form-data")) {
+			unvalidatedData = req.body;
+			console.log(req.body);
+		} else {
+			let { formFields } = req.body;
+
+			if (typeof formFields === "string") {
+				try {
+					formFields = JSON.parse(formFields);
+				} catch (err) {
+					return res.status(400).json({ message: "Unable to parse data" });
+				}
+			}
+
+			if (typeof formFields !== "object") {
+				return res.status(400).json({ message: "Invalid form data format" });
+			}
+			console.log(formFields);
+			
+			unvalidatedData = formFields;
+		}
+
+		try {
+			console.log(unvalidatedData);
+			const value = Joi.attempt(unvalidatedData, schema);
+			req.validatedForm = value;
+			next();
+		} catch (error) {
+			return res.status(400).json({ message: error.details[0].message });
+		}
+	};
+};
+
+
+const formFieldsValidator2 = (schema) => {
+	return (req, res, next) => {
+		console.log(req.body);
 		let { formFields } = req.body;
 		
 		if (typeof formFields === "string") {
@@ -731,8 +809,6 @@ const formFieldsValidator = (schema) => {
 
 const userFieldsValidator = (req, res, next) => {
 	let formFields = req.validatedForm;
-	//console.log(req.body);
-	//console.log(req.validatedForm);
 
 	if (typeof formFields === "string") {
 		try {
@@ -741,8 +817,7 @@ const userFieldsValidator = (req, res, next) => {
 			return res.status(400).json({ message: "Unable to parse data" });		
 		}
 	}
-		//console.log(typeof formFields);
-		//console.log(formFields);
+
 	if (typeof formFields !== "object") {
 		return res.status(400).json({ message: "Invalid form data format" });
 	}
@@ -3256,10 +3331,10 @@ app.get("/api/profile/refresh", authenticateSession, async (req, res) => {
 });
 
 // Update own user credentials
-app.patch("/api/profile", authenticateSession, formFieldsValidator(userUpdateSchema), userFieldsValidator, profileImgUpload.single("ProfileImage"), async (req, res) => {
+app.patch("/api/profile", authenticateSession, profileImgUpload.single("ProfileImage"), formFieldsValidator(userUpdateSchema), userFieldsValidator, async (req, res) => {
 		console.log("API update own credentials accessed");
-		console.log(req.user);
 		const userId = req.user.UserID;
+		const oldProfileImage = req.user.ProfileImage;
 		const jsonFormFields = req.validatedForm;
 		const ProfileImage = req.file; // Profile image
 
@@ -3271,6 +3346,13 @@ app.patch("/api/profile", authenticateSession, formFieldsValidator(userUpdateSch
 
 			let hashedPassword = null;
 			const allowedFields = ["Name", "Email", "Password", "Gender", "ProfileImage"];
+
+			if (ProfileImage) {
+				if (oldProfileImage && oldProfileImage !== null && oldProfileImage !== "default-profile.png") {
+					const imagePath = path.join(__dirname, "..", "public", "profile_images", oldProfileImage);
+					await deleteFile(imagePath);
+				}
+			}
 
 			// SQL query to update user data
 			// updateQuery allows for multiple fields to be updated simultaneously
@@ -3407,7 +3489,7 @@ app.delete("/api/part/delete/:part/:id", idValidator, authenticateSession, async
 	}
 });
 
-app.patch("/api/part/update/:part/:id", authenticateSession, idValidator, tableValidator(partNameSchema, "partName"), formFieldsValidator(partSchema), profileImgUpload.single("ProductImage"), async (req, res) => {
+app.patch("/api/part/update/:part/:id", authenticateSession, productImgUpload.single("ProductImage"), idValidator, tableValidator(partNameSchema, "partName"), formFieldsValidator(partSchema), async (req, res) => {
 		console.log("API part accessed");
 		const { part } = req.params;
 		const id = req.validatedId;
