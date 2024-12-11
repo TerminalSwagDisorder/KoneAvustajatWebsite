@@ -34,6 +34,7 @@ import {
 	handleCredentialChange,
 	wizardAlgorithm,
 	updateDynamicData,
+	postDynamicData,
 	deleteDynamicData,
 	fetchContent,
 	fetchContentIdentifiers,
@@ -88,7 +89,7 @@ function App() {
 					<Route path="parts" element={<PartsDisplay fetchDynamicData={fetchDynamicData} />} />
 				</Route>
 				
-				<Route path="profile" element={<ProtectedRoute><Profile handleCredentialChange={handleCredentialChange} handleSignout={handleSignout} /></ProtectedRoute>} />
+				<Route path="profile" element={<ProtectedRoute><Profile handleCredentialChange={handleCredentialChange} handleSignout={handleSignout} fetchDynamicData={fetchDynamicData} updateDynamicData={updateDynamicData} postDynamicData={postDynamicData} /></ProtectedRoute>} />
 				<Route path="signup" element={<ProtectedRoute unloggedOnly><Signup handleSignup={handleSignup} /></ProtectedRoute>} />
 				<Route path="Signin" element={<ProtectedRoute unloggedOnly><Signin handleSignin={handleSignin} checkIfSignedIn={checkIfSignedIn}/></ProtectedRoute>} />
 				<Route path="computerwizard" element={<ComputerWizard />}>

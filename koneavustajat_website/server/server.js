@@ -578,7 +578,15 @@ const addressSchema = Joi.object({
 	City: Joi.string().trim().max(100).optional(),
 	State: Joi.string().trim().max(100).optional(),
 	PostalCode: Joi.string().trim().max(20).optional(),
-	Country: Joi.string().trim().max(100).optional()
+	Country: Joi.string().trim().max(100).optional(),
+	currentPassword: Joi.string().trim()
+		.pattern(/^(?=.*[A-Z])(?=.*\d)[A-Za-z\d]{9,}$/)
+		.required()
+		.messages({
+			"string.pattern.base": "Invalid password format for current password.",
+			"string.empty": "Current password cannot be empty",
+			"any.required": "Current password is required"
+		})
 });
 
 // Validators & searches
@@ -3330,6 +3338,28 @@ app.get("/api/profile/refresh", authenticateSession, async (req, res) => {
 	}
 });
 
+app.get("/api/profile/addresses", authenticateSession, async (req, res) => {
+	console.log("API search addresses by currentuser accessed");
+
+	const id = req.user.UserID;
+
+	const customerSql = "SELECT * FROM customers WHERE UserID = ?";
+	const sql = "SELECT * FROM addresses WHERE CustomerID = ?";
+	try {
+		const [customer] = await promisePool.query(customerSql, [id]);
+		if (!customer.length) {
+			return res.status(401).json({ message: "User is not a customer!" });
+		}
+
+		const [addresses] = await promisePool.query(sql, [customer[0].CustomerID]);
+
+		return res.status(200).json(addresses);
+	} catch (error) {
+		const [status, message] = handleServerError(error);
+		return res.status(status).json({ message: message });
+	}
+});
+
 // Update own user credentials
 app.patch("/api/profile", authenticateSession, profileImgUpload.single("ProfileImage"), formFieldsValidator(userUpdateSchema), userFieldsValidator, async (req, res) => {
 		console.log("API update own credentials accessed");
@@ -3836,6 +3866,20 @@ app.get("/api/users/customers/:id", idValidator, async (req, res) => {
 	}
 });
 
+app.get("/api/addresstypes", routePagination, async (req, res) => {
+	console.log("API addresstypes accessed");
+
+	const sql = "SELECT * FROM address_types";
+	try {
+		const [address_types] = await promisePool.query(sql);
+
+		return res.status(200).json(address_types);
+	} catch (error) {
+		const [status, message] = handleServerError(error);
+		return res.status(status).json({ message: message });
+	}
+});
+
 // Route for viewing addresses
 app.get("/api/users/customers/addresses", routePagination, async (req, res) => {
 	console.log("API inventory accessed");
@@ -3862,7 +3906,7 @@ app.get("/api/users/customers/addresses/:id", idValidator, async (req, res) => {
 	try {
 		const [addresses] = await promisePool.query(sql, [id]);
 		if (!addresses.length) {
-			return res.status(404).json({ message: "Order not found" });
+			return res.status(404).json({ message: "Address not found" });
 		}
 
 		return res.status(200).json(addresses);
@@ -3872,17 +3916,27 @@ app.get("/api/users/customers/addresses/:id", idValidator, async (req, res) => {
 	}
 });
 
-app.post("/api/users/customers/addresses/add", formFieldsValidator(addressSchema), authenticateSession, async (req, res) => {
-	console.log("API add content accessed");
+app.post("/api/users/customers/addresses/add", authenticateSession, formFieldsValidator(addressSchema), async (req, res) => {
+	console.log("API add address accessed");
 
 	const userId = req.user.UserID;
 	const jsonFormFields = req.validatedForm;
 	const { CustomerID, AddressTypeID, Street, City, State, PostalCode, Country } = jsonFormFields;	
-	const allowedFields = ["AddressID", "CustomerID", "AddressTypeID", "Street", "City", "State", "PostalCode", "Country"];
+	const allowedFields = ["AddressID", "AddressTypeID", "Street", "City", "State", "PostalCode", "Country"];
+	const customerSql = "SELECT * FROM customers WHERE UserID = ?";
 
 	try {
+		const match = await bcrypt.compare(jsonFormFields.currentPassword, req.user.Password);
+		if (!match) {
+			return res.status(403).json({ message: "Current password is incorrect" });
+		}
+
 		if (!Street || !City || !PostalCode || !Country) {
 			return res.status(400).json({ message: "All required form fields were not provided" });
+		}
+		const [customer] = await promisePool.query(customerSql, [userId]);
+		if (!customer.length) {
+			return res.status(401).json({ message: "User is not a customer!" });
 		}
 
 		let insertQuery = `INSERT INTO addresses SET `;
@@ -3904,7 +3958,7 @@ app.post("/api/users/customers/addresses/add", formFieldsValidator(addressSchema
 		}
 
 		insertQuery += ", CustomerID = ?";
-		queryParams.push(parseInt(userId));
+		queryParams.push(parseInt(customer[0].CustomerID));
 
 		const [result] = await promisePool.query(insertQuery, queryParams);
 		return res.status(200).json({ message: "Added address successfully", id: result.insertId });
@@ -3924,6 +3978,11 @@ app.patch("/api/users/customers/addresses/update", authenticateSession, formFiel
 	const allowedFields = ["AddressID", "CustomerID", "AddressTypeID", "Street", "City", "State", "PostalCode", "Country"];
 
 	try {
+		const match = await bcrypt.compare(jsonFormFields.currentPassword, req.user.Password);
+		if (!match) {
+			return res.status(403).json({ message: "Current password is incorrect" });
+		}
+
 		// SQL query to update part data
 		// updateQuery allows for multiple fields to be updated simultaneously
 		let updateQuery = `UPDATE addresses SET `;
@@ -3947,12 +4006,13 @@ app.patch("/api/users/customers/addresses/update", authenticateSession, formFiel
 			updateQuery = updateQuery.slice(0, -2);
 		}
 
-		updateQuery += " WHERE CustomerID = ?";
+		updateQuery += " WHERE CustomerID = ? AND AddressTypeID = ?";
 		queryParams.push(parseInt(userId));
+		queryParams.push(parseInt(AddressTypeID));
 
 		const [result] = await promisePool.query(updateQuery, queryParams);
 		if (result.affectedRows === 0) {
-			return res.status(404).json({ message: "Item not found" });
+			return res.status(404).json({ message: "Address not found" });
 		}
 
 		return res.status(200).json({ message: "Address updated successfully" });

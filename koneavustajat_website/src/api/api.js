@@ -113,7 +113,7 @@ export const updateDynamicData = async (formFields, tableName, partName, id) => 
 
 		if (formFields && typeof formFields === "object" && !Array.isArray(formFields)) formFields = JSON.stringify(formFields);
 		// api call to register a new user
-		const response = await fetch(`http://localhost:4000/api/${tableName}${tableName.includes("/update") ? "" : "/update"}/${partName}/${id}`, {
+		const response = await fetch(`http://localhost:4000/api/${tableName}${tableName.includes("/update") ? "" : "/update"}${partName ? "/" + partName : ""}${id ? "/" + id : ""}`, {
 			method: "PATCH",
 			headers: {
 				"Content-Type": "application/json"
@@ -130,6 +130,44 @@ export const updateDynamicData = async (formFields, tableName, partName, id) => 
         }
 		
 		alert(`Successfully updated ${partName} with id ${id} from ${tableName}`);
+
+		return data;
+	} catch (error) {
+		console.error("Error updating data:", error);
+		if (error.message) alert(error.message);
+
+	}
+};
+
+export const postDynamicData = async (formFields, tableName, partName) => {
+	try {
+		console.log(`http://localhost:4000/api/${tableName}/update/${partName}`);
+		console.log(formFields);
+		await checkAllowedTableNames(["postroutes"], tableName);
+		
+		if (partName) {
+			await checkAllowedPartNames(partName);
+		} else {
+			console.log("partName has no value. This might be intentional, but double check to be sure.");
+		}
+
+		if (formFields && typeof formFields === "object" && !Array.isArray(formFields)) formFields = JSON.stringify(formFields);
+		// api call to register a new user
+		const response = await fetch(`http://localhost:4000/api/${tableName}${partName ? "/" + partName : ""}`, {
+			method: "POST",
+			headers: {
+				"Content-Type": "application/json"
+			},
+			credentials: "include", // Important, because we're using cookies
+			body: JSON.stringify({ formFields })
+		});
+
+		const data = await response.json();
+
+        if (!response.ok) {
+            alert(`HTTP error ${response.status}: ${data.message ? data.message : response.message}`);
+            throw new Error(`HTTP error ${response.status}: ${data.message ? data.message : response.message}`);
+        }
 
 		return data;
 	} catch (error) {
