@@ -168,6 +168,8 @@ export const postDynamicData = async (formFields, tableName, partName) => {
             alert(`HTTP error ${response.status}: ${data.message ? data.message : response.message}`);
             throw new Error(`HTTP error ${response.status}: ${data.message ? data.message : response.message}`);
         }
+		
+		alert(`Successfully added ${partName} to ${tableName}`);
 
 		return data;
 	} catch (error) {

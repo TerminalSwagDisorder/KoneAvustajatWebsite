@@ -68,8 +68,8 @@ const Profile = ({ handleCredentialChange, handleSignout, fetchDynamicData, upda
 		/^[-A-Za-z0-9!#$%&'*+/=?^_`{|}~]+(?:\.[-A-Za-z0-9!#$%&'*+/=?^_`{|}~]+)*@(?:[A-Za-z0-9](?:[-A-Za-z0-9]*[A-Za-z0-9])?\.)+[A-Za-z0-9](?:[-A-Za-z0-9]*[A-Za-z0-9])?$/;
 	
 	useEffect(() => {
-		fetchAddressData();
-	}, []);
+		if (currentUser && currentUser.RoleID === 2) fetchAddressData();
+	}, []);	
 
 	useEffect(() => {
 		updateFormFieldsByType();
@@ -89,7 +89,6 @@ const Profile = ({ handleCredentialChange, handleSignout, fetchDynamicData, upda
 			if (adressTypeData) setAddressTypes(adressTypeData);
 			if (data) setCurrentAddress(data);
 			if (data) setCurrentAddressType(data[0].AddressTypeID || 1);
-			//console.log(Object.entries(adressTypeData).map(([k, v]) => console.log(adressTypeData[k].AddressTypeName)));
 		} catch (error) {
 			console.error("Error while fetching addresses:", error);
 		}
@@ -118,10 +117,11 @@ const Profile = ({ handleCredentialChange, handleSignout, fetchDynamicData, upda
 		const currentAddressByType = currentAddress.find(
 			(item) => item.AddressTypeID === currentAddressType
 		);
-		if (currentAddressByType && Object.values(currentAddressByType).length > 0 ) {
-			setFormFields({...defaultFormFields, ...currentAddressByType});
+		if (currentAddressByType && Object.values(currentAddressByType).length > 0) {
+			setFormFields({  ...defaultFormFields, ...currentAddressByType, AddressTypeID: currentAddressType });
 		} else {
-			setFormFields({...defaultFormFields});
+			setFormFields({ ...defaultFormFields, AddressTypeID: currentAddressType });
+
 		}
 	};
 	
@@ -213,14 +213,6 @@ const renderUserForm = () => {
 				</Form>
 			</div>
 		);
-	} else {
-		return (
-			<div style={{ textAlign: "center" }} className="userCredentialChange">
-				<div>
-					<Button onClick={() => handleModifyProfile("edit")}>Edit your profile</Button>
-				</div>
-			</div>
-		);
 	}
 };	
 
@@ -234,19 +226,17 @@ const renderAddressForm = () => {
 					</div>
 					<h4 className=" mb-3">Change address</h4>
 					<Form.Group className="mb-3">
-						<Form.Group className="mb-3">
-							<Form.Select name="AddressTypeID" value={formFields.AddressTypeID} onChange={handleInputChange}>
-								{addressTypes && Object.keys(addressTypes).length > 0 ? (
-									Object.keys(addressTypes).map((key) => (
-										<option key={addressTypes[key].AddressTypeID} value={addressTypes[key].AddressTypeID}>
-											{addressTypes[key].AddressTypeName}
-										</option>
-									))
-								) : (
-									<option value="">No address types available</option>
-								)}
-							</Form.Select>
-						</Form.Group>
+						<Form.Select name="AddressTypeID" value={formFields.AddressTypeID || currentAddressType} onChange={handleInputChange}>
+							{addressTypes && Object.keys(addressTypes).length > 0 ? (
+								Object.keys(addressTypes).map((key) => (
+									<option key={addressTypes[key].AddressTypeID} value={addressTypes[key].AddressTypeID}>
+										{addressTypes[key].AddressTypeName}
+									</option>
+								))
+							) : (
+								<option value="">No address types available</option>
+							)}
+						</Form.Select>
 					</Form.Group>
 					<Form.Group className="mb-3">
 						<Form.Control
@@ -363,9 +353,11 @@ const renderAddressForm = () => {
 	const handleSubmit = async (event) => {
 		event.preventDefault();
 		if (currentOperation === "edit") {
+			const allowedFields = ["ProfileImage", "Name", "Gender", "Email", "Password", "currentPassword"];
+			const dataToSubmit = Object.fromEntries(
+				Object.entries(formFields).filter(([key, value]) => value && allowedFields.includes(key))
+			);
 			const fieldsToChange = Object.entries(formFields).filter(([key, value]) => value && key !== "currentPassword");
-			console.log(fieldsToChange);
-			console.log(fieldsToChange.length);
 
 			// Check if any field is filled
 			if (fieldsToChange.length === 0) {
@@ -384,7 +376,7 @@ const renderAddressForm = () => {
 			}
 
 			try {
-				const success = await handleCredentialChange(event, formFields);
+				const success = await handleCredentialChange(event, dataToSubmit);
 				if (success) {
 					await refreshProfileData();
 					closeForm();
@@ -394,8 +386,13 @@ const renderAddressForm = () => {
 				alert("Error updating credentials.");
 			}
 		} else if (currentOperation === "address") {
-			const fieldsToChange = Object.entries(formFields).filter(([key, value]) => value && key !== "currentPassword");
-			const currentAddressLength = Object.values(currentAddress).filter(value => value).length;
+			const allowedFields = ["AddressTypeID", "Street", "City", "State", "PostalCode", "Country", "currentPassword"];
+			const dataToSubmit = Object.fromEntries(
+				Object.entries(formFields).filter(([key, value]) => value && allowedFields.includes(key))
+			);			const fieldsToChange = Object.entries(formFields).filter(([key, value]) => value && key !== "currentPassword");
+			const currentAddressLength = currentAddress.find(
+				(item) => item.AddressTypeID === currentAddressType
+			);
 
 			// Check if any field is filled
 			if (fieldsToChange.length === 0) {
@@ -409,10 +406,10 @@ const renderAddressForm = () => {
 
 			try {
 				let success;
-				if (currentAddressLength === 0) {
-					success = await postDynamicData(formFields, "users/customers/addresses/add");
+				if (currentAddressLength) {
+					success = await updateDynamicData(dataToSubmit, "users/customers/addresses/update");
 				} else {
-					success = await updateDynamicData(formFields, "users/customers/addresses/update");
+					success = await postDynamicData(dataToSubmit, "users/customers/addresses/add");
 				}
 				if (success) {
 					await refreshProfileData();
@@ -425,23 +422,41 @@ const renderAddressForm = () => {
 		}
 	};
 
+	const formButtons = () => {
+		let editButton;
+		let customerButtons;
+
+		if (currentUser) {
+			editButton = <Button onClick={() => handleModifyProfile("edit")}>Edit your profile</Button>
+		}
+
+		if (currentUser && currentUser.RoleID === 2) {
+			customerButtons = (
+				<>
+					<br />
+					<Button onClick={() => handleModifyProfile("address")}>Change address details</Button>
+					<br />
+					<Button onClick={() => handleModifyProfile("payment")}>Change payment details</Button>
+				</>
+			);
+		}
+		return (
+			<Col md={4} className="text-center">
+				<div>
+					{editButton}
+					{customerButtons}
+				</div>
+			</Col>
+		);
+	};
+
 	return (
 		<Container>
 			<Row className="justify-content-center modal-body">
 				<Col lg={8}>
 					<h6 className="persInfo">Personal information</h6>
 					<Row className="align-items-center border border-1">
-					<Col md={4} className="text-center">
-						<div>
-							<Button onClick={() => handleModifyProfile("address")}>
-								Change address details
-							</Button>
-							<br />
-							<Button onClick={() => handleModifyProfile("payment")}>
-								Change payment details
-							</Button>
-						</div>
-					</Col>
+					{formButtons()}
 					<Col md={8} className="text-center">
 						{renderUserData()}
 						{/* User Form */}

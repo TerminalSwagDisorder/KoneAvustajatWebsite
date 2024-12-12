@@ -3970,17 +3970,23 @@ app.post("/api/users/customers/addresses/add", authenticateSession, formFieldsVa
 
 
 app.patch("/api/users/customers/addresses/update", authenticateSession, formFieldsValidator(addressSchema), async (req, res) => {
-	console.log("API patch content accessed");
+	console.log("API patch customer address accessed");
 
 	const userId = req.user.UserID;
 	const jsonFormFields = req.validatedForm;
 	const { AddressTypeID, Street, City, State, PostalCode, Country } = jsonFormFields;	
 	const allowedFields = ["AddressID", "CustomerID", "AddressTypeID", "Street", "City", "State", "PostalCode", "Country"];
+	const customerSql = "SELECT * FROM customers WHERE UserID = ?";
 
 	try {
 		const match = await bcrypt.compare(jsonFormFields.currentPassword, req.user.Password);
 		if (!match) {
 			return res.status(403).json({ message: "Current password is incorrect" });
+		}
+
+		const [customer] = await promisePool.query(customerSql, [userId]);
+		if (!customer.length) {
+			return res.status(401).json({ message: "User is not a customer!" });
 		}
 
 		// SQL query to update part data
@@ -4007,7 +4013,7 @@ app.patch("/api/users/customers/addresses/update", authenticateSession, formFiel
 		}
 
 		updateQuery += " WHERE CustomerID = ? AND AddressTypeID = ?";
-		queryParams.push(parseInt(userId));
+		queryParams.push(parseInt(customer[0].CustomerID));
 		queryParams.push(parseInt(AddressTypeID));
 
 		const [result] = await promisePool.query(updateQuery, queryParams);
