@@ -26,12 +26,26 @@ import { useAuth } from "../utils/Contexts";
 const Profile = ({ handleCredentialChange, handleSignout, fetchDynamicData, updateDynamicData, postDynamicData }) => {
 	const { currentUser, handleUserChange, refreshProfileData } = useAuth();
 	const navigate = useNavigate();
+	const defaultFormFields = {
+		AddressTypeID: "",
+		Street: "",
+		City: "",
+		State: "",
+		PostalCode: "",
+		Country: "",
+		ProfileImage: "",
+		Name: "", 
+		Gender: "", 
+		Email: "", 
+		Password: "", 
+		currentPassword: "" 
+	};
 	const [currentOperation, setCurrentOperation] = useState("");
-	const [formFields, setFormFields] = useState({});
 	const [emailValid, setEmailValid] = useState(false);
 	const [passwordValid, setPasswordValid] = useState(false);
 	const [addressTypes, setAddressTypes] = useState(null);
-	const [currentAddressType, setCurrentAddressType] = useState(null);
+	const [currentAddressType, setCurrentAddressType] = useState(1);
+	const [formFields, setFormFields] = useState({...defaultFormFields});
 	const [currentAddress, setCurrentAddress] = useState([{
 		AddressTypeID: "",
 		Street: "",
@@ -52,53 +66,29 @@ const Profile = ({ handleCredentialChange, handleSignout, fetchDynamicData, upda
 	const passwordRegex = /^(?=.*[A-Z])(?=.*\d)[A-Za-z\d]{9,}$/;
 	const emailRegex =
 		/^[-A-Za-z0-9!#$%&'*+/=?^_`{|}~]+(?:\.[-A-Za-z0-9!#$%&'*+/=?^_`{|}~]+)*@(?:[A-Za-z0-9](?:[-A-Za-z0-9]*[A-Za-z0-9])?\.)+[A-Za-z0-9](?:[-A-Za-z0-9]*[A-Za-z0-9])?$/;
-
+	
 	useEffect(() => {
 		fetchAddressData();
 	}, []);
 
 	useEffect(() => {
 		updateFormFieldsByType();
-		const currentAddressByType = currentAddress.find(
-			(item) => item.AddressTypeID === currentAddressType
-		);
-		console.log(currentAddressByType);
-		console.log(currentAddressType);
-		console.log(currentAddress[0].AddressTypeID);
-		currentAddress.map(item => console.log(item.AddressTypeID));
 	}, [currentAddress, currentAddressType]);
 
 	useEffect(() => {
-		console.log(formFields);
-
-	}, [formFields]);
-
-	useEffect(() => {
-		setFormFields({});
-		if (currentOperation === "address")	fetchAddressData();
+		setFormFields({...defaultFormFields});
+		if (currentOperation === "address") {
+			fetchAddressData();
+		}
 	}, [currentOperation]);
-
-	useEffect(() => {
-		console.log(currentAddress);
-		currentAddress.map((item) => console.log(item));
-		//setFormFields(currentAddress[0]);
-		setCurrentAddressType(currentAddress[0].AddressTypeID || 1);
-
-	}, [currentAddress]);
 
 	const fetchAddressData = async () => {
 		try {
 			const adressTypeData = await fetchDynamicData(null, "addresstypes", null);
 			const data = await fetchDynamicData(null, "profile/addresses", null);
-			setAddressTypes(adressTypeData);
-			setCurrentAddress(data || [{
-				AddressTypeID: "",
-				Street: "",
-				City: "",
-				State: "",
-				PostalCode: "",
-				Country: ""
-			}]);
+			if (adressTypeData) setAddressTypes(adressTypeData);
+			if (data) setCurrentAddress(data);
+			if (data) setCurrentAddressType(data[0].AddressTypeID || 1);
 			//console.log(Object.entries(adressTypeData).map(([k, v]) => console.log(adressTypeData[k].AddressTypeName)));
 		} catch (error) {
 			console.error("Error while fetching addresses:", error);
@@ -110,7 +100,7 @@ const Profile = ({ handleCredentialChange, handleSignout, fetchDynamicData, upda
 			...prevFields,
 			[event.target.name]: event.target.type === "file" ? event.target.files[0] : event.target.value
 		}));
-		
+
 		if (event.target.name === "Email") {
 			setEmailValid(emailRegex.test(event.target.value));
 		}
@@ -120,37 +110,24 @@ const Profile = ({ handleCredentialChange, handleSignout, fetchDynamicData, upda
 		}
 		
 		if (event.target.name === "AddressTypeID") {
-			//setFormFields(currentAddress.AddressTypeID[event.target.value]);
-			console.log("Changed ATI");
-			setCurrentAddressType(event.target.value);
+			setCurrentAddressType(parseInt(event.target.value));
 		}
 	};
-
+	
 	const updateFormFieldsByType = () => {
 		const currentAddressByType = currentAddress.find(
 			(item) => item.AddressTypeID === currentAddressType
 		);
-		console.log(currentAddressType);
-		console.log(currentAddressByType);
-		if (currentAddressByType) {
-			console.log("Succ");
-			setFormFields(currentAddressByType);
+		if (currentAddressByType && Object.values(currentAddressByType).length > 0 ) {
+			setFormFields({...defaultFormFields, ...currentAddressByType});
 		} else {
-			console.log("Fail");
-			setFormFields({
-				AddressTypeID: "",
-				Street: "",
-				City: "",
-				State: "",
-				PostalCode: "",
-				Country: ""
-			});
+			setFormFields({...defaultFormFields});
 		}
-	}
+	};
 	
 	const closeForm = () => {
 		setCurrentOperation("");
-		setFormFields({});
+		setFormFields({...defaultFormFields});
 		setEmailValid(false);
 		setPasswordValid(false);
 	};
@@ -176,18 +153,19 @@ const renderUserForm = () => {
 					<h4 className=" mb-3">Edit profile</h4>
 					<Form.Group className="mb-3">
 						<Form.Label htmlFor="ProfileImage"><FaCameraRetro /> Change profile picture</Form.Label>
-						<Form.Control type="file" name="ProfileImage" accept="image/png, image/jpeg, image/gif" onChange={handleInputChange} />
+						<Form.Control type="file" name="ProfileImage" value={formFields.ProfileImage} accept="image/png, image/jpeg, image/gif" onChange={handleInputChange} />
 					</Form.Group>
 					<Form.Group className="mb-3">
 							<Form.Control
 								type="text"
 								placeholder="Enter new name"
 								name="Name"
+								value={formFields.Name}
 								onChange={handleInputChange}
 							/>
 						</Form.Group>
 						<Form.Group className="mb-3">
-							<Form.Select name="Gender" onChange={handleInputChange}>
+							<Form.Select name="Gender" value={formFields.Gender} onChange={handleInputChange}>
 								<option value="">Select new gender</option>
 								<option value="male">
 									Male
@@ -203,6 +181,7 @@ const renderUserForm = () => {
 								placeholder="Enter new email"
 								name="Email"
 								onChange={handleInputChange}
+								value={formFields.Email}
 								className={emailValid ? "valid-input" : "invalid-input"}
 							/>
 						</Form.Group>
@@ -213,6 +192,7 @@ const renderUserForm = () => {
 									placeholder="Enter new password"
 									name="Password"
 									onChange={handleInputChange}
+									value={formFields.Password}
 									className={passwordValid ? "valid-input" : "invalid-input"}
 								/>
 							</OverlayTrigger>
@@ -223,6 +203,7 @@ const renderUserForm = () => {
 								placeholder="Enter current password"
 								name="currentPassword"
 								onChange={handleInputChange}
+								value={formFields.currentPassword}
 								required
 							/>
 						</Form.Group>
@@ -254,13 +235,16 @@ const renderAddressForm = () => {
 					<h4 className=" mb-3">Change address</h4>
 					<Form.Group className="mb-3">
 						<Form.Group className="mb-3">
-							<Form.Select name="AddressTypeID" onChange={handleInputChange} defaultValue={formFields.AddressTypeID || 1}>
-								{Object.keys(addressTypes).map((key) => (
-									<option key={addressTypes[key].AddressTypeID} value={addressTypes[key].AddressTypeID}>
-										{addressTypes[key].AddressTypeName}
-									</option>
-								))}
-
+							<Form.Select name="AddressTypeID" value={formFields.AddressTypeID} onChange={handleInputChange}>
+								{addressTypes && Object.keys(addressTypes).length > 0 ? (
+									Object.keys(addressTypes).map((key) => (
+										<option key={addressTypes[key].AddressTypeID} value={addressTypes[key].AddressTypeID}>
+											{addressTypes[key].AddressTypeName}
+										</option>
+									))
+								) : (
+									<option value="">No address types available</option>
+								)}
 							</Form.Select>
 						</Form.Group>
 					</Form.Group>
@@ -315,6 +299,7 @@ const renderAddressForm = () => {
 							placeholder="Enter current password"
 							name="currentPassword"
 							onChange={handleInputChange}
+							value={formFields.currentPassword}
 							required
 						/>
 					</Form.Group>
