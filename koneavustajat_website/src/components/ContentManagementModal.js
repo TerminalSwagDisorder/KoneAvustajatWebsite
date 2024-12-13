@@ -178,7 +178,7 @@ const ContentManagementModal = ({ fetchWholeContent, fetchContentIdentifiers, ad
 						Main_Tag: "p",
 						Content_Text: "",
 						Content_Type: "site_text", 
-						Status: ""})
+						Status: ""});
 				}
 			}
 

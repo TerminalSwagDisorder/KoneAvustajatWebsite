@@ -126,7 +126,6 @@ const ComputerWizardBrowse = ({ fetchDynamicData, fetchDataAmount, updateDynamic
 			if (success) {
 				await fetchData();
 				closeForm();
-				setFormFields({});
 			}
 		} catch (error) {
 			console.error("Error modifying data:", error);

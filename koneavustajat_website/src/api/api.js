@@ -358,7 +358,7 @@ export const fetchContent = async (identifiers) => {
 		const correctSearchTerms = await checkSearchTerms({Site_Identifier: contentIdentifier});
 
 		const query = await buildQuery(correctSearchTerms, true);
-		
+
 		const response = await fetch(`http://localhost:4000/api/text-content?${query}`, {
 			method: "GET",
 			credentials: "include", // Important, because we're using cookies
@@ -370,6 +370,18 @@ export const fetchContent = async (identifiers) => {
             throw new Error(`HTTP error ${response.status}: ${data.message ? data.message : response.message}`);
         }
 
+		const checkPublish = data.content.some((item) => item.Status !== "published");
+
+		if (data.contentMap && data.content && checkPublish) {
+			for (const item of data.content) {
+				if (item.Status !== "published") {
+					if (data.contentMap[item.Site_Identifier]) {
+						data.contentMap[item.Site_Identifier][item.Language] = "Content is not published";
+					}
+				}
+			}
+		}
+		
 		// Return only data.contentMap
 		if (data.contentMap) {
 		  return data.contentMap;
@@ -411,7 +423,7 @@ export const fetchWholeContent = async (identifiers) => {
 			.filter(value => value !== undefined && value !== "");
 		const contentIdentifier = identifierValues.join(".");
 
-		const correctSearchTerms = await checkSearchTerms({site_identifier: contentIdentifier});
+		const correctSearchTerms = await checkSearchTerms({Site_Identifier: contentIdentifier});
 
 		const query = await buildQuery(correctSearchTerms, true);
 		
@@ -425,6 +437,16 @@ export const fetchWholeContent = async (identifiers) => {
             alert(`HTTP error ${response.status}: ${data.message ? data.message : response.message}`);
             throw new Error(`HTTP error ${response.status}: ${data.message ? data.message : response.message}`);
         }
+
+		if (data.contentMap && data.content) {
+			data.content.forEach((item) => {
+				if (item.Status !== "published") {
+					if (data.contentMap[item.Site_Identifier]) {
+						data.contentMap[item.Site_Identifier][item.Language] = "Content is not published";
+					}
+				}
+			});
+		}
 
 		// Return only data.contentMap
 		if (data.content) {

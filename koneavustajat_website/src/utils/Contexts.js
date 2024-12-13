@@ -109,6 +109,7 @@ export const ContentProvider = ({ fetchContent, children }) => {
 		try {
 			const data = await fetchContent(identifiers);
 			setContent(data);
+			return data;
 		} catch (error) {
 			console.error(`Error fetching content for page ${identifiers}:`, error);
 		}
@@ -121,7 +122,7 @@ export const ContentProvider = ({ fetchContent, children }) => {
 		try {
 			const data = await fetchContent(identifiers);
             setOverridenContent(data);
-			return overridenContent;
+			return data;
 		} catch (error) {
 			console.error(`Error fetching content for page ${identifiers}:`, error);
 		}
