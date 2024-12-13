@@ -169,7 +169,7 @@ const ComputerWizardBrowse = ({ fetchDynamicData, fetchDataAmount, updateDynamic
 		if (currentUser && currentUser.RoleID === 4 && selectedPart && currentOperation === "modify") {
 			return (
 				<div id="partform" className="partform d-flex justify-content-center align-items-center">
-					<Form onSubmit={handleSubmit} className="adminForm border rounded shadow p-4 bg-opaque" style={{ wIDth: "400px" }}>
+					<Form onSubmit={handleSubmit} className="adminForm border rounded shadow p-4 bg-opaque">
 						<div className="d-flex justify-content-end mb-3">
 							<CloseButton onClick={() => closeForm()} />
 						</div>
@@ -219,7 +219,7 @@ const ComputerWizardBrowse = ({ fetchDynamicData, fetchDataAmount, updateDynamic
 				</div>
 			);
 		}
-	};	
+	};
 
 	const renderPartDeletion = () => {
 		if (currentUser && currentUser.RoleID === 4 && selectedPart && currentOperation === "delete") {

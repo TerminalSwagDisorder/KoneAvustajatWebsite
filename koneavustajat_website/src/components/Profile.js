@@ -214,7 +214,7 @@ const renderUserForm = () => {
 			</div>
 		);
 	}
-};	
+};
 
 const renderAddressForm = () => {
 	if (currentUser && formFields && currentOperation === "address") {
@@ -389,7 +389,8 @@ const renderAddressForm = () => {
 			const allowedFields = ["AddressTypeID", "Street", "City", "State", "PostalCode", "Country", "currentPassword"];
 			const dataToSubmit = Object.fromEntries(
 				Object.entries(formFields).filter(([key, value]) => value && allowedFields.includes(key))
-			);			const fieldsToChange = Object.entries(formFields).filter(([key, value]) => value && key !== "currentPassword");
+			);			
+			const fieldsToChange = Object.entries(formFields).filter(([key, value]) => value && key !== "currentPassword");
 			const currentAddressLength = currentAddress.find(
 				(item) => item.AddressTypeID === currentAddressType
 			);

@@ -755,7 +755,6 @@ const formFieldsValidator = (schema) => {
 
 		if (req.headers["content-type"] && req.headers["content-type"].includes("multipart/form-data")) {
 			unvalidatedData = req.body;
-			console.log(req.body);
 		} else {
 			let { formFields } = req.body;
 
@@ -770,43 +769,14 @@ const formFieldsValidator = (schema) => {
 			if (typeof formFields !== "object") {
 				return res.status(400).json({ message: "Invalid form data format" });
 			}
-			console.log(formFields);
 			
-			unvalidatedData = formFields;
+			unvalidatedData = Object.fromEntries(
+				Object.entries(formFields).filter(([_, value]) => value !== "")
+			);
 		}
 
 		try {
-			console.log(unvalidatedData);
 			const value = Joi.attempt(unvalidatedData, schema);
-			req.validatedForm = value;
-			next();
-		} catch (error) {
-			return res.status(400).json({ message: error.details[0].message });
-		}
-	};
-};
-
-
-const formFieldsValidator2 = (schema) => {
-	return (req, res, next) => {
-		console.log(req.body);
-		let { formFields } = req.body;
-		
-		if (typeof formFields === "string") {
-			try {
-				formFields = JSON.parse(formFields);
-			} catch (err) {
-				return res.status(400).json({ message: "Unable to parse data" });		
-			}
-		}
-
-		if (typeof formFields !== "object") {
-			return res.status(400).json({ message: "Invalid form data format" });
-		}
-
-		try {
-			const value = Joi.attempt(formFields, schema);
-			
 			req.validatedForm = value;
 			next();
 		} catch (error) {
@@ -3682,6 +3652,46 @@ app.get("/api/inventory", routePagination, tableSearch("inventory"), async (req,
 	}
 });
 
+
+app.post("/api/inventory/add", authenticateSession, formFieldsValidator(inventorySchema), async (req, res) => {
+	console.log("API add address accessed");
+
+	const userId = req.user.UserID;
+	const jsonFormFields = req.validatedForm;
+	const { PartTypeID, Name, Manufacturer, ModelNumber, SerialNumber, Price, Available, AdditionalDetails } = jsonFormFields;	
+	const allowedFields = ["PartTypeID", "Name", "Manufacturer", "ModelNumber", "SerialNumber", "Price", "Available", "AdditionalDetails"];
+
+	try {
+		if (req.user.RoleID !== 4) {
+			return res.status(401).json({ message: "User is not an admin" });
+		}
+
+		let insertQuery = `INSERT INTO part_inventory SET `;
+		let queryParams = [];
+
+		// More dynamic way of updating content
+		for (const key in jsonFormFields) {
+			console.log(key);
+			if (allowedFields.includes(key)) {
+				if (jsonFormFields[key] !== "") {
+					insertQuery += key.charAt(0).toUpperCase() + key.slice(1) + " = ?, ";
+					queryParams.push(jsonFormFields[key]);
+				}
+			}
+		}
+
+		if (queryParams.length > 0) {
+			insertQuery = insertQuery.slice(0, -2);
+		}
+
+		const [result] = await promisePool.query(insertQuery, queryParams);
+		return res.status(200).json({ message: "Added part to inventory successfully", id: result.insertId });
+	} catch (error) {
+		const [status, message] = handleServerError(error);
+		return res.status(status).json({ message: message });
+	}
+});
+
 app.get("/api/inventory/:id", idValidator, async (req, res) => {
 	console.log("API search parts by id accessed");
 
@@ -4118,117 +4128,121 @@ app.patch("/api/text-content/delete/:id", idValidator, authenticateSession, asyn
 });
 
 app.patch("/api/text-content/update/:id", authenticateSession, idValidator, formFieldsValidator(contentSchema), async (req, res) => {
-		console.log("API patch content accessed");
-		const id = req.validatedId;
-		const jsonFormFields = req.validatedForm;
-		const allowedFieldsSql = `SELECT DISTINCT column_name FROM information_schema.columns WHERE table_name IN ('content') AND table_schema = '${process.env.DB_NAME}';`;
+	console.log("API patch content accessed");
+	const id = req.validatedId;
+	const jsonFormFields = req.validatedForm;
+	const allowedFieldsSql = `SELECT DISTINCT column_name FROM information_schema.columns WHERE table_name IN ('content') AND table_schema = '${process.env.DB_NAME}';`;
 
-		try {
-			const [allowedColumns] = await promisePool.query(allowedFieldsSql);
-			const allowedFields = allowedColumns.map(item => item.column_name);
+	try {
+		if (req.user.RoleID !== 4) {
+			return res.status(401).json({ message: "User is not an admin" });
+		}
+		const [allowedColumns] = await promisePool.query(allowedFieldsSql);
+		const allowedFields = allowedColumns.map(item => item.column_name);
 
-			// SQL query to update part data
-			// updateQuery allows for multiple fields to be updated simultaneously
-			let updateQuery = `UPDATE content SET `;
-			let queryParams = [];
+		// SQL query to update part data
+		// updateQuery allows for multiple fields to be updated simultaneously
+		let updateQuery = `UPDATE content SET `;
+		let queryParams = [];
 
-			// More dynamic way of updating content
-			for (const key in jsonFormFields) {
-				console.log(key);
-				if (allowedFields.includes(key)) {
-					if (jsonFormFields.hasOwnProperty(key)) {
-						if (jsonFormFields[key] !== "") {
-							updateQuery += key.charAt(0).toUpperCase() + key.slice(1) + " = ?, "; // Since the first letters are capitalized in the db
-							queryParams.push(jsonFormFields[key]);
-						}
+		// More dynamic way of updating content
+		for (const key in jsonFormFields) {
+			console.log(key);
+			if (allowedFields.includes(key)) {
+				if (jsonFormFields.hasOwnProperty(key)) {
+					if (jsonFormFields[key] !== "") {
+						updateQuery += key.charAt(0).toUpperCase() + key.slice(1) + " = ?, "; // Since the first letters are capitalized in the db
+						queryParams.push(jsonFormFields[key]);
 					}
 				}
 			}
-
-			// Remove trailing comma and space
-			if (queryParams.length > 0) {
-				updateQuery = updateQuery.slice(0, -2);
-			}
-
-			updateQuery += " WHERE ContentID = ?";
-			queryParams.push(parseInt(id));
-
-			const [result] = await promisePool.query(updateQuery, queryParams);
-			if (result.affectedRows === 0) {
-				return res.status(404).json({ message: "Item not found" });
-			}
-
-			return res.status(200).json({ message: "Content updated successfully" });
-		} catch (error) {
-			const [status, message] = handleServerError(error);
-			return res.status(status).json({ message: message });
-
 		}
+
+		// Remove trailing comma and space
+		if (queryParams.length > 0) {
+			updateQuery = updateQuery.slice(0, -2);
+		}
+
+		updateQuery += " WHERE ContentID = ?";
+		queryParams.push(parseInt(id));
+
+		const [result] = await promisePool.query(updateQuery, queryParams);
+		if (result.affectedRows === 0) {
+			return res.status(404).json({ message: "Item not found" });
+		}
+
+		return res.status(200).json({ message: "Content updated successfully" });
+	} catch (error) {
+		const [status, message] = handleServerError(error);
+		return res.status(status).json({ message: message });
+
 	}
-);
+});
 
 app.patch("/api/text-content/update", authenticateSession, formFieldsValidator(contentSchema), async (req, res) => {
-		console.log("API patch content accessed");
-		const jsonFormFields = req.validatedForm;
-		const allowedFieldsSql = `SELECT DISTINCT column_name FROM information_schema.columns WHERE table_name IN ('content') AND table_schema = '${process.env.DB_NAME}';`;
-		const searchKeys = ["Site_Identifier", "Language", "Version"];
+	console.log("API patch content accessed");
+	const jsonFormFields = req.validatedForm;
+	const allowedFieldsSql = `SELECT DISTINCT column_name FROM information_schema.columns WHERE table_name IN ('content') AND table_schema = '${process.env.DB_NAME}';`;
+	const searchKeys = ["Site_Identifier", "Language", "Version"];
 
-		try {
-			if (jsonFormFields.Site_Identifier === "" || jsonFormFields.Language === "") {
-				return res.status(400).json({ message: "All identifier fields are not filled" });
-			}
-			
-			const [allowedColumns] = await promisePool.query(allowedFieldsSql);
-			//const allowedFields = allowedColumns.map(item => item.column_name);
-			const allowedFields = ["Main_Tag", "Content_Text", "Content_Type", "Status"];
+	try {
+		if (req.user.RoleID !== 4) {
+			return res.status(401).json({ message: "User is not an admin" });
+		}
+		if (jsonFormFields.Site_Identifier === "" || jsonFormFields.Language === "") {
+			return res.status(400).json({ message: "All identifier fields are not filled" });
+		}
 
-			// SQL query to update part data
-			// updateQuery allows for multiple fields to be updated simultaneously
-			let updateQuery = `UPDATE content SET `;
-			let queryParams = [];
+		const [allowedColumns] = await promisePool.query(allowedFieldsSql);
+		//const allowedFields = allowedColumns.map(item => item.column_name);
+		const allowedFields = ["Main_Tag", "Content_Text", "Content_Type", "Status"];
 
-			// More dynamic way of updating content
-			for (const key in jsonFormFields) {
-				console.log(key);
-				if (allowedFields.includes(key)) {
-					if (jsonFormFields.hasOwnProperty(key)) {
-						if (jsonFormFields[key] !== "") {
-							updateQuery += key.charAt(0).toUpperCase() + key.slice(1) + " = ?, "; // Since the first letters are capitalized in the db
-							queryParams.push(jsonFormFields[key]);
-						}
+		// SQL query to update part data
+		// updateQuery allows for multiple fields to be updated simultaneously
+		let updateQuery = `UPDATE content SET `;
+		let queryParams = [];
+
+		// More dynamic way of updating content
+		for (const key in jsonFormFields) {
+			console.log(key);
+			if (allowedFields.includes(key)) {
+				if (jsonFormFields.hasOwnProperty(key)) {
+					if (jsonFormFields[key] !== "") {
+						updateQuery += key.charAt(0).toUpperCase() + key.slice(1) + " = ?, "; // Since the first letters are capitalized in the db
+						queryParams.push(jsonFormFields[key]);
 					}
 				}
 			}
-
-			// Remove trailing comma and space
-			if (queryParams.length > 0) {
-				updateQuery = updateQuery.slice(0, -2);
-			}
-
-			updateQuery += " WHERE Site_Identifier = ?";
-			queryParams.push(jsonFormFields.Site_Identifier);
-			
-			updateQuery += " AND Language = ?";
-			queryParams.push(jsonFormFields.Language);
-			
-			if (jsonFormFields.Version !== "") {
-				updateQuery += " AND Version = ?";
-				queryParams.push(jsonFormFields.Version);
-			}
-
-			const [result] = await promisePool.query(updateQuery, queryParams);
-			if (result.affectedRows === 0) {
-				return res.status(404).json({ message: "Item not found" });
-			}
-
-			return res.status(200).json({ message: "Content updated successfully" });
-		} catch (error) {
-			const [status, message] = handleServerError(error);
-			return res.status(status).json({ message: message });
-
 		}
+
+		// Remove trailing comma and space
+		if (queryParams.length > 0) {
+			updateQuery = updateQuery.slice(0, -2);
+		}
+
+		updateQuery += " WHERE Site_Identifier = ?";
+		queryParams.push(jsonFormFields.Site_Identifier);
+
+		updateQuery += " AND Language = ?";
+		queryParams.push(jsonFormFields.Language);
+
+		if (jsonFormFields.Version !== "") {
+			updateQuery += " AND Version = ?";
+			queryParams.push(jsonFormFields.Version);
+		}
+
+		const [result] = await promisePool.query(updateQuery, queryParams);
+		if (result.affectedRows === 0) {
+			return res.status(404).json({ message: "Item not found" });
+		}
+
+		return res.status(200).json({ message: "Content updated successfully" });
+	} catch (error) {
+		const [status, message] = handleServerError(error);
+		return res.status(status).json({ message: message });
+
 	}
-);
+});
 
 /*
 // Check this updated patch route
@@ -4342,6 +4356,10 @@ app.post("/api/text-content/add", formFieldsValidator(contentSchema), authentica
 	const allowedFields = ["Site_Identifier", "Main_Tag", "Language", "Content_Text", "Content_Type"];
 
 	try {
+		if (req.user.RoleID !== 4) {
+			return res.status(401).json({ message: "User is not an admin" });
+		}
+
 		if (!Site_Identifier || !Content_Text) {
 			return res.status(400).json({ message: "All required form fields were not provided" });
 		}

@@ -110,6 +110,10 @@ export const updateDynamicData = async (formFields, tableName, partName, id) => 
 		} else {
 			console.log("partName has no value. This might be intentional, but double check to be sure.");
 		}
+		
+		formFields = Object.fromEntries(
+				Object.entries(formFields).filter(([_, value]) => value !== "")
+			);
 
 		if (formFields && typeof formFields === "object" && !Array.isArray(formFields)) formFields = JSON.stringify(formFields);
 		// api call to register a new user
@@ -150,6 +154,10 @@ export const postDynamicData = async (formFields, tableName, partName) => {
 		} else {
 			console.log("partName has no value. This might be intentional, but double check to be sure.");
 		}
+		
+		formFields = Object.fromEntries(
+				Object.entries(formFields).filter(([_, value]) => value !== "")
+			);
 
 		if (formFields && typeof formFields === "object" && !Array.isArray(formFields)) formFields = JSON.stringify(formFields);
 		// api call to register a new user

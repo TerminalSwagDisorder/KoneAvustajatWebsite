@@ -1,11 +1,23 @@
 import React, { useState, useEffect } from "react";
 import { Link } from 'react-router-dom';
-import { Button, Container, Table, Form } from 'react-bootstrap';
+import { Button, Container, Table, Form, CloseButton } from 'react-bootstrap';
 import { useSelector, useDispatch } from "react-redux";
 import { addToShoppingCart, removeFromShoppingCart, clearShoppingCart } from "../redux/shoppingCartSlice";
 import { addToCompletedBuild, removeFromCompletedBuild, clearCompletedBuild } from "../redux/wizardSlice";
+import { useAuth } from "../utils/Contexts";
 
-const UsedPartsBrowse = ({ fetchDynamicData, fetchDataAmount }) => {
+const UsedPartsBrowse = ({ fetchDynamicData, fetchDataAmount, postDynamicData, updateDynamicData }) => {
+	const { currentUser } = useAuth();
+	const formFieldsDefault = {
+		PartTypeID: "",
+		Name: "",
+		Manufacturer: "",
+		ModelNumber: "",
+		SerialNumber: "",
+		Price: "",
+		Available: "",
+		AdditionalDetails: ""
+	};
 	const [parts, setParts] = useState([]);
 	const [partName, setPartName] = useState("cpu");
 	const [error, setError] = useState(null);
@@ -13,6 +25,8 @@ const UsedPartsBrowse = ({ fetchDynamicData, fetchDataAmount }) => {
 	const [totalPages, setTotalPages] = useState(0);
 	const [page, setPage] = useState(1);
 	const [selectedPart, setSelectedPart] = useState("");
+	const [currentOperation, setCurrentOperation] = useState("");
+	const [formFields, setFormFields] = useState(formFieldsDefault);
 	const shoppingCart = useSelector((state) => state.shoppingCart.shoppingCart);
 	const completedBuild = useSelector((state) => state.wizard.completedBuild);
 	const dispatch = useDispatch();
@@ -26,6 +40,17 @@ const UsedPartsBrowse = ({ fetchDynamicData, fetchDataAmount }) => {
 		6: 'Motherboard',
 		7: 'Psu',
 		8: 'Storage'
+	};
+
+	const partTypeIDMapping = {
+		1: "chassis",
+		2: "cpu",
+		3: "cpu_cooler",
+		4: "gpu",
+		5: "memory",
+		6: "motherboard",
+		7: "psu",
+		8: "storage"
 	};
 
 	// On initial page load
@@ -51,7 +76,8 @@ const UsedPartsBrowse = ({ fetchDynamicData, fetchDataAmount }) => {
 		fetchParts(page, "inventory");     //Error????
 	}, [page]);
 */
-	
+	const formatString = str => str.replace(/_/g, " ").replace(/([a-z])([A-Z])/g, "$1 $2").toLowerCase().replace(/^./, c => c.toUpperCase());
+
 	const handleAddToCart = (item) => {
 		const newItem = {
 			...item,
@@ -83,6 +109,11 @@ const UsedPartsBrowse = ({ fetchDynamicData, fetchDataAmount }) => {
 		window.scrollTo(0, 180);
 	};
 
+	const handleAddPart = (operation) => {
+		setFormFields(formFieldsDefault);
+		setCurrentOperation(operation);
+	};
+
 	const fetchData = async () => {
 		try {
 			const data = await fetchDynamicData(page, "inventory");
@@ -96,6 +127,12 @@ const UsedPartsBrowse = ({ fetchDynamicData, fetchDataAmount }) => {
 	const handleSearchTerm = (event) => {
 		event.preventDefault();
 		setPartName(event.target.value);
+	};
+
+	const closeForm = () => {
+		setFormFields(formFieldsDefault);
+		setCurrentOperation(null);
+		setSelectedPart(null);
 	};
 
 	const fetchSearchTermData = async (event) => {
@@ -112,6 +149,28 @@ const UsedPartsBrowse = ({ fetchDynamicData, fetchDataAmount }) => {
 		} catch (error) {
 			alert(`Error while fetching parts: \n${error}`);
 			console.error(`Error while fetching parts: \n${error}`);
+		}
+	};
+
+	const handleInputChange = (event) => {		
+		setFormFields((prevFields) => ({
+			...prevFields,
+			[event.target.name]: event.target.value,
+		}));
+	};
+	
+	const handleSubmit = async (event) => {
+		event.preventDefault();
+		try {
+			const success = await postDynamicData(formFields, "inventory/add");
+			if (success) {
+				await fetchData();
+				await handlePagination();
+				closeForm();
+			}
+		} catch (error) {
+			console.error("Error updating credentials:", error);
+			alert("Error updating credentials.");
 		}
 	};
 
@@ -140,6 +199,69 @@ const UsedPartsBrowse = ({ fetchDynamicData, fetchDataAmount }) => {
 			</div>
 		);
 	};*/
+
+const renderAddForm = () => {
+	if (currentUser && currentUser.RoleID === 4 && currentOperation !== "add") {
+		return (
+			<Button className="user-select-button" onClick={() => handleAddPart("add")}>
+				Add new part
+			</Button>
+		);
+	} else if (currentUser && currentUser.RoleID === 4 && currentOperation === "add") {
+		return (
+			<div id="partform" className="partform d-flex justify-content-center align-items-center">
+				<Form onSubmit={handleSubmit} className="adminForm border rounded shadow p-4 bg-opaque">
+					<div className="d-flex justify-content-end mb-3">
+						<CloseButton onClick={() => closeForm()} />
+					</div>
+					<h4 className="mb-3">Add part</h4>
+					{Object.entries(formFields).map(([key, value]) => 
+						<Form.Group key={key} className="mb-3">
+						{key === "PartTypeID" ? (
+							<Form.Select key={key} name="PartTypeID" value={formFields.PartTypeID} onChange={handleInputChange}>
+								<option value="">Select part type</option>
+								{partTypeIDMapping && Object.keys(partTypeIDMapping).length > 0 ? (
+									Object.entries(partTypeIDMapping).map(([k, v]) => (
+										<option key={k} value={k}>
+											{formatString(v)}
+										</option>
+									))
+								) : (
+									<option value="">No part types available</option>
+								)}
+							</Form.Select>
+						) : key === "Price" ? (
+							<Form.Control
+								key={key}
+								type="number"
+								step={0.01}
+								min={0}
+								placeholder={`Enter new ${formatString(key)}`}
+								name={key}
+								value={value}
+								onChange={handleInputChange}
+							/>
+						) : (
+							<Form.Control
+								key={key}
+								type="text"
+								placeholder={`Enter new ${formatString(key)}`}
+								name={key}
+								value={value}
+								onChange={handleInputChange}
+							/>
+						)}
+						</Form.Group>
+					   )}
+						
+					<Button variant="primary" type="submit">
+						Add part to inventory
+					</Button>
+				</Form>
+			</div>
+		);
+	}
+};
 
 	const renderPagination = (page, totalPages) => {
 		return (
@@ -188,6 +310,7 @@ const UsedPartsBrowse = ({ fetchDynamicData, fetchDataAmount }) => {
 		<div>
 		<h1>Used Parts</h1>
 		{/*searchParts()*/}
+		{renderAddForm()}
 		{renderPagination(page, totalPages)}
 		<Table responsive="md" hover bordered className="table-striped">
 			<thead>
