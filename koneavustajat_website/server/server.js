@@ -429,7 +429,7 @@ const loginSchema = Joi.object({
 		}),
 	Password: Joi.string().trim()
 		.required()
-		.pattern(/^(?=.*[A-Z])(?=.*\d)[A-Za-z\d]{9,}$/)
+		.pattern(/^(?=.*[A-Z])(?=.*\d)[\w!@#$%^&*()_\-+=\[\]{}:;"'<>,.?\/]{9,}$/)
 		.messages({
 			"string.pattern.base": "Invalid password format. Password must be at least 9 characters long, include 1 capital letter, and 1 number.",
 			"string.empty": "Password cannot be empty",
@@ -455,7 +455,7 @@ const userSchema = Joi.object({
 		}),
 	Password: Joi.string().trim()
 		.required()
-		.pattern(/^(?=.*[A-Z])(?=.*\d)[A-Za-z\d]{9,}$/)
+		.pattern(/^(?=.*[A-Z])(?=.*\d)[\w!@#$%^&*()_\-+=\[\]{}:;"'<>,.?\/]{9,}$/)
 		.messages({
 			"string.pattern.base": "Invalid password format. Password must be at least 9 characters long, include 1 capital letter, and 1 number.",
 			"string.empty": "Password cannot be empty",
@@ -478,14 +478,14 @@ const userUpdateSchema = Joi.object({
 			"string.empty": "Email cannot be empty"
 		}),
 	Password: Joi.string().trim()
-		.pattern(/^(?=.*[A-Z])(?=.*\d)[A-Za-z\d]{9,}$/)
+		.pattern(/^(?=.*[A-Z])(?=.*\d)[\w!@#$%^&*()_\-+=\[\]{}:;"'<>,.?\/]{9,}$/)
 		.optional()
 		.messages({
 			"string.pattern.base": "Invalid password format. Password must be at least 9 characters long, include 1 capital letter, and 1 number.",
 			"string.empty": "Password cannot be empty"
 		}),
 	currentPassword: Joi.string().trim()
-		.pattern(/^(?=.*[A-Z])(?=.*\d)[A-Za-z\d]{9,}$/)
+		.pattern(/^(?=.*[A-Z])(?=.*\d)[\w!@#$%^&*()_\-+=\[\]{}:;"'<>,.?\/]{9,}$/)
 		.required()
 		.messages({
 			"string.pattern.base": "Invalid password format for current password.",
@@ -580,7 +580,7 @@ const addressSchema = Joi.object({
 	PostalCode: Joi.string().trim().max(20).optional(),
 	Country: Joi.string().trim().max(100).optional(),
 	currentPassword: Joi.string().trim()
-		.pattern(/^(?=.*[A-Z])(?=.*\d)[A-Za-z\d]{9,}$/)
+		.pattern(/^(?=.*[A-Z])(?=.*\d)[\w!@#$%^&*()_\-+=\[\]{}:;"'<>,.?\/]{9,}$/)
 		.required()
 		.messages({
 			"string.pattern.base": "Invalid password format for current password.",
@@ -836,7 +836,7 @@ const tableValidator = (schema, queryName) => {
 
 // Middleware for regex validation, kind of unnecessary with joi
 const checkRegex = (req, res, next) => {
-	const passwordRegex = /^(?=.*[A-Z])(?=.*\d)[A-Za-z\d]{9,}$/; // At least 1 upper character, at least 1 digit/number, at least 9 chars long
+	const passwordRegex = /^(?=.*[A-Z])(?=.*\d)[\w!@#$%^&*()_\-+=\[\]{}:;"'<>,.?\/]{9,}$/; // At least 1 upper character, at least 1 digit/number, at least 9 chars long
 	const emailRegex =
 		/^[-A-Za-z0-9!#$%&'*+/=?^_`{|}~]+(?:\.[-A-Za-z0-9!#$%&'*+/=?^_`{|}~]+)*@(?:[A-Za-z0-9](?:[-A-Za-z0-9]*[A-Za-z0-9])?\.)+[A-Za-z0-9](?:[-A-Za-z0-9]*[A-Za-z0-9])?$/; // Email according to the RFC 5322 standard
 
