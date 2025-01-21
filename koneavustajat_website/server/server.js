@@ -9,6 +9,7 @@ const helmet = require("helmet");
 const cors = require("cors");
 const path = require("path");
 const bcrypt = require("bcrypt");
+const crypto = require("crypto");
 const fs = require("fs");
 const cookieParser = require("cookie-parser");
 const multer = require("multer");
@@ -31,6 +32,8 @@ require("dotenv").config();
 const sessionSecret = process.env.SESSION_SECRET;
 const jwtSecret = process.env.JWT_SECRET;
 const opensearch = process.env.OPENSEARCH_URL;
+const stripe_secret = process.env.STRIPE_SK;
+const stripe_publish = process.env.STRIPE_PK;
 if (!sessionSecret) {
 	console.error("Missing SESSION_SECRET environment variable. Exiting...\nHave you run env_generator.js yet?");
 	process.exit(1);
@@ -43,6 +46,17 @@ if (!opensearch) {
 	console.error("Missing OPENSEARCH_URL environment variable. Exiting...\nHave you run env_generator.js yet?");
 	process.exit(1);
 }
+if (!stripe_secret) {
+	console.error("Missing STRIPE_SK environment variable. Exiting...");
+	process.exit(1);
+}
+if (!stripe_publish) {
+	console.error("Missing STRIPE_PK environment variable. Exiting...");
+	process.exit(1);
+}
+
+const stripe = require("stripe")(stripe_secret);
+
 
 // General setup
 
@@ -270,6 +284,21 @@ const deleteFile = async (filePath) => {
 		console.error("Error deleting file:", error);
 		return false;
     }
+};
+
+// Stripe payment
+const createPaymentIntent = async (amount, currency) => {
+	try {
+		const paymentIntent = await stripe.paymentIntents.create({
+			amount: amount, // Amount in smallest currency unit (e.g., cents for USD)
+			currency: "euro", // E.g., 'usd'
+			payment_method_types: ["card"], // Specify accepted payment methods
+		});
+		console.log(paymentIntent);
+		return paymentIntent;
+	} catch (error) {
+		console.error(error);
+	}
 };
 
 const paginationSchema = Joi.object({
@@ -587,6 +616,24 @@ const addressSchema = Joi.object({
 			"string.empty": "Current password cannot be empty",
 			"any.required": "Current password is required"
 		})
+});
+
+const orderSchema = Joi.object({
+	OrderID: Joi.number().optional(),
+	OrderTypeID: Joi.number().optional(),
+	CustomerID: Joi.number().optional(),
+	ReceiptID: Joi.string().trim().max(30).optional(),
+	OrderDate: Joi.date().optional(),
+	Status: Joi.string().trim().max(255).optional(),
+	TotalPrice: Joi.number().optional(),
+	Currency: Joi.string().trim().max(10).optional(),
+	Items: Joi.array().items(Joi.object().optional()).optional(),
+	PaymentMethod: Joi.string().trim().max(255).optional(),
+	PaymentProvider: Joi.string().trim().max(255).optional(),
+	TransactionID: Joi.string().trim().max(255).optional(),
+	PaymentStatus: Joi.string().trim().max(255).optional(),
+	PaymentDate: Joi.date().optional(),
+	ModifiedAt: Joi.date().optional()
 });
 
 // Validators & searches
@@ -2657,6 +2704,21 @@ const chooseRandomBuild = async (randomBuilds, scoring) => {
 	return randomBuilds[chosenBuild.index];
 };
 
+const generateReceiptId = (customerID) => {
+	if (!customerID) {
+		return null;
+	}
+
+	const hashedUserId = crypto.createHash("sha256").update(customerID.toString()).digest("hex").slice(0, 8);
+
+	const currentDate = new Date();
+	const formattedDate = currentDate.toLocaleDateString("en-GB").replace(/\//g, "");
+
+	const randomChars = Math.random().toString(36).substring(2, 6).toUpperCase();
+	
+	const receiptId = `${hashedUserId}${formattedDate}-${randomChars}`;
+	return receiptId;
+};
 
 ////////////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////
@@ -3759,6 +3821,70 @@ app.get("/api/orders/:id", idValidator, async (req, res) => {
 		}));
 
 		return res.status(200).json(parseInventory);
+	} catch (error) {
+		const [status, message] = handleServerError(error);
+		return res.status(status).json({ message: message });
+	}
+});
+
+app.post("/api/orders/add", authenticateSession, formFieldsValidator(orderSchema), async (req, res) => {
+	console.log("API add order accessed");
+
+	const userId = req.user.UserID;
+	const jsonFormFields = req.validatedForm;
+	const { TotalPrice,  Items, } = jsonFormFields;
+	const allowedFields = ["TotalPrice",  "Items"];
+	const customerSql = "SELECT * FROM customers WHERE UserID = ?";
+
+	try {
+		if (!TotalPrice || !Items) {
+			return res.status(400).json({ message: "All required form fields were not provided" });
+		}
+		const [customer] = await promisePool.query(customerSql, [userId]);
+		if (!customer.length) {
+			return res.status(401).json({ message: "User is not a customer!" });
+		}
+
+		let insertQuery = `INSERT INTO orders SET `;
+		let queryParams = [];
+
+		// More dynamic way of updating content
+		for (const key in jsonFormFields) {
+			console.log(key);
+			if (allowedFields.includes(key)) {
+				if (jsonFormFields[key] !== "") {
+					insertQuery += key.charAt(0).toUpperCase() + key.slice(1) + " = ?, ";
+					if (typeof jsonFormFields[key] === "object") {
+						queryParams.push(JSON.stringify(jsonFormFields[key]));
+					} else {
+						queryParams.push(jsonFormFields[key]);
+					}
+				}
+			}
+		}
+
+		if (queryParams.length > 0) {
+			insertQuery = insertQuery.slice(0, -2);
+		}
+
+		// OrderID, OrderTypeID, CustomerID, ReceiptID, OrderDate, Status, TotalPrice, Currency, Items, PaymentMethod, PaymentProvider, TransactionID, PaymentStatus, PaymentDate, ModifiedAt
+		insertQuery += ", CustomerID = ?";
+		queryParams.push(parseInt(customer[0].CustomerID));		
+		
+		insertQuery += ", OrderTypeID = ?";
+		queryParams.push(1);
+		
+		insertQuery += ", ReceiptID = ?";
+		queryParams.push(generateReceiptId(customer[0].CustomerID));
+	
+		insertQuery += ", Status = ?";
+		queryParams.push("verifying");
+
+		insertQuery += ", Currency = ?";
+		queryParams.push("euro");
+
+		const [result] = await promisePool.query(insertQuery, queryParams);
+		return res.status(200).json({ message: "Added address successfully", id: result.insertId });
 	} catch (error) {
 		const [status, message] = handleServerError(error);
 		return res.status(status).json({ message: message });

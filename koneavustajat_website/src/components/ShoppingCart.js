@@ -8,12 +8,16 @@ import {
 	clearShoppingCart
 } from "../redux/shoppingCartSlice";
 
-const ShoppingCart = () => {
+const ShoppingCart = ({ postDynamicData }) => {
 	const shoppingCart = useSelector((state) => state.shoppingCart.shoppingCart);
 	const dispatch = useDispatch();
 	const cartItems = Object.values(shoppingCart);
 	const cartEntries = Object.entries(shoppingCart);
 	const [chosenPart, setChosenPart] = useState("");
+	const [formFields, setFormFields] = useState({
+		TotalPrice: 0,
+		Items: {},
+	});
 
 	const sortingId = (key) => parseInt(key.split('_')[1], 10);
 	const usedPartsItems = cartEntries
@@ -30,12 +34,13 @@ const ShoppingCart = () => {
 	});
 
 	const sortedItems = [...usedPartsItems, ...orderedItems];
+	const allCurrentItems = sortedItems.map(item => item[1]);
 
-	console.log(sortedItems.map(item => item[1].Price || item[1].totalPrice));
+	//console.log(sortedItems.map(item => item[1].Price || item[1].totalPrice));
 
 	const totalPrice = sortedItems.map(item => item[1])
 		.filter(i => i && i.Price || i.totalPrice) // Filter out non-component entries
-		.reduce((acc, i) => acc + (parseFloat(i.Price || i.totalPrice) || 0), 0)
+		.reduce((acc, i) => acc + (parseFloat(i.Price || i.totalPrice) || 0) * parseInt(i.quantity || 1), 0)
 	.toFixed(2);
 
 
@@ -65,6 +70,20 @@ const ShoppingCart = () => {
 			setChosenPart("");
 		} else {
 			setChosenPart(newChoice);
+		}
+	};
+
+	const handleSubmit = async () => {
+		formFields.TotalPrice = totalPrice;
+		formFields.Items = allCurrentItems;
+		console.log(typeof formFields.Items);
+		try {
+			const handle = await postDynamicData(formFields, "orders/add");
+			if (handle) handleClearCart();
+			
+		} catch (error) {
+			console.error("Error adding order:", error);
+			alert("Error adding order.");
 		}
 	};
 	
@@ -153,6 +172,11 @@ const ShoppingCart = () => {
 			<Button className="user-select-button" onClick={() => handleClearCart()}>
 				Clear Cart
 			</Button>
+			{allCurrentItems && (
+				<Button className="user-select-button" onClick={() => handleSubmit()}>
+					Proceed with order
+				</Button>
+			)}
 			<br />
 			<br />
 			<br />

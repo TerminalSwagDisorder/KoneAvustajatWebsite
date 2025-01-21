@@ -181,7 +181,7 @@ export const postDynamicData = async (formFields, tableName, partName) => {
 
 		return data;
 	} catch (error) {
-		console.error("Error updating data:", error);
+		console.error("Error posting data:", error);
 		if (error.message) alert(error.message);
 
 	}
