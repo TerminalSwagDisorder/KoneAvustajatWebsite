@@ -3833,17 +3833,30 @@ app.post("/api/orders/add", authenticateSession, formFieldsValidator(orderSchema
 	const userId = req.user.UserID;
 	const jsonFormFields = req.validatedForm;
 	const { TotalPrice,  Items, } = jsonFormFields;
-	const allowedFields = ["TotalPrice",  "Items"];
+	const currency = "eur";
+	const allowedFields = ["Items"];
 	const customerSql = "SELECT * FROM customers WHERE UserID = ?";
 
 	try {
 		if (!TotalPrice || !Items) {
 			return res.status(400).json({ message: "All required form fields were not provided" });
 		}
+
 		const [customer] = await promisePool.query(customerSql, [userId]);
 		if (!customer.length) {
 			return res.status(401).json({ message: "User is not a customer!" });
 		}
+
+		const calculatedPrice = Items.map(item => item)
+			.filter(i => i && i.Price || i.totalPrice)
+			.reduce((acc, i) => acc + (parseFloat(i.Price || i.totalPrice) || 0) * parseInt(i.quantity || 1), 0)
+		.toFixed(2);
+
+		const paymentIntent = await stripe.paymentIntents.create({
+			amount: Math.round(calculatedPrice * 100), // Amount in cents
+			currency: currency,
+			payment_method_types: ["card"],
+		});
 
 		let insertQuery = `INSERT INTO orders SET `;
 		let queryParams = [];
@@ -3868,23 +3881,11 @@ app.post("/api/orders/add", authenticateSession, formFieldsValidator(orderSchema
 		}
 
 		// OrderID, OrderTypeID, CustomerID, ReceiptID, OrderDate, Status, TotalPrice, Currency, Items, PaymentMethod, PaymentProvider, TransactionID, PaymentStatus, PaymentDate, ModifiedAt
-		insertQuery += ", CustomerID = ?";
-		queryParams.push(parseInt(customer[0].CustomerID));		
-		
-		insertQuery += ", OrderTypeID = ?";
-		queryParams.push(1);
-		
-		insertQuery += ", ReceiptID = ?";
-		queryParams.push(generateReceiptId(customer[0].CustomerID));
-	
-		insertQuery += ", Status = ?";
-		queryParams.push("verifying");
-
-		insertQuery += ", Currency = ?";
-		queryParams.push("euro");
+		insertQuery += ", CustomerID = ?, TotalPrice = ?, OrderTypeID = ?, ReceiptID = ?, Status = ?, Currency = ?, PaymentProvider = ?, TransactionID = ?, PaymentMethod = ?, PaymentStatus = ?";
+		queryParams.push(parseInt(customer[0].CustomerID), calculatedPrice, 1, generateReceiptId(customer[0].CustomerID), "verifying", currency, "stripe", paymentIntent.id, "card", "unpaid");		
 
 		const [result] = await promisePool.query(insertQuery, queryParams);
-		return res.status(200).json({ message: "Added address successfully", id: result.insertId });
+		return res.status(200).json({ message: "Added address successfully", id: result.insertId, clientSecret: paymentIntent.client_secret });
 	} catch (error) {
 		const [status, message] = handleServerError(error);
 		return res.status(status).json({ message: message });

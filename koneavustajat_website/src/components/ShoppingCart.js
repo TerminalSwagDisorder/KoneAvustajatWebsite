@@ -7,8 +7,11 @@ import {
 	removeOneFromShoppingCart,
 	clearShoppingCart
 } from "../redux/shoppingCartSlice";
+import PaymentForm from "./PaymentForm.js";
+import { usePayment } from "../utils/Contexts";
 
 const ShoppingCart = ({ postDynamicData }) => {
+    const { clientSecret, setClientSecret } = usePayment();
 	const shoppingCart = useSelector((state) => state.shoppingCart.shoppingCart);
 	const dispatch = useDispatch();
 	const cartItems = Object.values(shoppingCart);
@@ -18,6 +21,8 @@ const ShoppingCart = ({ postDynamicData }) => {
 		TotalPrice: 0,
 		Items: {},
 	});
+	const [showPaymentForm, setShowPaymentForm] = useState(false);
+
 
 	const sortingId = (key) => parseInt(key.split('_')[1], 10);
 	const usedPartsItems = cartEntries
@@ -78,13 +83,23 @@ const ShoppingCart = ({ postDynamicData }) => {
 		formFields.Items = allCurrentItems;
 		console.log(typeof formFields.Items);
 		try {
-			const handle = await postDynamicData(formFields, "orders/add");
-			if (handle) handleClearCart();
-			
+			const paymentData = await postDynamicData(formFields, "orders/add");
+			if (paymentData && paymentData.clientSecret) {
+				setClientSecret(paymentData.clientSecret);
+				setShowPaymentForm(true);
+			} else {
+				throw new Error("Could not initiate payment. No client secret received!");
+			}
 		} catch (error) {
 			console.error("Error adding order:", error);
 			alert("Error adding order.");
 		}
+	};
+
+	const handlePaymentSuccess = () => {
+		alert("Payment Succeeded!");
+		handleClearCart();
+		setShowPaymentForm(false);
 	};
 	
 	const formatString = str => str.replace(/_/g, " ").replace(/([a-z])([A-Z])/g, "$1 $2").toLowerCase().replace(/^./, c => c.toUpperCase());
@@ -176,6 +191,12 @@ const ShoppingCart = ({ postDynamicData }) => {
 				<Button className="user-select-button" onClick={() => handleSubmit()}>
 					Proceed with order
 				</Button>
+			)}
+			{showPaymentForm && clientSecret && (
+				<PaymentForm
+					clientSecret={clientSecret}
+					onPaymentSuccess={handlePaymentSuccess}
+				/>
 			)}
 			<br />
 			<br />

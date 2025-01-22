@@ -8,12 +8,14 @@ const LanguageContext = createContext();
 const ContentContext = createContext();
 const ModalContext = createContext();
 const AuthContext = createContext();
+const PaymentContext = createContext();
 
 export const useTheme = () => useContext(ThemeContext);
 export const useLanguage = () => useContext(LanguageContext);
 export const useContent = () => useContext(ContentContext);
 export const useModal = () => useContext(ModalContext);
 export const useAuth = () => useContext(AuthContext);
+export const usePayment = () => useContext(PaymentContext);
 
 export const AuthProvider = ({ children }) => {
 	const [currentUser, setCurrentUser] = useState(null);
@@ -167,5 +169,15 @@ export const ModalProvider = ({ children }) => {
 		<ModalContext.Provider value={{ isOpen, modalContent, openModal, closeModal }}>
 			{children}
 		</ModalContext.Provider>
+	);
+};
+
+export const PaymentProvider = ({ children }) => {
+	const [clientSecret, setClientSecret] = useState(null);
+
+	return (
+		<PaymentContext.Provider value={{ clientSecret, setClientSecret }}>
+			{children}
+		</PaymentContext.Provider>
 	);
 };
