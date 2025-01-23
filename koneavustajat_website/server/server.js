@@ -3384,8 +3384,36 @@ app.get("/api/profile/addresses", authenticateSession, async (req, res) => {
 		}
 
 		const [addresses] = await promisePool.query(sql, [customer[0].CustomerID]);
+		if (!addresses.length) {
+			return res.status(404).json({ message: "No addresses found" });
+		}
 
 		return res.status(200).json(addresses);
+	} catch (error) {
+		const [status, message] = handleServerError(error);
+		return res.status(status).json({ message: message });
+	}
+});
+
+app.get("/api/profile/orders", authenticateSession, async (req, res) => {
+	console.log("API search parts by id accessed");
+
+	const id = req.user.UserID;
+
+	const customerSql = "SELECT * FROM customers WHERE UserID = ?";
+	const sql = "SELECT * FROM orders WHERE CustomerID = ?";
+	try {
+		const [customer] = await promisePool.query(customerSql, [id]);
+		if (!customer.length) {
+			return res.status(401).json({ message: "User is not a customer!" });
+		}
+
+		const [orders] = await promisePool.query(sql, [customer[0].CustomerID]);
+		if (!orders.length) {
+			return res.status(404).json({ message: "No orders found" });
+		}
+
+		return res.status(200).json(orders);
 	} catch (error) {
 		const [status, message] = handleServerError(error);
 		return res.status(status).json({ message: message });
@@ -3807,7 +3835,7 @@ app.get("/api/orders/:id", idValidator, async (req, res) => {
 
 	const id = req.validatedId;
 
-	const sql = "SELECT * FROM orders WHERE PartID = ?";
+	const sql = "SELECT * FROM orders WHERE OrderID = ?";
 	try {
 		const [orders] = await promisePool.query(sql, [id]);
 		if (!orders.length) {

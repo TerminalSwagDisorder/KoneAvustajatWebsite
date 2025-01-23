@@ -54,6 +54,10 @@ const Profile = ({ handleCredentialChange, handleSignout, fetchDynamicData, upda
 		PostalCode: "",
 		Country: ""
 	}]);
+	const [orders, setOrders] = useState([]);
+	const [currentOrder, setCurrentOrder] = useState({});
+	
+	
 	/*const [currentAddress, setCurrentAddress] = useState({
 		AddressTypeID: "",
 		Street: "",
@@ -68,7 +72,10 @@ const Profile = ({ handleCredentialChange, handleSignout, fetchDynamicData, upda
 		/^[-A-Za-z0-9!#$%&'*+/=?^_`{|}~]+(?:\.[-A-Za-z0-9!#$%&'*+/=?^_`{|}~]+)*@(?:[A-Za-z0-9](?:[-A-Za-z0-9]*[A-Za-z0-9])?\.)+[A-Za-z0-9](?:[-A-Za-z0-9]*[A-Za-z0-9])?$/;
 	
 	useEffect(() => {
-		if (currentUser && currentUser.RoleID === 2) fetchAddressData();
+		if (currentUser && currentUser.RoleID === 2) {
+			fetchAddressData();
+			fetchOrders();
+		}
 	}, []);	
 
 	useEffect(() => {
@@ -76,9 +83,16 @@ const Profile = ({ handleCredentialChange, handleSignout, fetchDynamicData, upda
 	}, [currentAddress, currentAddressType]);
 
 	useEffect(() => {
+		console.log(currentOperation);
+	}, [currentOperation]);
+
+	useEffect(() => {
 		setFormFields({...defaultFormFields});
 		if (currentOperation === "address") {
 			fetchAddressData();
+		}
+		if (currentOperation === "orders") {
+			fetchOrders();
 		}
 	}, [currentOperation]);
 
@@ -93,6 +107,15 @@ const Profile = ({ handleCredentialChange, handleSignout, fetchDynamicData, upda
 			console.error("Error while fetching addresses:", error);
 		}
 	};
+	
+	const fetchOrders = async () => {
+		try {
+			const orderData = await fetchDynamicData(null, "profile/orders", null);
+			if (orderData) setOrders(orderData);
+		} catch (error) {
+			console.error("Error while fetching orders:", error);
+		}
+	}
 
 	const handleInputChange = (event) => {
 		setFormFields((prevFields) => ({
@@ -142,60 +165,146 @@ const Profile = ({ handleCredentialChange, handleSignout, fetchDynamicData, upda
 		</Tooltip>
 	);
 
-const renderUserForm = () => {
-	if (currentUser && currentOperation === "edit") {
-		return (
-			<div id="partform" className="partform d-flex justify-content-center align-items-center">
-				<Form onSubmit={handleSubmit} className="adminForm border rounded shadow p-4 bg-opaque" style={{ wIDth: "400px" }}>
-					<div className="d-flex justify-content-end mb-3">
-						<CloseButton onClick={() => closeForm()} />
-					</div>
-					<h4 className=" mb-3">Edit profile</h4>
-					<Form.Group className="mb-3">
-						<Form.Label htmlFor="ProfileImage"><FaCameraRetro /> Change profile picture</Form.Label>
-						<Form.Control type="file" name="ProfileImage" value={formFields.ProfileImage} accept="image/png, image/jpeg, image/gif" onChange={handleInputChange} />
-					</Form.Group>
-					<Form.Group className="mb-3">
-							<Form.Control
-								type="text"
-								placeholder="Enter new name"
-								name="Name"
-								value={formFields.Name}
-								onChange={handleInputChange}
-							/>
+	const renderUserForm = () => {
+		if (currentUser && currentOperation === "edit") {
+			return (
+				<div id="partform" className="partform d-flex justify-content-center align-items-center">
+					<Form onSubmit={handleSubmit} className="adminForm border rounded shadow p-4 bg-opaque" style={{ wIDth: "400px" }}>
+						<div className="d-flex justify-content-end mb-3">
+							<CloseButton onClick={() => closeForm()} />
+						</div>
+						<h4 className=" mb-3">Edit profile</h4>
+						<Form.Group className="mb-3">
+							<Form.Label htmlFor="ProfileImage"><FaCameraRetro /> Change profile picture</Form.Label>
+							<Form.Control type="file" name="ProfileImage" value={formFields.ProfileImage} accept="image/png, image/jpeg, image/gif" onChange={handleInputChange} />
 						</Form.Group>
 						<Form.Group className="mb-3">
-							<Form.Select name="Gender" value={formFields.Gender} onChange={handleInputChange}>
-								<option value="">Select new gender</option>
-								<option value="male">
-									Male
-								</option>
-								<option value="female">
-									Female
-								</option>
+								<Form.Control
+									type="text"
+									placeholder="Enter new name"
+									name="Name"
+									value={formFields.Name}
+									onChange={handleInputChange}
+								/>
+							</Form.Group>
+							<Form.Group className="mb-3">
+								<Form.Select name="Gender" value={formFields.Gender} onChange={handleInputChange}>
+									<option value="">Select new gender</option>
+									<option value="male">
+										Male
+									</option>
+									<option value="female">
+										Female
+									</option>
+								</Form.Select>
+							</Form.Group>
+							<Form.Group className="mb-3">
+								<Form.Control
+									type="email"
+									placeholder="Enter new email"
+									name="Email"
+									onChange={handleInputChange}
+									value={formFields.Email}
+									className={emailValid ? "valid-input" : "invalid-input"}
+								/>
+							</Form.Group>
+							<Form.Group className="mb-3">
+								<OverlayTrigger placement="right" delay={{ hide: 400 }} overlay={renderTooltip}>
+									<Form.Control
+										type="password"
+										placeholder="Enter new password"
+										name="Password"
+										onChange={handleInputChange}
+										value={formFields.Password}
+										className={passwordValid ? "valid-input" : "invalid-input"}
+									/>
+								</OverlayTrigger>
+							</Form.Group>
+							<Form.Group className="mb-3">
+								<Form.Control
+									type="password"
+									placeholder="Enter current password"
+									name="currentPassword"
+									onChange={handleInputChange}
+									value={formFields.currentPassword}
+									required
+								/>
+							</Form.Group>
+						<Button variant="primary" type="submit">
+							Change credentials
+						</Button>
+					</Form>
+				</div>
+			);
+		}
+	};
+
+	const renderAddressForm = () => {
+		if (currentUser && formFields && currentOperation === "address") {
+			return (
+				<div id="partform" className="partform d-flex justify-content-center align-items-center">
+					<Form onSubmit={handleSubmit} className="adminForm border rounded shadow p-4 bg-opaque" style={{ width: "400px" }}>
+						<div className="d-flex justify-content-end mb-3">
+							<CloseButton onClick={() => closeForm()} />
+						</div>
+						<h4 className=" mb-3">Change address</h4>
+						<Form.Group className="mb-3">
+							<Form.Select name="AddressTypeID" value={formFields.AddressTypeID || currentAddressType} onChange={handleInputChange}>
+								{addressTypes && Object.keys(addressTypes).length > 0 ? (
+									Object.keys(addressTypes).map((key) => (
+										<option key={addressTypes[key].AddressTypeID} value={addressTypes[key].AddressTypeID}>
+											{addressTypes[key].AddressTypeName}
+										</option>
+									))
+								) : (
+									<option value="">No address types available</option>
+								)}
 							</Form.Select>
 						</Form.Group>
 						<Form.Group className="mb-3">
 							<Form.Control
-								type="email"
-								placeholder="Enter new email"
-								name="Email"
+								type="text"
+								placeholder="Enter new street"
+								name="Street"
 								onChange={handleInputChange}
-								value={formFields.Email}
-								className={emailValid ? "valid-input" : "invalid-input"}
+								value={formFields.Street}
 							/>
 						</Form.Group>
 						<Form.Group className="mb-3">
-							<OverlayTrigger placement="right" delay={{ hide: 400 }} overlay={renderTooltip}>
-								<Form.Control
-									type="password"
-									placeholder="Enter new password"
-									name="Password"
-									onChange={handleInputChange}
-									value={formFields.Password}
-									className={passwordValid ? "valid-input" : "invalid-input"}
-								/>
-							</OverlayTrigger>
+							<Form.Control
+								type="text"
+								placeholder="Enter new city"
+								name="City"
+								onChange={handleInputChange}
+								value={formFields.City}
+							/>
+						</Form.Group>
+						<Form.Group className="mb-3">
+							<Form.Control
+								type="text"
+								placeholder="Enter new state"
+								name="State"
+								onChange={handleInputChange}
+								value={formFields.State}
+							/>
+						</Form.Group>
+						<Form.Group className="mb-3">
+							<Form.Control
+								type="text"
+								placeholder="Enter new postal code"
+								name="PostalCode"
+								onChange={handleInputChange}
+								value={formFields.PostalCode}
+							/>
+						</Form.Group>
+						<Form.Group className="mb-3">
+							<Form.Control
+								type="text"
+								placeholder="Enter new country"
+								name="Country"
+								onChange={handleInputChange}
+								value={formFields.Country}
+							/>
 						</Form.Group>
 						<Form.Group className="mb-3">
 							<Form.Control
@@ -207,100 +316,40 @@ const renderUserForm = () => {
 								required
 							/>
 						</Form.Group>
-					<Button variant="primary" type="submit">
-						Change credentials
-					</Button>
-				</Form>
-			</div>
-		);
-	}
-};
+						<Button variant="primary" type="submit">
+							Change address
+						</Button>
+					</Form>
+				</div>
+			);
+		}
+	};
 
-const renderAddressForm = () => {
-	if (currentUser && formFields && currentOperation === "address") {
-		return (
-			<div id="partform" className="partform d-flex justify-content-center align-items-center">
-				<Form onSubmit={handleSubmit} className="adminForm border rounded shadow p-4 bg-opaque" style={{ width: "400px" }}>
-					<div className="d-flex justify-content-end mb-3">
-						<CloseButton onClick={() => closeForm()} />
-					</div>
-					<h4 className=" mb-3">Change address</h4>
-					<Form.Group className="mb-3">
-						<Form.Select name="AddressTypeID" value={formFields.AddressTypeID || currentAddressType} onChange={handleInputChange}>
-							{addressTypes && Object.keys(addressTypes).length > 0 ? (
-								Object.keys(addressTypes).map((key) => (
-									<option key={addressTypes[key].AddressTypeID} value={addressTypes[key].AddressTypeID}>
-										{addressTypes[key].AddressTypeName}
-									</option>
-								))
-							) : (
-								<option value="">No address types available</option>
-							)}
-						</Form.Select>
-					</Form.Group>
-					<Form.Group className="mb-3">
-						<Form.Control
-							type="text"
-							placeholder="Enter new street"
-							name="Street"
-							onChange={handleInputChange}
-							value={formFields.Street}
-						/>
-					</Form.Group>
-					<Form.Group className="mb-3">
-						<Form.Control
-							type="text"
-							placeholder="Enter new city"
-							name="City"
-							onChange={handleInputChange}
-							value={formFields.City}
-						/>
-					</Form.Group>
-					<Form.Group className="mb-3">
-						<Form.Control
-							type="text"
-							placeholder="Enter new state"
-							name="State"
-							onChange={handleInputChange}
-							value={formFields.State}
-						/>
-					</Form.Group>
-					<Form.Group className="mb-3">
-						<Form.Control
-							type="text"
-							placeholder="Enter new postal code"
-							name="PostalCode"
-							onChange={handleInputChange}
-							value={formFields.PostalCode}
-						/>
-					</Form.Group>
-					<Form.Group className="mb-3">
-						<Form.Control
-							type="text"
-							placeholder="Enter new country"
-							name="Country"
-							onChange={handleInputChange}
-							value={formFields.Country}
-						/>
-					</Form.Group>
-					<Form.Group className="mb-3">
-						<Form.Control
-							type="password"
-							placeholder="Enter current password"
-							name="currentPassword"
-							onChange={handleInputChange}
-							value={formFields.currentPassword}
-							required
-						/>
-					</Form.Group>
-					<Button variant="primary" type="submit">
-						Change address
-					</Button>
-				</Form>
-			</div>
-		);
-	}
-};
+	const renderOrdersForm = () => {
+		const allowedFields = ["ReceiptID", "OrderDate", "Status", "TotalPrice", "PaymentMethod", "TransactionID", "PaymentStatus", "PaymentDate", "Items"];
+		console.log(Object.entries(orders).map(([key, value]) => console.log(value)));
+		if (currentUser && currentOperation === "orders") {
+			return (
+				<div id="partform" className="partform d-flex justify-content-center align-items-center">
+					{Object.values(orders).map(
+						(value, index) => 
+							(Object.entries(value).map(
+								([key, val]) => allowedFields.includes(key) && (
+									key === "Items" ? (
+										null
+									) : (
+										<>
+										<span>{key}</span>: {val} <br />
+										</>	
+									)
+								)
+							)
+						)
+					)}
+				</div>
+			)
+		}
+	};
 
 	const renderUserData = () => {
 		if (currentUser) {
@@ -341,10 +390,11 @@ const renderAddressForm = () => {
 	};
 
 	const renderForms = () => {
-		return(
+		return (
 			<>
 				{renderUserForm()}
 				{renderAddressForm()}
+				{renderOrdersForm()}
 			</>
 		);
 	}
@@ -426,6 +476,7 @@ const renderAddressForm = () => {
 	const formButtons = () => {
 		let editButton;
 		let customerButtons;
+		let ordersButton;
 
 		if (currentUser) {
 			editButton = <Button onClick={() => handleModifyProfile("edit")}>Edit your profile</Button>
@@ -434,18 +485,21 @@ const renderAddressForm = () => {
 		if (currentUser && currentUser.RoleID === 2) {
 			customerButtons = (
 				<>
-					<br />
 					<Button onClick={() => handleModifyProfile("address")}>Change address details</Button>
 					<br />
 					<Button onClick={() => handleModifyProfile("payment")}>Change payment details</Button>
 				</>
 			);
+			ordersButton = (
+				<Button onClick={() => handleModifyProfile("orders")}>View and change orders</Button>
+			)
 		}
 		return (
 			<Col md={4} className="text-center">
 				<div>
-					{editButton}
-					{customerButtons}
+					{editButton}<br />
+					{customerButtons}<br />
+					{ordersButton}<br />
 				</div>
 			</Col>
 		);

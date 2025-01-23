@@ -77,8 +77,8 @@ function App() {
 		<BrowserRouter>
 			<ModalProvider>
 				<ContentProvider fetchContent={fetchContent}>
-					<PaymentProvider>
-						<PaymentUtil>
+					<PaymentUtil>
+						<PaymentProvider>
 						<div className="App">
 						<NavBar handleSignout={handleSignout} /> 
 						<ContentManagementModal fetchWholeContent={fetchWholeContent} fetchContentIdentifiers={fetchContentIdentifiers} addContent={addContent} updateContent={updateContent} />
@@ -106,8 +106,8 @@ function App() {
 							)}
 						</Routes>
 						</div>
-					</PaymentUtil>
-				</PaymentProvider>
+					</PaymentProvider>
+				</PaymentUtil>
 			</ContentProvider>
 		</ModalProvider>
 	</BrowserRouter>
