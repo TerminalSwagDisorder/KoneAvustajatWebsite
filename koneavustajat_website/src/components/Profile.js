@@ -101,8 +101,10 @@ const Profile = ({ handleCredentialChange, handleSignout, fetchDynamicData, upda
 			const adressTypeData = await fetchDynamicData(null, "addresstypes", null);
 			const data = await fetchDynamicData(null, "profile/addresses", null);
 			if (adressTypeData) setAddressTypes(adressTypeData);
-			if (data) setCurrentAddress(data);
-			if (data) setCurrentAddressType(data[0].AddressTypeID || 1);
+			if (data) {
+				setCurrentAddress(data);
+				setCurrentAddressType(data[0].AddressTypeID || 1);
+			}
 		} catch (error) {
 			console.error("Error while fetching addresses:", error);
 		}
@@ -111,11 +113,30 @@ const Profile = ({ handleCredentialChange, handleSignout, fetchDynamicData, upda
 	const fetchOrders = async () => {
 		try {
 			const orderData = await fetchDynamicData(null, "profile/orders", null);
-			if (orderData) setOrders(orderData);
+			if (orderData) {
+				setOrders(orderData);
+				const currentOrderData = await fetchDynamicData(null, `orders/${orderData[0].OrderID}`, null);
+				if (currentOrderData) setCurrentOrder(currentOrderData);
+			} 
 		} catch (error) {
 			console.error("Error while fetching orders:", error);
 		}
-	}
+	};
+	
+	const fetchCurrentOrder = async (event) => {
+		if (event.target.name !== "OrderID") {
+			return;
+		}
+
+		const orderID = event.target.value;
+		try {
+			const currentOrderData = await fetchDynamicData(null, `orders/${orderID}`, null);
+			if (currentOrderData) setCurrentOrder(currentOrderData);
+		} catch (error) {
+			console.error("Error while fetching orders:", error);
+
+		}
+	};
 
 	const handleInputChange = (event) => {
 		setFormFields((prevFields) => ({
@@ -325,29 +346,69 @@ const Profile = ({ handleCredentialChange, handleSignout, fetchDynamicData, upda
 		}
 	};
 
-	const renderOrdersForm = () => {
+	const renderCurrentOrder = () => {
 		const allowedFields = ["ReceiptID", "OrderDate", "Status", "TotalPrice", "PaymentMethod", "TransactionID", "PaymentStatus", "PaymentDate", "Items"];
-		console.log(Object.entries(orders).map(([key, value]) => console.log(value)));
-		if (currentUser && currentOperation === "orders") {
+		if (currentUser && currentOrder && currentOperation === "orders") {
+			return (
+				<ListGroup className="profile-details">
+					{Object.values(currentOrder).map((value, index) =>
+						<ListGroup className="profile-details" key={index}>
+						{Object.entries(value).map(
+							([key, val]) =>
+								allowedFields.includes(key) && (
+								key === "Items" ? (
+									<ListGroup.Item>
+									{Object.values(val).map((obj, idx) => 
+										<li>
+											{obj.Name} | {obj.Price || obj.TotalPrice}€ | #{obj.quantity} <br />
+										</li>
+								   )}
+									</ListGroup.Item>
+								) : (
+									<ListGroup.Item>
+										<span>{key}</span>: {val ? val : "No value"} <br />
+									</ListGroup.Item>
+								)
+						))}
+					</ListGroup>
+					)}
+				</ListGroup>
+			)
+		}
+	};
+
+	const renderOrdersForm = () => {
+		if (currentUser && orders && currentOperation === "orders") {
+			if (currentOrder) console.log(currentOrder[0].PaymentStatus)
 			return (
 				<div id="partform" className="partform d-flex justify-content-center align-items-center">
-					{Object.values(orders).map(
-						(value, index) => 
-							(Object.entries(value).map(
-								([key, val]) => allowedFields.includes(key) && (
-									key === "Items" ? (
-										null
-									) : (
-										<>
-										<span>{key}</span>: {val} <br />
-										</>	
-									)
-								)
-							)
-						)
-					)}
+					<Form onSubmit={handleSubmit} className="adminForm border rounded shadow p-4 bg-opaque" style={{ width: "400px" }}>
+						<div className="d-flex justify-content-end mb-3">
+							<CloseButton onClick={() => closeForm()} />
+						</div>
+						<h4 className=" mb-3">Change address</h4>
+						<Form.Group className="mb-3">
+							<Form.Select name="OrderID" value={currentOrder[0].OrderID} onChange={fetchCurrentOrder}>
+								{orders && Object.keys(orders).length > 0 ? (
+									Object.keys(orders).map((key) => (
+										<option key={orders[key].ReceiptID} value={orders[key].OrderID}>
+											{orders[key].ReceiptID}
+										</option>
+									))
+								) : (
+									<option value="">No orders available</option>
+								)}
+							</Form.Select>
+						</Form.Group>
+						{renderCurrentOrder()}
+						{currentOrder && currentOrder[0].PaymentStatus !== "paid" && (
+							<Button variant="primary" type="submit">
+								Pay for order
+							</Button>
+						)}
+					</Form>
 				</div>
-			)
+			);
 		}
 	};
 
@@ -491,7 +552,7 @@ const Profile = ({ handleCredentialChange, handleSignout, fetchDynamicData, upda
 				</>
 			);
 			ordersButton = (
-				<Button onClick={() => handleModifyProfile("orders")}>View and change orders</Button>
+				<Button onClick={() => handleModifyProfile("orders")}>View orders</Button>
 			)
 		}
 		return (

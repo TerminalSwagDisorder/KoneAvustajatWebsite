@@ -14,7 +14,6 @@ export const checkAllowedTableNames = async (routeTypeArr, tableName) => {
 
     const allowedTableNamesArray = [];
     const allRoutes = await fetchServerRoutes();
-    
     const transformRouteTypes = routeTypeArr.map((col) => col.toLowerCase());
 
     for (let route in allRoutes) {
@@ -22,22 +21,27 @@ export const checkAllowedTableNames = async (routeTypeArr, tableName) => {
             for (let r of allRoutes[route]) {
                 let path = r.path.toLowerCase();
 
-                // Remove "/api/" prefix if present
                 path = path.includes("/api/") ? path.split("/api/")[1] : path;
-
-                // Remove dynamic parts (e.g., ":id")
-                path = path
-                    .split("/")
-                    .filter((segment) => !segment.startsWith(":"))
-                    .join("/");
 
                 allowedTableNamesArray.push(path);
             }
         }
     }
 
-    if (!allowedTableNamesArray.includes(tableName) || tableName === "") {
-        // console.error(`tableName "${tableName}" is not allowed!`);
+    const isTableNameAllowed = allowedTableNamesArray.some((allowedRoute) => {
+        const allowedSegments = allowedRoute.split("/");
+        const tableNameSegments = tableName.split("/");
+
+        if (allowedSegments.length !== tableNameSegments.length) {
+            return false;
+        }
+
+        return allowedSegments.every((segment, index) => {
+            return segment.startsWith(":") || segment === tableNameSegments[index];
+        });
+    });
+
+    if (!isTableNameAllowed || tableName === "") {
         throw new Error(`tableName "${tableName}" is not allowed!`);
     }
 

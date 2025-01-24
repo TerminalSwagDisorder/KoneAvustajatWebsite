@@ -3413,7 +3413,13 @@ app.get("/api/profile/orders", authenticateSession, async (req, res) => {
 			return res.status(404).json({ message: "No orders found" });
 		}
 
-		return res.status(200).json(orders);
+		// Items needs to be parsed
+		const parseInventory = orders.map((item) => ({
+			...item,
+			Items: item.Items ? JSON.parse(item.Items) : null
+		}));
+
+		return res.status(200).json(parseInventory);
 	} catch (error) {
 		const [status, message] = handleServerError(error);
 		return res.status(status).json({ message: message });
