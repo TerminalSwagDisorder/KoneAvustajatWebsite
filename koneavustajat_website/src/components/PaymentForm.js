@@ -1,6 +1,7 @@
 import React, { useState } from "react";
 import { CardElement, useStripe, useElements } from "@stripe/react-stripe-js";
 import { usePayment } from "../utils/Contexts";
+import { Form, Button } from "react-bootstrap";
 
 const PaymentForm = ({ onPaymentSuccess }) => {
     const { clientSecret, setClientSecret } = usePayment();
@@ -29,8 +30,10 @@ const PaymentForm = ({ onPaymentSuccess }) => {
 			}
 
 			if (paymentIntent && paymentIntent.status === "succeeded") {
-				onPaymentSuccess();
+				const transactionId = paymentIntent.id;
+				onPaymentSuccess(transactionId);
 			}
+
 		} catch (error) {
 			alert(error.message);
 		} finally {
@@ -39,12 +42,12 @@ const PaymentForm = ({ onPaymentSuccess }) => {
 	};
 
 	return (
-		<form onSubmit={handleSubmit}>
+		<Form onSubmit={handleSubmit} className="adminForm border rounded shadow p-4 bg-opaque">
 			<CardElement />
-			<button type="submit" disabled={!stripe || processing}>
+			<Button type="submit" disabled={!stripe || processing || !clientSecret}>
 				{processing ? "Processing..." : "Pay"}
-			</button>
-		</form>
+			</Button>
+		</Form>
 	);
 };
 

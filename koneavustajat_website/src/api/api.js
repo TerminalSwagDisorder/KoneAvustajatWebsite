@@ -127,7 +127,7 @@ export const updateDynamicData = async (formFields, tableName, partName, id) => 
 		});
 
 		const data = await response.json();
-
+		console.log(response);
         if (!response.ok) {
             alert(`HTTP error ${response.status}: ${data.message ? data.message : response.message}`);
             throw new Error(`HTTP error ${response.status}: ${data.message ? data.message : response.message}`);

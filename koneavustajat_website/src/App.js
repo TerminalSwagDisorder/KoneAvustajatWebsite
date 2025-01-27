@@ -102,7 +102,7 @@ function App() {
 						</Route>
 						<Route path="usedparts" element={<UsedPartsBrowse fetchDynamicData={fetchDynamicData} fetchDataAmount={fetchDataAmount} postDynamicData={postDynamicData} updateDynamicData={updateDynamicData} />} />
 							{shoppingCart && totalCartItems && totalCartItems > 0 && (
-									<Route path="shoppingcart" element={<ShoppingCart postDynamicData={postDynamicData}/>} />
+									<Route path="shoppingcart" element={<ShoppingCart postDynamicData={postDynamicData} updateDynamicData={updateDynamicData} />} />
 							)}
 						</Routes>
 						</div>

@@ -27,13 +27,15 @@ const mysql = require("mysql2");
 // Environment file
 require("dotenv").config();
 
-// Session secret for express session
-// Also jwt secret for possible jwt
+// Environment variables
+// Remember, secrets should not be published
 const sessionSecret = process.env.SESSION_SECRET;
 const jwtSecret = process.env.JWT_SECRET;
 const opensearch = process.env.OPENSEARCH_URL;
-const stripe_secret = process.env.STRIPE_SK;
-const stripe_publish = process.env.STRIPE_PK;
+const stripeSecret = process.env.STRIPE_SK;
+const stripePublish = process.env.STRIPE_PK;
+const stripeWebhookSecret = process.env.STRIPE_WEBHOOK_SECRET;
+
 if (!sessionSecret) {
 	console.error("Missing SESSION_SECRET environment variable. Exiting...\nHave you run env_generator.js yet?");
 	process.exit(1);
@@ -46,16 +48,20 @@ if (!opensearch) {
 	console.error("Missing OPENSEARCH_URL environment variable. Exiting...\nHave you run env_generator.js yet?");
 	process.exit(1);
 }
-if (!stripe_secret) {
+if (!stripeSecret) {
 	console.error("Missing STRIPE_SK environment variable. Exiting...");
 	process.exit(1);
 }
-if (!stripe_publish) {
+if (!stripePublish) {
 	console.error("Missing STRIPE_PK environment variable. Exiting...");
 	process.exit(1);
 }
+if (!stripeWebhookSecret) {
+	console.error("Missing STRIPE_WEBHOOK_SECRET environment variable. Exiting...");
+	process.exit(1);
+}
 
-const stripe = require("stripe")(stripe_secret);
+const stripe = require("stripe")(stripeSecret);
 
 
 // General setup
@@ -66,7 +72,6 @@ const stripe = require("stripe")(stripe_secret);
 
 const app = express();
 const port = 4000;
-app.use(express.json());
 
 // Cors options to allow the use of user cookies
 const corsOptions = {
@@ -168,6 +173,49 @@ app.use(
 		cookie: { httpOnly: true, sameSite: "lax", maxAge: 3600000 }
 	})
 );
+
+// Webhook needs to be before the express json setting
+app.post("/api/stripe/webhook", express.raw({ type: "application/json" }), async (req, res) => {
+    const sig = req.headers["stripe-signature"];
+    let event;
+
+    try {
+        event = stripe.webhooks.constructEvent(req.body, sig, stripeWebhookSecret);
+    } catch (err) {
+        console.error("Webhook signature verification failed:", err.message);
+        return res.status(400).send(`Webhook Error: ${err.message}`);
+    }
+
+    switch (event.type) {
+        case "payment_intent.succeeded":
+            const paymentIntent = event.data.object;
+
+            await promisePool.query(
+                "UPDATE orders SET PaymentStatus = ?, Status = ?, PaymentDate = NOW() WHERE TransactionID = ?",
+                ["paid", "processing", paymentIntent.id]
+            );
+            console.log(`Payment succeeded for TransactionID: ${paymentIntent.id}`);
+            break;
+
+        case "payment_intent.payment_failed":
+            const failedIntent = event.data.object;
+
+            await promisePool.query(
+                "UPDATE orders SET PaymentStatus = ?, Status = ? WHERE TransactionID = ?",
+                ["failed", "verifying", failedIntent.id]
+            );
+            console.log(`Payment failed for TransactionID: ${failedIntent.id}`);
+            break;
+
+        default:
+            console.log(`Unhandled event type: ${event.type}`);
+    }
+
+    // Acknowledge receipt of the event
+    res.status(200).send("Webhook received");
+});
+
+app.use(express.json());
 
 // Middleware for checking if user is logged in
 const authenticateSession = (req, res, next) => {
@@ -3925,6 +3973,107 @@ app.post("/api/orders/add", authenticateSession, formFieldsValidator(orderSchema
 		return res.status(status).json({ message: message });
 	}
 });
+
+app.patch("/api/orders/update/:id", authenticateSession, idValidator, async (req, res) => {
+	console.log("API update order accessed");
+	
+	const userId = req.user.UserID;
+	const orderId = req.validatedId;
+
+	const customerSql = "SELECT * FROM customers WHERE UserID = ?";
+	const currentOrderSql = "SELECT * FROM orders WHERE OrderID = ?";
+
+	try {
+		const [customer] = await promisePool.query(customerSql, [userId]);
+		if (!customer.length) {
+			return res.status(401).json({ message: "User is not a customer!" });
+		}
+		
+		const [currentOrder] = await promisePool.query(currentOrderSql, [orderId]);
+		if (!currentOrder.length) {
+			return res.status(404).json({ message: "Order not found!" });
+		}
+		const totalPrice = parseFloat(currentOrder[0].TotalPrice);
+		
+
+		const paymentIntent = await stripe.paymentIntents.create({
+			amount: Math.round(totalPrice * 100), // Amount in cents
+			currency: "eur",
+			payment_method_types: ["card"],
+		});
+
+		let updateQuery = `UPDATE orders SET `;
+		let queryParams = [];
+
+		updateQuery += "Status = ?, Currency = ?, PaymentProvider = ?, TransactionID = ?, PaymentMethod = ?, PaymentStatus = ? ";
+		queryParams.push("verifying", "eur", "stripe", paymentIntent.id, "card", "verifying");
+
+		updateQuery += "WHERE OrderID = ?";
+		queryParams.push(orderId);
+	
+		const [order] = await promisePool.query(updateQuery, queryParams);
+		if (order.affectedRows === 0) {
+			return res.status(404).json({ message: "Order not updated!" });
+		}
+
+		return res.status(200).json({ message: `${order} updated succesfully`, clientSecret: paymentIntent.client_secret });
+	} catch (error) {
+		const [status, message] = handleServerError(error);
+		return res.status(status).json({ message: message });
+	}
+});
+
+app.patch("/api/orders/update/:id/verify", authenticateSession, idValidator, formFieldsValidator(orderSchema), async (req, res) => {
+    console.log("API verify order accessed");
+    
+	const jsonFormFields = req.validatedForm;
+	const { TransactionID } = jsonFormFields;
+    const userId = req.user.UserID;
+    const orderId = req.validatedId;
+
+    const customerSql = "SELECT * FROM customers WHERE UserID = ?";
+    const currentOrderSql = "SELECT * FROM orders WHERE OrderID = ?";
+
+    try {
+		if (!TransactionID) {
+			return res.status(400).json({ message: "Transaction ID is required" });
+		}
+
+        const [customer] = await promisePool.query(customerSql, [userId]);
+        if (!customer.length) {
+            return res.status(401).json({ message: "User is not a customer!" });
+        }
+        
+        const [currentOrder] = await promisePool.query(currentOrderSql, [orderId]);
+        if (!currentOrder.length) {
+            return res.status(404).json({ message: "Order not found!" });
+        }
+
+        // Validate payment with Stripe
+        const paymentIntent = await stripe.paymentIntents.retrieve(TransactionID);
+        if (!paymentIntent || paymentIntent.status !== "succeeded") {
+            return res.status(400).json({ message: "Payment not verified with Stripe" });
+        }
+
+        if (paymentIntent.id !== currentOrder[0].TransactionID) {
+            return res.status(400).json({ message: "Transaction ID mismatch" });
+        }
+
+        // Update order to "paid"
+        const updateQuery = "UPDATE orders SET PaymentStatus = ?, Status = ?, PaymentDate = NOW() WHERE OrderID = ?";
+        const [order] = await promisePool.query(updateQuery, ["paid", "processing", orderId]);
+
+        if (order.affectedRows === 0) {
+            return res.status(404).json({ message: "Order not verified" });
+        }
+
+        return res.status(200).json({ message: `Order ${orderId} verified successfully` });
+    } catch (error) {
+        const [status, message] = handleServerError(error);
+        return res.status(status).json({ message: message });
+    }
+});
+
 
 // Route for viewing customers
 app.get("/api/users/customers", routePagination, async (req, res) => {

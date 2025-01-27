@@ -21,9 +21,12 @@ import {
 	Tooltip
 } from "react-bootstrap";
 import { useAuth } from "../utils/Contexts";
+import PaymentForm from "./PaymentForm.js";
+import { usePayment } from "../utils/Contexts";
 
 
 const Profile = ({ handleCredentialChange, handleSignout, fetchDynamicData, updateDynamicData, postDynamicData }) => {
+    const { clientSecret, setClientSecret } = usePayment();
 	const { currentUser, handleUserChange, refreshProfileData } = useAuth();
 	const navigate = useNavigate();
 	const defaultFormFields = {
@@ -56,6 +59,8 @@ const Profile = ({ handleCredentialChange, handleSignout, fetchDynamicData, upda
 	}]);
 	const [orders, setOrders] = useState([]);
 	const [currentOrder, setCurrentOrder] = useState({});
+	const [showPaymentForm, setShowPaymentForm] = useState(false);
+	
 	
 	
 	/*const [currentAddress, setCurrentAddress] = useState({
@@ -379,8 +384,9 @@ const Profile = ({ handleCredentialChange, handleSignout, fetchDynamicData, upda
 
 	const renderOrdersForm = () => {
 		if (currentUser && orders && currentOperation === "orders") {
-			if (currentOrder) console.log(currentOrder[0].PaymentStatus)
+			if (currentOrder) console.log(currentOrder[0])
 			return (
+				<div>
 				<div id="partform" className="partform d-flex justify-content-center align-items-center">
 					<Form onSubmit={handleSubmit} className="adminForm border rounded shadow p-4 bg-opaque" style={{ width: "400px" }}>
 						<div className="d-flex justify-content-end mb-3">
@@ -407,6 +413,13 @@ const Profile = ({ handleCredentialChange, handleSignout, fetchDynamicData, upda
 							</Button>
 						)}
 					</Form>
+				</div>
+					{showPaymentForm && clientSecret && (
+						<PaymentForm
+							clientSecret={clientSecret}
+							onPaymentSuccess={handlePaymentSuccess}
+						/>
+					)}
 				</div>
 			);
 		}
@@ -531,6 +544,32 @@ const Profile = ({ handleCredentialChange, handleSignout, fetchDynamicData, upda
 				console.error("Error updating credentials:", error);
 				alert("Error updating credentials.");
 			}
+		} else if (currentOperation === "orders" && currentOrder[0]) {
+			try {											//formFields, tableName, partName, id
+				const paymentData = await updateDynamicData(currentOrder[0], `orders/update/${currentOrder[0].OrderID}`, null);
+				if (paymentData && paymentData.clientSecret) {
+					setClientSecret(paymentData.clientSecret);
+					setShowPaymentForm(true);
+				} else {
+					throw new Error("Could not initiate payment. No client secret received!");
+				}
+			} catch (error) {
+				console.error("Error updating order:", error);
+				alert("Error updating order.");
+			}
+		}
+	};
+
+	const handlePaymentSuccess = async (transactionId) => {
+		console.log("transactionId:", transactionId);
+		const verifyPayment = true;//await updateDynamicData({ TransactionID: transactionId }, `orders/update/${currentOrder[0].OrderID}/verify`, null);
+		if (verifyPayment) {
+			alert("Payment Succeeded!");
+			await fetchOrders();
+			closeForm();
+			setShowPaymentForm(false);
+		} else {
+			alert("Payment failed");
 		}
 	};
 
