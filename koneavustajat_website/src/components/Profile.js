@@ -562,7 +562,7 @@ const Profile = ({ handleCredentialChange, handleSignout, fetchDynamicData, upda
 
 	const handlePaymentSuccess = async (transactionId) => {
 		console.log("transactionId:", transactionId);
-		const verifyPayment = true;//await updateDynamicData({ TransactionID: transactionId }, `orders/update/${currentOrder[0].OrderID}/verify`, null);
+		const verifyPayment = await updateDynamicData({ TransactionID: transactionId }, `orders/update/${currentOrder[0].OrderID}/verify`, null);
 		if (verifyPayment) {
 			alert("Payment Succeeded!");
 			await fetchOrders();

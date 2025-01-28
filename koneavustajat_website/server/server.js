@@ -15,6 +15,7 @@ const cookieParser = require("cookie-parser");
 const multer = require("multer");
 const axios = require("axios");
 const Joi = require("joi");
+const PdfPrinter = require("pdfmake");
 const { Client } = require('@opensearch-project/opensearch');
 
 // User authentication exports
@@ -173,49 +174,6 @@ app.use(
 		cookie: { httpOnly: true, sameSite: "lax", maxAge: 3600000 }
 	})
 );
-
-// Webhook needs to be before the express json setting
-app.post("/api/stripe/webhook", express.raw({ type: "application/json" }), async (req, res) => {
-    const sig = req.headers["stripe-signature"];
-    let event;
-
-    try {
-        event = stripe.webhooks.constructEvent(req.body, sig, stripeWebhookSecret);
-    } catch (err) {
-        console.error("Webhook signature verification failed:", err.message);
-        return res.status(400).send(`Webhook Error: ${err.message}`);
-    }
-
-    switch (event.type) {
-        case "payment_intent.succeeded":
-            const paymentIntent = event.data.object;
-
-            await promisePool.query(
-                "UPDATE orders SET PaymentStatus = ?, Status = ?, PaymentDate = NOW() WHERE TransactionID = ?",
-                ["paid", "processing", paymentIntent.id]
-            );
-            console.log(`Payment succeeded for TransactionID: ${paymentIntent.id}`);
-            break;
-
-        case "payment_intent.payment_failed":
-            const failedIntent = event.data.object;
-
-            await promisePool.query(
-                "UPDATE orders SET PaymentStatus = ?, Status = ? WHERE TransactionID = ?",
-                ["failed", "verifying", failedIntent.id]
-            );
-            console.log(`Payment failed for TransactionID: ${failedIntent.id}`);
-            break;
-
-        default:
-            console.log(`Unhandled event type: ${event.type}`);
-    }
-
-    // Acknowledge receipt of the event
-    res.status(200).send("Webhook received");
-});
-
-app.use(express.json());
 
 // Middleware for checking if user is logged in
 const authenticateSession = (req, res, next) => {
@@ -2768,6 +2726,239 @@ const generateReceiptId = (customerID) => {
 	return receiptId;
 };
 
+
+const generateReceipt = async (result, customer, Items, calculatedPrice, paymentIntent) => {
+	const fonts = {
+		Roboto: {
+			normal: path.resolve(__dirname, "../fonts/Roboto/Roboto-Regular.ttf"), // Point to the actual TTF file
+			bold: path.resolve(__dirname, "../fonts/Roboto/Roboto-Bold.ttf"),
+			italics: path.resolve(__dirname, "../fonts/Roboto/Roboto-Italic.ttf"),
+			bolditalics: path.resolve(__dirname, "../fonts/Roboto/Roboto-BoldItalic.ttf"),
+		},
+	};
+
+	const printer = new PdfPrinter(fonts);
+
+	const address = `${customer.Street || ""}, ${customer.City || ""}, ${customer.State || ""}, ${customer.PostalCode || ""}`;
+	const receiptPath = path.join(__dirname, `../receipts/receipt_${result.ReceiptID}.pdf`);
+
+	// Convert items to table rows
+	const tableBody = [
+		[
+			{ text: "Tuote", style: "tableHeader" },
+			{ text: "Tuottaja", style: "tableHeader" },
+			{ text: "Määrä", style: "tableHeader" },
+			{ text: "Hinta (€/kpl)", style: "tableHeader" },
+			{ text: "Yhteensä (€)", style: "tableHeader" }
+		]
+	];
+
+	for (const item of Items) {
+		let price;
+		let name;
+		let manufacturer;
+		let quantity;
+		if (item.table === "completedBuild") {
+			quantity = 1;
+			price = parseFloat(item.totalPrice).toFixed(2) || 0;
+			name = "Computer build";
+			manufacturer = "KoneAvustajat";
+		} else {
+			quantity = item.quantity || 1;
+			price = parseFloat(item.Price).toFixed(2) || 0;
+			name = item.Name || "-";
+			manufacturer = item.Manufacturer || "-";
+		}
+		
+		tableBody.push([
+			name,
+			manufacturer,
+			String(quantity),
+			price,
+			(quantity * price).toFixed(2),
+		]);
+	}
+
+	// Payment status
+	const paidStatus = paymentIntent?.status === "succeeded" ? "Kyllä" : "Ei";
+	const paidDate = paymentIntent?.status === "succeeded" ? (result.PaymentDate.toLocaleDateString() || "Ei päivämäärää") : "";
+
+	// docDefinition for PDFMake
+	const docDefinition = {
+		pageSize: "A4",
+		pageMargins: [40, 60, 40, 60],
+		content: [
+			{
+				text: "Kuitti",
+				style: "header",
+				alignment: "center"
+			},
+			{ text: "Myyjä:", style: "listHeader" },
+			{
+				text: [
+					"Yrityksen nimi: KoneAvustajat\n",
+					"Y-tunnus: 3365106-1\n",
+					"Sähköposti: benniw139@gmail.com\n\n"
+				],
+				style: "body"
+			},
+			{ text: "Asiakas:", style: "listHeader" },
+			{
+				text: [
+					`Nimi: ${customer.Name || "Ei määritelty"}\n`,
+					`Osoite: ${address || "Ei määritelty"}\n`,
+					`Sähköposti: ${customer.Email || "Ei määritelty"}\n\n`
+				],
+				style: "body"
+			},
+			{
+				text: [
+					{ text: "Kuittinumero:", bold: true }, ` ${result.ReceiptID}\n`,
+					{ text: "Luomispäivämäärä:", bold: true }, ` ${new Date().toLocaleDateString()}\n\n`
+				],
+				style: "body"
+			},
+			{ text: "Tuotteet:", style: "subheader" },
+			{
+				style: "tableExample",
+				table: {
+					headerRows: 1,
+					widths: ["auto", "auto", "auto", "auto", "auto"],
+					body: tableBody
+				},
+				layout: {
+					hLineWidth: (i, node) => {
+						return i === 1 ? 2 : 0.5;
+					},
+					vLineWidth: (i, node) => {
+						return 0.5;
+					},
+					paddingTop: (rowIndex, node) => 5,
+					paddingBottom: (rowIndex, node) => 5,
+					paddingLeft: (rowIndex, node) => 5,
+					paddingRight: (rowIndex, node) => 5,
+				},
+				margin: [0, 20, 0, 20]
+			},
+			{
+				text: [{ text: "\nYhteensä (sis. ALV 24%):", bold: true }, ` ${calculatedPrice}€`],
+				style: "rightAlign"
+			},
+			{
+				text: [{ text: "Maksettu:", bold: true }, ` ${paidStatus}`, { text: "\nMaksutapa: ", bold: true }, "Kortti", { text: "\nMaksupäivämäärä: ", bold: true }, `${paidDate}\n`],
+				style: "rightAlign"
+			},
+			{ text: "Takuuehdot:", style: "subheader", pageBreak: "before" },
+			{ 
+				text: [
+					"1kk täysi takuu (paitsi SSD & PSU) & 3kk ilmainen korjaus & 6kk tukea. ",
+					"Takuu kattaa valmistusvirheet ja normaalin käytön aiheuttamat viat. ",
+					"Takuu ei kata fyysisiä vaurioita tai virheellisesti asennettujen osien aiheuttamia ongelmia.\n\n",
+					"Tämä kuitti toimii virallisena todisteena ostosta. Takuu- ja tukipalvelut ovat voimassa vain esittämällä tämän kuitin.\n\n"
+				]
+			},
+			{ text: "Takuu ei kata:", style: "listHeader" },
+			{
+				ul: [
+					"SSD ja PSU",
+					"Fyysiset vauriot",
+					"Asiakkaan aiheuttamat virheet asennuksessa tai käytössä"
+				],
+				margin: [20, 5, 0, 10]
+			},
+			{ 
+				text: [
+					{ text: "\nIlmainen korjaus", bold: true }, " koskee valmistusvirheistä johtuvia vikoja ja muita ongelmia, ",
+					"jotka ilmenevät normaalissa käytössä kolmen (3) kuukauden sisällä ostopäivästä. ",
+					"Ilmainen korjaus koskee vain alkuperäisiä komponentteja ja alkuperäistä kokoonpanoa.\n\n",
+					{ text: "Tuki", bold: true }, " sisältää teknistä apua ja neuvontaa kuuden (6) kuukauden ajan ostopäivästä."
+				]
+			},
+			{ text: "Huoltopalvelut:", style: "listHeader" },
+			{ 
+				text: [
+					"Tarjoamme myös erillisiä huoltopalveluita, jotka ovat erillisiä laitteen oston yhteydessä tarjottavista korjauspalveluista. ",
+					"Huoltopalvelut eivät sisälly takuuseen ja niistä peritään erillinen maksu. ",
+					"Emme vastaa korjausten aikana mahdollisesti syntyneistä vahingoista. ",
+					"Kaikki huoltopalvelut suoritetaan asiakkaan omalla vastuulla. ",
+					"Mikäli huoltopalvelun aikana ilmenee lisävaurioita tai komponenttien rikkoutumisia, emme ole velvollisia korvaamaan näitä vahinkoja.\n\n"
+				]
+			},
+			{ text: "Nouto:", style: "listHeader" },
+			{ 
+				text: [
+					"Kun laite on valmis (sekä oston että huoltopalveluiden osalta) tai todetaan korjauskelvottomaksi, ",
+					"asiakasta ilmoitetaan joko tekstiviestillä tai sähköpostilla laitteen noutoa varten. ",
+					"Asiakkaan tulee noutaa laite mahdollisimman pian ilmoituksen saatuaan. ",
+					"Säilytämme laitteita kaksi viikkoa siitä, kun asiakasta on ilmoitettu laitteen olevan noudettavissa, ",
+					"ellei asiakas ole etukäteen ilmoittanut pidemmästä säilytysajasta.\n\n"
+				]
+			},
+			{ text: "Lisätietoja:", style: "listHeader" },
+			{ 
+				text: [
+					"Mikäli tarvitsette lisätietoja takuusta, teknisestä tuesta tai huollosta, ottakaa yhteyttä KoneAvustajien asiakaspalveluun.\n\n"
+				]
+			},
+			{ text: "Huomio:", style: "listHeader" },
+			{ 
+				text: [
+					"Tämä kuitti toimii virallisena ostotodistuksena ja takuuehtojen vahvistuksena. Säilyttäkää kuitti turvallisessa paikassa.\n\n"
+				]
+			},
+		],
+		styles: {
+			header: {
+				fontSize: 18,
+				bold: true,
+				margin: [0, 0, 0, 10],
+				font: "Roboto"
+			},
+			subheader: {
+				fontSize: 14,
+				bold: true,
+				margin: [0, 10, 0, 5],
+				font: "Roboto"
+			},
+			listHeader: {
+				fontSize: 12,
+				bold: true,
+				margin: [0, 10, 0, 5],
+				font: "Roboto"
+			},
+			tableHeader: {
+				bold: true,
+				fontSize: 12,
+				color: "black",
+				font: "Roboto"
+			},
+			body: {
+				fontSize: 12,
+				margin: [0, 5, 0, 5],
+				font: "Roboto"
+			},
+			rightAlign: {
+				fontSize: 12,
+				margin: [0, 5, 0, 5],
+				alignment: "right",
+				font: "Roboto"
+			},
+			tableExample: {
+				margin: [0, 5, 0, 15],
+				lineHeight: 1.5
+			}
+		}
+	};
+
+	// Create PDFKit document
+	const pdfDoc = printer.createPdfKitDocument(docDefinition);
+	pdfDoc.pipe(fs.createWriteStream(receiptPath));
+	pdfDoc.end();
+
+	return receiptPath;
+};
+
+
 ////////////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////
@@ -2776,6 +2967,50 @@ const generateReceiptId = (customerID) => {
 ////////////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////
+
+
+// Webhook needs to be before the express json setting
+app.post("/api/stripe/webhook", express.raw({ type: "application/json" }), async (req, res) => {
+    const sig = req.headers["stripe-signature"];
+    let event;
+
+    try {
+        event = stripe.webhooks.constructEvent(req.body, sig, stripeWebhookSecret);
+    } catch (err) {
+        console.error("Webhook signature verification failed:", err.message);
+        return res.status(400).send(`Webhook Error: ${err.message}`);
+    }
+
+    switch (event.type) {
+        case "payment_intent.succeeded":
+            const paymentIntent = event.data.object;
+
+            await promisePool.query(
+                "UPDATE orders SET PaymentStatus = ?, Status = ?, PaymentDate = NOW() WHERE TransactionID = ?",
+                ["paid", "processing", paymentIntent.id]
+            );
+            console.log(`Payment succeeded for TransactionID: ${paymentIntent.id}`);
+            break;
+
+        case "payment_intent.payment_failed":
+            const failedIntent = event.data.object;
+
+            await promisePool.query(
+                "UPDATE orders SET PaymentStatus = ?, Status = ? WHERE TransactionID = ?",
+                ["failed", "verifying", failedIntent.id]
+            );
+            console.log(`Payment failed for TransactionID: ${failedIntent.id}`);
+            break;
+
+        default:
+            console.log(`Unhandled event type: ${event.type}`);
+    }
+
+    // Acknowledge receipt of the event
+    res.status(200).send("Webhook received");
+});
+
+app.use(express.json());
 
 app.get("/", async (req, res) => {
 	console.log("Index accessed");
@@ -4031,7 +4266,8 @@ app.patch("/api/orders/update/:id/verify", authenticateSession, idValidator, for
     const userId = req.user.UserID;
     const orderId = req.validatedId;
 
-    const customerSql = "SELECT * FROM customers WHERE UserID = ?";
+	const customerSql = `SELECT c.CustomerID, c.UserID, u.Name, u.Email, a.AddressID, a.AddressTypeID, a.Street, a.City, a.State, a.PostalCode, a.Country FROM customers c LEFT JOIN users u ON c.UserID = u.UserID LEFT JOIN addresses a ON c.CustomerID = a.CustomerID WHERE a.AddressTypeID = 1 AND c.UserID = ?`;	
+	
     const currentOrderSql = "SELECT * FROM orders WHERE OrderID = ?";
 
     try {
@@ -4067,6 +4303,22 @@ app.patch("/api/orders/update/:id/verify", authenticateSession, idValidator, for
             return res.status(404).json({ message: "Order not verified" });
         }
 
+        const [updatedOrder] = await promisePool.query(currentOrderSql, [orderId]);
+        if (!updatedOrder.length) {
+            return res.status(404).json({ message: "Order not found!" });
+        }
+		
+		let parsedItems;
+		if (typeof updatedOrder[0].Items !== "object") {
+		 	parsedItems = JSON.parse(updatedOrder[0].Items);
+		}
+		console.log(parsedItems);
+
+		const receipt = await generateReceipt(updatedOrder[0], customer[0], parsedItems, updatedOrder[0].TotalPrice, paymentIntent);
+		if (!receipt) {
+			console.warn("Failed to generate receipt");
+		}
+		
         return res.status(200).json({ message: `Order ${orderId} verified successfully` });
     } catch (error) {
         const [status, message] = handleServerError(error);
