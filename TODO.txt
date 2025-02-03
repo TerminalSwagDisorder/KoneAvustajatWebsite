@@ -1,0 +1,11 @@
+stripe listen --forward-to http://localhost:4000/api/stripe/webhook
+
+stripe trigger payment_intent.succeeded
+stripe trigger payment_intent.payment_failed
+
+
+-Stripe tax x
+-Receipt download button in profile
+-Admin user page -> add full user details
+-Make custom frontend error module
+-Set up CMS texts
