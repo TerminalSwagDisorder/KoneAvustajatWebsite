@@ -292,21 +292,6 @@ const deleteFile = async (filePath) => {
     }
 };
 
-// Stripe payment
-const createPaymentIntent = async (amount, currency) => {
-	try {
-		const paymentIntent = await stripe.paymentIntents.create({
-			amount: amount, // Amount in smallest currency unit (e.g., cents for USD)
-			currency: "euro", // E.g., 'usd'
-			payment_method_types: ["card"], // Specify accepted payment methods
-		});
-		console.log(paymentIntent);
-		return paymentIntent;
-	} catch (error) {
-		console.error(error);
-	}
-};
-
 const paginationSchema = Joi.object({
 	page: Joi.number().min(1).default(1),
 	items: Joi.number().min(1).max(1000).default(100),
@@ -2958,6 +2943,57 @@ const generateReceipt = async (result, customer, Items, calculatedPrice, payment
 	return receiptPath;
 };
 
+// Stripe payment
+const createPaymentIntent = async (amount, currency, customer) => {
+	if (!customer) {
+		console.error("No customer given!");
+		return null;
+	}
+	
+	const customerSql = `SELECT c.CustomerID, c.UserID, u.Name, u.Email, a.AddressID, a.AddressTypeID, a.Street, a.City, a.State, a.PostalCode, a.Country FROM customers c LEFT JOIN users u ON c.UserID = u.UserID LEFT JOIN addresses a ON c.CustomerID = a.CustomerID WHERE a.AddressTypeID = 1 AND c.UserID = ?`;	
+	
+	try {
+		const [user] = await promisePool.query(customerSql, [customer.UserID]);
+		if (!user.length) {
+			throw new Error("Customer not found");
+		}
+
+		const stripeCustomer = await generateStripeCustomer(user[0]);
+		
+		const paymentIntent = await stripe.paymentIntents.create({
+			amount: Math.round(amount * 100), // Amount in cents
+			currency: currency,
+			automatic_tax: { "enabled": true },
+			customer: stripeCustomer.id,
+			payment_method_types: ["card"]
+		});
+
+		console.log(paymentIntent);
+		return paymentIntent;
+	} catch (error) {
+		console.error(error);
+	}
+};
+
+const generateStripeCustomer = async (customer) => {
+	if (!customer || typeof customer !== "object") {
+		console.error("Missing customer object for Stripe customer user!");
+		return null;
+	}
+	
+	const stripeCustomer = await stripe.customers.create({
+		name: customer.Name,
+		email: customer.Email,
+		address: {
+			line1: customer.Street || "Ei määritelty",
+			postal_code: customer.PostalCode || "00000",
+			city: customer.City || "Ei määritelty",
+			country: "FI" // Finland
+		},
+		metadata: { userId: customer.UserID }
+	});
+	return stripeCustomer;
+};
 
 ////////////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////
@@ -4168,12 +4204,8 @@ app.post("/api/orders/add", authenticateSession, formFieldsValidator(orderSchema
 			.filter(i => i && i.Price || i.totalPrice)
 			.reduce((acc, i) => acc + (parseFloat(i.Price || i.totalPrice) || 0) * parseInt(i.quantity || 1), 0)
 		.toFixed(2);
-
-		const paymentIntent = await stripe.paymentIntents.create({
-			amount: Math.round(calculatedPrice * 100), // Amount in cents
-			currency: currency,
-			payment_method_types: ["card"],
-		});
+		
+		const paymentIntent = await createPaymentIntent(calculatedPrice, currency, customer[0]);
 
 		let insertQuery = `INSERT INTO orders SET `;
 		let queryParams = [];
@@ -4230,12 +4262,7 @@ app.patch("/api/orders/update/:id", authenticateSession, idValidator, async (req
 		}
 		const totalPrice = parseFloat(currentOrder[0].TotalPrice);
 		
-
-		const paymentIntent = await stripe.paymentIntents.create({
-			amount: Math.round(totalPrice * 100), // Amount in cents
-			currency: "eur",
-			payment_method_types: ["card"],
-		});
+		const paymentIntent = await createPaymentIntent(totalPrice, "eur", customer[0]);
 
 		let updateQuery = `UPDATE orders SET `;
 		let queryParams = [];
