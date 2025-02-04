@@ -66,7 +66,7 @@ export const Signup = ({ handleSignup }) => {
 
 
 			} catch (error) {
-				displayError(error.message || error);
+				displayError(`${error}`);
 				console.log(error.message);
 			} finally {
 				setIsLoading(false);

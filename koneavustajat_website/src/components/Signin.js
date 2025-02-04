@@ -35,7 +35,7 @@ export const Signin = ({ handleSignin, checkIfSignedIn }) => {
 				navigate("/");
 			}
 		} catch (error) {
-			displayError(error);
+			displayError(`${error}`);
 			console.error(error);
 		} finally {
 			setIsLoading(false);

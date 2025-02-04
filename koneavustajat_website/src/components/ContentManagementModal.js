@@ -192,7 +192,7 @@ const ContentManagementModal = ({ fetchWholeContent, fetchContentIdentifiers, ad
 				const success = await updateContent(formFields);
 				if (success) {
 					console.log(success);
-					alert(success.message);
+					displayError(success.message);
 					if (identifiers[0].startsWith(location.pathname === "/" ? "home" : location.pathname.slice(1))) {
 						await fetchPageContent({ page: identifiers[0] });
 					}
@@ -210,7 +210,7 @@ const ContentManagementModal = ({ fetchWholeContent, fetchContentIdentifiers, ad
 			
 		} catch (error) {
 			console.error(error);
-			displayError(error);
+			displayError(`${error}`);
 		}
 	};
 
