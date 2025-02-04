@@ -1,17 +1,17 @@
 // components/ErrorModule.js
-import React from "react";
+import React, { useMemo } from "react";
 import { Alert } from "react-bootstrap";
 import { useError } from "../utils/Contexts";
 
 const ErrorModule = () => {
 	const { errorContent, type, displayError, clearError } = useError();
 
-	const alertVariants = {
+	const alertVariants = useMemo(() => ({
 		error: "danger",
 		success: "success",
 		warning: "warning",
 		info: "info"
-	};
+	}), []);
 	
 	if (!errorContent) return null;
 
