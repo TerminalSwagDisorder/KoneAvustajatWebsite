@@ -1,10 +1,11 @@
 // components/ContentManagementModal.js
 import React, { useState, useEffect } from "react";
 import { Modal, Button, Form, Alert } from "react-bootstrap";
-import { useModal, useLanguage, useContent } from "../utils/Contexts";
+import { useModal, useLanguage, useContent, useError } from "../utils/Contexts";
 import { useLocation } from "react-router-dom";
 
 const ContentManagementModal = ({ fetchWholeContent, fetchContentIdentifiers, addContent, updateContent}) => {
+	const { displayError } = useError();
 	const { isOpen, modalContent, closeModal } = useModal();
 	const { fetchPageContent } = useContent();
 	const { language } = useLanguage();
@@ -209,6 +210,7 @@ const ContentManagementModal = ({ fetchWholeContent, fetchContentIdentifiers, ad
 			
 		} catch (error) {
 			console.error(error);
+			displayError(error);
 		}
 	};
 

@@ -4,9 +4,11 @@ import { Button, Container, Table, Form, CloseButton } from 'react-bootstrap';
 import { useSelector, useDispatch } from "react-redux";
 import { addToShoppingCart, removeFromShoppingCart, clearShoppingCart } from "../redux/shoppingCartSlice";
 import { addToCompletedBuild, removeFromCompletedBuild, clearCompletedBuild } from "../redux/wizardSlice";
-import { useAuth } from "../utils/Contexts";
+import { useAuth, useError } from "../utils/Contexts";
+
 
 const UsedPartsBrowse = ({ fetchDynamicData, fetchDataAmount, postDynamicData, updateDynamicData }) => {
+    const { displayError } = useError();
 	const { currentUser } = useAuth();
 	const formFieldsDefault = {
 		PartTypeID: "",
@@ -120,7 +122,8 @@ const UsedPartsBrowse = ({ fetchDynamicData, fetchDataAmount, postDynamicData, u
 			setParts(data);
 			//console.log(data);
 		} catch (error) {
-			console.error("Error while fetching medUsers:", error);
+			displayError(`Error while fetching used parts: ${error}`);
+			console.error("Error while fetching used parts:", error);
 		}
 	};
 
@@ -143,11 +146,11 @@ const UsedPartsBrowse = ({ fetchDynamicData, fetchDataAmount, postDynamicData, u
 				setParts(data);
 				setPage(1);
 			} else {
-				alert("Search term cannot be empty!");
+				displayError("Search term cannot be empty!");
 				return;
 			}
 		} catch (error) {
-			alert(`Error while fetching parts: \n${error}`);
+			displayError(`Error while fetching parts: \n${error}`);
 			console.error(`Error while fetching parts: \n${error}`);
 		}
 	};
@@ -170,7 +173,7 @@ const UsedPartsBrowse = ({ fetchDynamicData, fetchDataAmount, postDynamicData, u
 			}
 		} catch (error) {
 			console.error("Error updating credentials:", error);
-			alert("Error updating credentials.");
+			displayError(`Error updating credentials: ${error}`);
 		}
 	};
 

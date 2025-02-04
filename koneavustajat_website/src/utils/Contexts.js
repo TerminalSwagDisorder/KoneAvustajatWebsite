@@ -1,4 +1,4 @@
-import React, { useEffect, useState, createContext, useContext } from "react";
+import React, { useEffect, useState, createContext, useContext, useRef, useCallback } from "react";
 import { useLocation } from "react-router-dom";
 import { checkIfSignedIn, refreshProfile } from '../api/api';
 
@@ -9,6 +9,7 @@ const ContentContext = createContext();
 const ModalContext = createContext();
 const AuthContext = createContext();
 const PaymentContext = createContext();
+const ErrorContext = createContext();
 
 export const useTheme = () => useContext(ThemeContext);
 export const useLanguage = () => useContext(LanguageContext);
@@ -16,6 +17,7 @@ export const useContent = () => useContext(ContentContext);
 export const useModal = () => useContext(ModalContext);
 export const useAuth = () => useContext(AuthContext);
 export const usePayment = () => useContext(PaymentContext);
+export const useError = () => useContext(ErrorContext);
 
 export const AuthProvider = ({ children }) => {
 	const [currentUser, setCurrentUser] = useState(null);
@@ -179,5 +181,41 @@ export const PaymentProvider = ({ children }) => {
 		<PaymentContext.Provider value={{ clientSecret, setClientSecret }}>
 			{children}
 		</PaymentContext.Provider>
+	);
+};
+
+export const ErrorProvider = ({ children }) => {
+	const [errorContent, setErrorContent] = useState(null);
+	const [type, setType] = useState(null);
+	const timerRef = useRef(null);
+
+	const displayError = useCallback((content, errorType = "error") => {
+		setErrorContent(content);
+		setType(errorType);
+
+		if (timerRef.current) clearTimeout(timerRef.current);
+
+		timerRef.current = setTimeout(() => {
+			setErrorContent(null);
+			setType(null);
+		}, 5000);
+	}, []);
+
+	const clearError = useCallback(() => {
+		if (timerRef.current) clearTimeout(timerRef.current);
+		setErrorContent(null);
+		setType(null);
+	}, []);
+
+	useEffect(() => {
+		return () => {
+			if (timerRef.current) clearTimeout(timerRef.current);
+		};
+	}, []);
+
+	return (
+		<ErrorContext.Provider value={{ errorContent, type, displayError, clearError }}>
+			{children}
+		</ErrorContext.Provider>
 	);
 };

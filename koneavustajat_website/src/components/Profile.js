@@ -20,12 +20,12 @@ import {
 	OverlayTrigger,
 	Tooltip
 } from "react-bootstrap";
-import { useAuth } from "../utils/Contexts";
 import PaymentForm from "./PaymentForm.js";
-import { usePayment } from "../utils/Contexts";
+import { usePayment, useError, useAuth } from "../utils/Contexts";
 
 
 const Profile = ({ handleCredentialChange, handleSignout, fetchDynamicData, updateDynamicData, postDynamicData }) => {
+	const { displayError } = useError();
     const { clientSecret, setClientSecret } = usePayment();
 	const { currentUser, handleUserChange, refreshProfileData } = useAuth();
 	const navigate = useNavigate();
@@ -111,6 +111,7 @@ const Profile = ({ handleCredentialChange, handleSignout, fetchDynamicData, upda
 				setCurrentAddressType(data[0].AddressTypeID || 1);
 			}
 		} catch (error) {
+			displayError(`Error while fetching addresses: ${error}`);
 			console.error("Error while fetching addresses:", error);
 		}
 	};
@@ -124,6 +125,7 @@ const Profile = ({ handleCredentialChange, handleSignout, fetchDynamicData, upda
 				if (currentOrderData) setCurrentOrder(currentOrderData);
 			} 
 		} catch (error) {
+			displayError(`Error while fetching orders: ${error}`);
 			console.error("Error while fetching orders:", error);
 		}
 	};
@@ -138,6 +140,7 @@ const Profile = ({ handleCredentialChange, handleSignout, fetchDynamicData, upda
 			const currentOrderData = await fetchDynamicData(null, `orders/${orderID}`, null);
 			if (currentOrderData) setCurrentOrder(currentOrderData);
 		} catch (error) {
+			displayError(`Error while fetching orders: ${error}`);
 			console.error("Error while fetching orders:", error);
 
 		}
@@ -485,18 +488,18 @@ const Profile = ({ handleCredentialChange, handleSignout, fetchDynamicData, upda
 
 			// Check if any field is filled
 			if (fieldsToChange.length === 0) {
-				alert("No credentials entered!");
+				displayError("No credentials entered!");
 				return;
 			}
 
 			// Check for changes in name and email
 			if (formFields.Name === currentUser.Name || formFields.Email === currentUser.Email) {
-				alert("You cannot use the same credentials!");
+				displayError("You cannot use the same credentials!");
 				return;
 			}
 
 			if (!formFields.currentPassword) {
-				alert("You must enter your current password!");
+				displayError("You must enter your current password!");
 			}
 
 			try {
@@ -506,8 +509,8 @@ const Profile = ({ handleCredentialChange, handleSignout, fetchDynamicData, upda
 					closeForm();
 				}
 			} catch (error) {
+				displayError(`Error updating credentials: ${error}`);
 				console.error("Error updating credentials:", error);
-				alert("Error updating credentials.");
 			}
 		} else if (currentOperation === "address") {
 			const allowedFields = ["AddressTypeID", "Street", "City", "State", "PostalCode", "Country", "currentPassword"];
@@ -521,12 +524,12 @@ const Profile = ({ handleCredentialChange, handleSignout, fetchDynamicData, upda
 
 			// Check if any field is filled
 			if (fieldsToChange.length === 0) {
-				alert("No credentials entered!");
+				displayError("No credentials entered!");
 				return;
 			}
 
 			if (!formFields.currentPassword) {
-				alert("You must enter your current password!");
+				displayError("You must enter your current password!");
 			}
 
 			try {
@@ -541,8 +544,8 @@ const Profile = ({ handleCredentialChange, handleSignout, fetchDynamicData, upda
 					closeForm();
 				}
 			} catch (error) {
+				displayError(`Error updating credentials: ${error}`);
 				console.error("Error updating credentials:", error);
-				alert("Error updating credentials.");
 			}
 		} else if (currentOperation === "orders" && currentOrder[0]) {
 			try {											//formFields, tableName, partName, id
@@ -554,8 +557,8 @@ const Profile = ({ handleCredentialChange, handleSignout, fetchDynamicData, upda
 					throw new Error("Could not initiate payment. No client secret received!");
 				}
 			} catch (error) {
+				displayError(`Error updating order: ${error}`);
 				console.error("Error updating order:", error);
-				alert("Error updating order.");
 			}
 		}
 	};
@@ -564,12 +567,12 @@ const Profile = ({ handleCredentialChange, handleSignout, fetchDynamicData, upda
 		console.log("transactionId:", transactionId);
 		const verifyPayment = await updateDynamicData({ TransactionID: transactionId }, `orders/update/${currentOrder[0].OrderID}/verify`, null);
 		if (verifyPayment) {
-			alert("Payment Succeeded!");
+			displayError("Payment Succeeded!");
 			await fetchOrders();
 			closeForm();
 			setShowPaymentForm(false);
 		} else {
-			alert("Payment failed");
+			displayError("Payment failed");
 		}
 	};
 

@@ -4,10 +4,12 @@
 import React, { useState, useEffect } from "react";
 import { Container, Button, Form, Spinner, OverlayTrigger, Tooltip } from "react-bootstrap";
 import { useNavigate } from "react-router-dom";
+import { useError } from "../utils/Contexts";
 
 
 // Function for rendering sign up page, takes onSubmit as a prop
 export const Signup = ({ handleSignup }) => {
+    const { displayError } = useError();
 	const navigate = useNavigate();
 	const [isLoading, setIsLoading] = useState(false);
 	const [formFields, setFormFields] = useState(
@@ -45,7 +47,7 @@ export const Signup = ({ handleSignup }) => {
 		const newEmail = event.target.Email.value;
 		const newPassword = event.target.Password.value;
 		if (!newName && !newEmail && !newPassword) {
-			alert("All required fields must be filled!");
+			displayError("All required fields must be filled!");
 			return;
 		}
 
@@ -59,10 +61,12 @@ export const Signup = ({ handleSignup }) => {
 				setFormFields({});
 				setEmailValid(false);
 				setPasswordValid(false);
+				displayError("Successfully signed up!", "success");
 			}
 
 
 			} catch (error) {
+				displayError(error.message || error);
 				console.log(error.message);
 			} finally {
 				setIsLoading(false);

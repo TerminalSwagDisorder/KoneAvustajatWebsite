@@ -21,6 +21,7 @@ import UsedPartsBuild from './components/UsedPartsBuild';
 import UsedPartsModify from './components/UsedPartsModify';
 import ShoppingCart from './components/ShoppingCart';
 import ContentManagementModal from './components/ContentManagementModal';
+import ErrorModule from './components/ErrorModule';
 import {
 	fetchUsers,
 	fetchDynamicData,
@@ -42,7 +43,7 @@ import {
 	addContent,
 	updateContent
 } from "./api/api";
-import { ContentProvider, ModalProvider, useAuth, PaymentProvider } from "./utils/Contexts";
+import { ContentProvider, ModalProvider, useAuth, PaymentProvider, ErrorProvider } from "./utils/Contexts";
 import { ProtectedRoute } from "./utils/AuthUtils";
 import { useSelector, useDispatch } from "react-redux";
 import { PaymentUtil } from "./utils/PaymentUtil";
@@ -81,6 +82,7 @@ function App() {
 						<PaymentProvider>
 						<div className="App">
 						<NavBar handleSignout={handleSignout} /> 
+						<ErrorModule />
 						<ContentManagementModal fetchWholeContent={fetchWholeContent} fetchContentIdentifiers={fetchContentIdentifiers} addContent={addContent} updateContent={updateContent} />
 						<Routes>
 							<Route path="/" element={<Home />} />

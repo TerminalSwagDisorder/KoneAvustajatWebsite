@@ -8,10 +8,12 @@ import {
 	clearShoppingCart
 } from "../redux/shoppingCartSlice";
 import PaymentForm from "./PaymentForm.js";
-import { usePayment } from "../utils/Contexts";
+import { usePayment, useError } from "../utils/Contexts";
 import { Navigate } from "react-router-dom";
 
+
 const ShoppingCart = ({ postDynamicData, updateDynamicData }) => {
+    const { displayError } = useError();
     const { clientSecret, setClientSecret } = usePayment();
 	const shoppingCart = useSelector((state) => state.shoppingCart.shoppingCart);
 	const dispatch = useDispatch();
@@ -94,21 +96,21 @@ const ShoppingCart = ({ postDynamicData, updateDynamicData }) => {
 				throw new Error("Could not initiate payment. No client secret received!");
 			}
 		} catch (error) {
+			displayError(`Error adding order: ${error}`);
 			console.error("Error adding order:", error);
-			alert("Error adding order.");
 		}
 	};
 
 	const handlePaymentSuccess = async (transactionId) => {
 		const verifyPayment = await updateDynamicData({ TransactionID: transactionId }, `orders/update/${currentOrder}/verify`, null);
 		if (verifyPayment) {
-			alert("Payment Succeeded!");
+			displayError("Payment Succeeded!", "success");
 			handleClearCart();
 			setShowPaymentForm(false);
 			return <Navigate to="/profile" />;
 			
 		} else {
-			alert("Payment failed!")
+			displayError("Payment failed!")
 		}
 	};
 	

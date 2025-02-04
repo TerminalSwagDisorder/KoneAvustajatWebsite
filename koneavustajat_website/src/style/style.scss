@@ -411,6 +411,24 @@ $dark_user_select_button: #697ef5;
 			color: $text_input_color;
 		}
 	}
+
+	.error-module {
+		position: fixed;
+		top: 20px;
+		left: 20px;
+		z-index: 1050;
+		width: 400px;
+	}
+
+	.alert {
+		box-shadow: 2px 2px 10px rgba(0, 0, 0, 0.2);
+		opacity: 0.85;
+	}
+
+	.alert:hover {
+		opacity: 1;
+	}
+
 }
 
 :root {

@@ -1,11 +1,14 @@
 import React, { useState, useEffect } from "react";
 import { fetchDynamicData } from "../api/api";
 import { Button, Container, Table, Form } from "react-bootstrap";
+import { useError } from "../utils/Contexts";
+
+
 
 const PartsDisplay = ({ fetchDynamicData }) => {
+	const { displayError } = useError();
 	const [parts, setParts] = useState([]);
 	const [partName, setPartName] = useState("cpu");
-	const [error, setError] = useState(null);
 	const [loading, setLoading] = useState(true);
 	const [page, setPage] = useState(1);
 
@@ -16,7 +19,7 @@ const PartsDisplay = ({ fetchDynamicData }) => {
 			setParts(data);
 		} catch (error) {
 			console.error("Error fetching parts:", error);
-			setError(`Error fetching parts: ${error.message}`);
+			displayError(`Error fetching parts: ${error.message}`);
 		} finally {
 			setLoading(false);
 		}
@@ -39,11 +42,11 @@ const PartsDisplay = ({ fetchDynamicData }) => {
 				setParts(data);
 				setPage(1);
 			} else {
-				alert("Search term cannot be empty!")
+				displayError("Search term cannot be empty!")
 				return;
 			}
 		} catch (error) {
-			alert(`Error while fetching parts: \n${error}`);
+			displayError(`Error while fetching parts: \n${error}`);
 			console.error(`Error while fetching parts: \n${error}`);
 		}
 	};
@@ -104,9 +107,6 @@ const PartsDisplay = ({ fetchDynamicData }) => {
 		}
 		if (loading) {
 			return <h3>Loading parts...</h3>;
-		}
-		if (error) {
-			return <h3>{error}</h3>;
 		}
 	};
 

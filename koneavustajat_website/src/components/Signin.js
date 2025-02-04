@@ -4,11 +4,12 @@
 import React, { useState } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import { Container, Button, Form, Spinner } from "react-bootstrap";
-import { useAuth } from "../utils/Contexts";
+import { useAuth, useError } from "../utils/Contexts";
 
 
 // Function for signin in, take onSubmit and setting the current user as props
 export const Signin = ({ handleSignin, checkIfSignedIn }) => {
+    const { displayError } = useError();
 	const { handleUserChange, currentUser } = useAuth();
 	const navigate = useNavigate();
 	const [Email, setEmail] = useState("");
@@ -30,9 +31,11 @@ export const Signin = ({ handleSignin, checkIfSignedIn }) => {
 		try {
 			const success = await handleSignin(event, formFields, handleUserChange);
 			if (success) {
+				displayError("Successfully signed in!", "success");
 				navigate("/");
 			}
 		} catch (error) {
+			displayError(error);
 			console.error(error);
 		} finally {
 			setIsLoading(false);

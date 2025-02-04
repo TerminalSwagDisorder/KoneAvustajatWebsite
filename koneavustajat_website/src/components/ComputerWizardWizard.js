@@ -2,8 +2,10 @@ import React, { useState, useEffect } from "react";
 import { useSelector, useDispatch } from "react-redux";
 import { addToWizard, removeFromWizard, clearWizard, addToCompletedBuild } from "../redux/wizardSlice";
 import { Form, Button, InputGroup, Dropdown, DropdownButton, Container, Row, Col, Image, CloseButton, ListGroup } from "react-bootstrap";
+import { useError } from "../utils/Contexts";
 
 const ComputerWizardWizard = ({ wizardAlgorithm }) => {
+	const { displayError } = useError();
 	const [currentOperation, setCurrentOperation] = useState("wizard");
 	const [formFields, setFormFields] = useState({
 		price: 0,
@@ -152,11 +154,11 @@ const ComputerWizardWizard = ({ wizardAlgorithm }) => {
 		event.preventDefault();
 
 		if (Number.isNaN(formFields.price) || formFields.price === 0 || formFields.price === undefined) {
-			alert("Price must be a number between 500-5000");
+			displayError("Price must be a number between 500-5000");
 		}
 
 		if (formFields.price < 500 || formFields.price > 5000) {
-			alert("Price must be between 500-5000");
+			displayError("Price must be between 500-5000");
 		}
 
 		if (formFields.otherColor !== "" && formFields.colorPreference !== "other") {
@@ -174,7 +176,7 @@ const ComputerWizardWizard = ({ wizardAlgorithm }) => {
 			//console.log(formFields);
 		} catch (error) {
 			console.error("Error updating build:", error);
-			alert("Error updating build.");
+			displayError(`Error updating build: ${error}`);
 		}
 	};
 	

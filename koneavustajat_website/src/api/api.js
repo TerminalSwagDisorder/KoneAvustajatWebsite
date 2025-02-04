@@ -2,8 +2,8 @@
 // Auth: Terminal Swag Disorder
 // Desc: File containing code for api functionality
 
-import React, { useEffect, useState } from "react";
-import { checkAllowedTableNames, checkAllowedPartNames, checkSearchTerms, buildQuery, validateIdentifiers } from "./helpers";
+import React from "react";
+import { checkAllowedTableNames, checkAllowedPartNames, checkSearchTerms, buildQuery, validateIdentifiers, checkRes } from "./helpers";
 import "../style/style.scss";
 
 export const wizardAlgorithm = async (formFields) => {
@@ -20,15 +20,13 @@ export const wizardAlgorithm = async (formFields) => {
 		});
 		const data = await response.json();
 
-        if (!response.ok) {
-            alert(`HTTP error ${response.status}: ${data.message ? data.message : response.message}`);
-            throw new Error(`HTTP error ${response.status}: ${data.message ? data.message : response.message}`);
-        }
+        await checkRes(response, data);
 
-		alert("Build fetched.");
+		//alert("Build fetched.");
 		return data;
 	} catch (error) {
-		console.error("Error while fetching build:", error);
+		console.error("Error while fetching build:", error); 
+		throw error; 
 	}
 };
 
@@ -44,10 +42,7 @@ export const fetchUsers = async (page) => {
 
 		const data = await response.json();
 
-        if (!response.ok) {
-            alert(`HTTP error ${response.status}: ${data.message ? data.message : response.message}`);
-            throw new Error(`HTTP error ${response.status}: ${data.message ? data.message : response.message}`);
-        }
+		await checkRes(response, data);
 
 		// If data is not correct format
 		if (!Array.isArray(data)) {
@@ -57,6 +52,7 @@ export const fetchUsers = async (page) => {
 		return data;
 	} catch (error) {
 		console.error(error);
+		throw error;
 		
 	}
 };
@@ -83,10 +79,7 @@ export const fetchDynamicData = async (page, tableName, partName) => {
 		});
 		const data = await response.json();
 
-        if (!response.ok) {
-            alert(`HTTP error ${response.status}: ${data.message ? data.message : response.message}`);
-            throw new Error(`HTTP error ${response.status}: ${data.message ? data.message : response.message}`);
-        }
+        await checkRes(response, data);
 
 		// If data is not correct format
 		if (!Array.isArray(data)) {
@@ -96,6 +89,7 @@ export const fetchDynamicData = async (page, tableName, partName) => {
 		return data;
 	} catch (error) {
 		console.error(error);
+		throw error;
 	}
 };
 
@@ -127,18 +121,16 @@ export const updateDynamicData = async (formFields, tableName, partName, id) => 
 		});
 
 		const data = await response.json();
-		console.log(response);
-        if (!response.ok) {
-            alert(`HTTP error ${response.status}: ${data.message ? data.message : response.message}`);
-            throw new Error(`HTTP error ${response.status}: ${data.message ? data.message : response.message}`);
-        }
+
+		await checkRes(response, data);
 		
-		alert(`Successfully updated ${partName} with id ${id} from ${tableName}`);
+		//alert(`Successfully updated ${partName} with id ${id} from ${tableName}`);
 
 		return data;
 	} catch (error) {
 		console.error("Error updating data:", error);
-		if (error.message) alert(error.message);
+		throw error;
+		
 
 	}
 };
@@ -172,17 +164,15 @@ export const postDynamicData = async (formFields, tableName, partName) => {
 
 		const data = await response.json();
 
-        if (!response.ok) {
-            alert(`HTTP error ${response.status}: ${data.message ? data.message : response.message}`);
-            throw new Error(`HTTP error ${response.status}: ${data.message ? data.message : response.message}`);
-        }
+        await checkRes(response, data);
 		
-		alert(`Successfully added ${partName} to ${tableName}`);
+		//alert(`Successfully added ${partName} to ${tableName}`);
 
 		return data;
 	} catch (error) {
 		console.error("Error posting data:", error);
-		if (error.message) alert(error.message);
+		throw error;
+		
 
 	}
 };
@@ -209,15 +199,13 @@ export const deleteDynamicData = async (tableName, partName, id) => {
 
 		const data = await response.json();
 
-        if (!response.ok) {
-            alert(`HTTP error ${response.status}: ${data.message ? data.message : response.message}`);
-            throw new Error(`HTTP error ${response.status}: ${data.message ? data.message : response.message}`);
-        }
-		alert(`Successfully deleted ${partName} with id ${id} from ${tableName}`);
+        await checkRes(response, data);
+		
 		return true;
 	} catch (error) {
 		console.error("Error adding user:", error);
-		if (error.message) alert(error.message);
+		throw error;
+		
 
 	}
 };
@@ -236,10 +224,7 @@ export const fetchSearchData = async (searchTerms, tableName) => {
 		});
 		const data = await response.json();
 
-        if (!response.ok) {
-            alert(`HTTP error ${response.status}: ${data.message ? data.message : response.message}`);
-            throw new Error(`HTTP error ${response.status}: ${data.message ? data.message : response.message}`);
-        }
+        await checkRes(response, data);
 
 		// If data is not correct format
 		if (!Array.isArray(data)) {
@@ -249,6 +234,7 @@ export const fetchSearchData = async (searchTerms, tableName) => {
 		return data;
 	} catch (error) {
 		console.error(error);
+		throw error;
 	}
 };
 
@@ -268,10 +254,7 @@ export const fetchSearchIdData = async (id, tableName, partName) => {
 		});
 		const data = await response.json(); // Note for some reason this is a different format from email search
 
-        if (!response.ok) {
-            alert(`HTTP error ${response.status}: ${data.message ? data.message : response.message}`);
-            throw new Error(`HTTP error ${response.status}: ${data.message ? data.message : response.message}`);
-        }
+        await checkRes(response, data);
 
 		// If data is not correct format
 		if (!Array.isArray(data)) {
@@ -282,6 +265,7 @@ export const fetchSearchIdData = async (id, tableName, partName) => {
 		return data;
 	} catch (error) {
 		console.error(error);
+		throw error;
 	}
 };
 
@@ -300,14 +284,12 @@ export const fetchDataAmount = async (tableName) => {
 		
 		const data = await response.json();
 		
-        if (!response.ok) {
-			alert(`HTTP error ${response.status}: ${data.message ? data.message : response.message}`);
-            throw new Error(`HTTP error ${response.status}: ${data.message ? data.message : response.message}`);
-        }
+        await checkRes(response, data);
 
 		return data;
 	} catch (error) {
 		console.error("Error while getting pagination:", error);
+		throw error;
 	}
     
 };
@@ -321,14 +303,12 @@ export const fetchServerRoutes = async () => {
 
 		const data = await response.json();
 
-        if (!response.ok) {
-			alert(`HTTP error ${response.status}: ${data.message ? data.message : response.message}`);
-            throw new Error(`HTTP error ${response.status}: ${data.message ? data.message : response.message}`);
-        }
+        await checkRes(response, data);
 
 		return data;
 	} catch (error) {
 		console.error("Error while getting pagination:", error);
+		throw error;
 	}
     
 };
@@ -373,10 +353,7 @@ export const fetchContent = async (identifiers) => {
 		});
 		const data = await response.json();
 
-        if (!response.ok) {
-            alert(`HTTP error ${response.status}: ${data.message ? data.message : response.message}`);
-            throw new Error(`HTTP error ${response.status}: ${data.message ? data.message : response.message}`);
-        }
+        await checkRes(response, data);
 
 		const checkPublish = data.content.some((item) => item.Status !== "published");
 
@@ -398,6 +375,7 @@ export const fetchContent = async (identifiers) => {
 		return data;
 	} catch (error) {
 		console.error(error);
+		throw error;
 	}
 };
 
@@ -441,10 +419,7 @@ export const fetchWholeContent = async (identifiers) => {
 		});
 		const data = await response.json();
 
-        if (!response.ok) {
-            alert(`HTTP error ${response.status}: ${data.message ? data.message : response.message}`);
-            throw new Error(`HTTP error ${response.status}: ${data.message ? data.message : response.message}`);
-        }
+        await checkRes(response, data);
 
 		if (data.contentMap && data.content) {
 			data.content.forEach((item) => {
@@ -464,6 +439,7 @@ export const fetchWholeContent = async (identifiers) => {
 		return data;
 	} catch (error) {
 		console.error(error);
+		throw error;
 	}
 };
 
@@ -476,10 +452,7 @@ export const fetchContentIdentifiers = async () => {
 		
 		const data = await response.json();
 
-        if (!response.ok) {
-			alert(`HTTP error ${response.status}: ${data.message ? data.message : response.message}`);
-            throw new Error(`HTTP error ${response.status}: ${data.message ? data.message : response.message}`);
-        }
+        await checkRes(response, data);
 
 		if (typeof data === "object") {
 			return Object.values(data);
@@ -488,6 +461,7 @@ export const fetchContentIdentifiers = async () => {
 		return data;
 	} catch (error) {
 		console.error("Error while getting content identifiers:", error);
+		throw error;
 	}
 };
 
@@ -522,14 +496,12 @@ export const addContent = async (formFields) => {
 		});
 		const data = await response.json();
 
-        if (!response.ok) {
-            alert(`HTTP error ${response.status}: ${data.message ? data.message : response.message}`);
-            throw new Error(`HTTP error ${response.status}: ${data.message ? data.message : response.message}`);
-        }
+        await checkRes(response, data);
 
 		return data;
 	} catch (error) {
 		console.error("Error while adding content:", error);
+		throw error;
 	}
 };
 
@@ -561,15 +533,13 @@ export const updateContent = async (formFields) => {
 
 		const data = await response.json();
 
-        if (!response.ok) {
-            alert(`HTTP error ${response.status}: ${data.message ? data.message : response.message}`);
-            throw new Error(`HTTP error ${response.status}: ${data.message ? data.message : response.message}`);
-        }
+        await checkRes(response, data);
 
 		return data;
 	} catch (error) {
 		console.error("Error adding user:", error);
-		if (error.message) alert(error.message);
+		throw error;
+		
 
 	}
 };
@@ -596,19 +566,16 @@ export const handleSignin = async (event, formFields, handleUserChange) => {
 			const data = await response.json();
 			console.log(data.user);
 
-			if (!response.ok) {
-				console.log(data);
-				alert(`HTTP error ${response.status}: ${data.message ? data.message : response.message}`);
-				throw new Error(`HTTP error ${response.status}: ${data.message ? data.message : response.message}`);
-			}
+			await checkRes(response, data);
 
-			alert("Successfully signed in!");
+			//alert("Successfully signed in!");
 			handleUserChange(data.user);
 			return data.user;
 
 			}
 	} catch (error) {
 		console.error("Error signing user in:", error);
+		throw error;
 	}
 };
 
@@ -628,17 +595,15 @@ export const handleSignup = async (event, formFields) => {
 
 		const data = await response.json();
 
-        if (!response.ok) {
-            alert(`HTTP error ${response.status}: ${data.message ? data.message : response.message}`);
-            throw new Error(`HTTP error ${response.status}: ${data.message ? data.message : response.message}`);
-        }
+        await checkRes(response, data);
 
-		alert("Signed up successfully");
+		//alert("Signed up successfully");
 
 		return true;
 	} catch (error) {
 		console.error("Error adding user:", error);
-		if (error.message) alert(error.message);
+		throw error;
+		
 
 	}
 };
@@ -690,6 +655,7 @@ export const checkIfSignedIn = async () => {
 		}
 	} catch (error) {
 		console.error("Error while fetching user:", error);
+		throw error;
 	}
 };
 
@@ -717,6 +683,7 @@ export const refreshProfile = async () => {
 		}
 	} catch (error) {
 		console.error("Error while fetching user:", error);
+		throw error;
 	}
 };
 
@@ -744,18 +711,19 @@ export const handleCredentialChange = async (event, formFields) => {
 		// Handle update
 		if (response.ok) {
 			console.log("User updated successfully:", data);
-			alert("Successfully changed credentials!");
+			//alert("Successfully changed credentials!");
 			return true;
 		} else {
 			if (data.message ? data.message : response.message) {
-				alert(`HTTP error ${response.status}: ${data.message ? data.message : response.message}`);
+				//alert(`HTTP error ${response.status}: ${data.message ? data.message : response.message}`);
 				throw new Error(data.error);
 			} else {
-				alert("Failed change credentials. Please try again.");
+				//alert("Failed change credentials. Please try again.");
 				throw new Error(data.error);
 			}
 		}
     } catch (error) {
         console.error("Error updating credentials:", error);
+		throw error;
     }
 };

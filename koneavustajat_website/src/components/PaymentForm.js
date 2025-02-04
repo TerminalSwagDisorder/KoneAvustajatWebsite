@@ -2,8 +2,10 @@ import React, { useState } from "react";
 import { CardElement, useStripe, useElements } from "@stripe/react-stripe-js";
 import { usePayment } from "../utils/Contexts";
 import { Form, Button } from "react-bootstrap";
+import { useError } from "../utils/Contexts";
 
 const PaymentForm = ({ onPaymentSuccess }) => {
+	const { displayError } = useError();
     const { clientSecret, setClientSecret } = usePayment();
 	const stripe = useStripe();
 	const elements = useElements();
@@ -35,7 +37,7 @@ const PaymentForm = ({ onPaymentSuccess }) => {
 			}
 
 		} catch (error) {
-			alert(error.message);
+			displayError(error.message || error);
 		} finally {
 			setProcessing(false);
 		}

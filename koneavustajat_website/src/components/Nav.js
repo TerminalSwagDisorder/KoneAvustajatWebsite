@@ -4,10 +4,11 @@ import { Nav, Navbar, NavDropdown, Button, Image } from "react-bootstrap";
 import { Link } from "react-router-dom";
 import { AiOutlineShoppingCart } from "react-icons/ai";
 import { useSelector, useDispatch } from "react-redux";
-import { useTheme, useLanguage, useModal, useAuth } from "../utils/Contexts";
+import { useTheme, useLanguage, useModal, useAuth, useError } from "../utils/Contexts";
 import { useLocation } from "react-router-dom";
 
 const NavBar = ({ handleSignout }) => {
+	const { displayError } = useError();
 	const location = useLocation();
 	const [scrolled, setScrolled] = useState(false);
 	const [showDropdown, setShowDropdown] = useState(false);
@@ -49,8 +50,10 @@ const NavBar = ({ handleSignout }) => {
 		try {
 			await handleSignout();
 			handleUserChange(null);
+			displayError("Successfully logged out!", "success")
 		} catch (error) {
-			console.log(error.message);
+			displayError(error.message || error);
+			console.log(error.message || error);
 		}
 	};
 

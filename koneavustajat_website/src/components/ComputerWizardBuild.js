@@ -3,8 +3,10 @@ import { useSelector, useDispatch } from "react-redux";
 import { Container, Button, Image, CloseButton, ListGroup } from "react-bootstrap";
 import { addToWizard, removeFromWizard, clearWizard, addToCompletedBuild, removeFromCompletedBuild, clearCompletedBuild } from "../redux/wizardSlice";
 import { addToShoppingCart } from "../redux/shoppingCartSlice";
+import { useError } from "../utils/Contexts";
 
 const ComputerWizardBuild = () => {
+	const { displayError } = useError();
     const wizard = useSelector((state) => state.wizard.wizard);
     const completedBuild = useSelector((state) => state.wizard.completedBuild);
     const shoppingCart = useSelector((state) => state.shoppingCart.shoppingCart);
@@ -29,6 +31,7 @@ const ComputerWizardBuild = () => {
             };
             dispatch(addToShoppingCart(newItem));
         } else {
+            displayError("Unable to add a completed build with no parts!");
             console.error("Unable to add a completed build with no parts!");
         }
 	};

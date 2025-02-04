@@ -172,3 +172,11 @@ export const validateIdentifiers = async (identifiers) => {
     // Identifiers are valid
     return true;
 };
+
+export const checkRes = async (response, data) => {
+	if (!response.ok) {
+		//alert(`HTTP error ${response.status}: ${data.message ? data.message : response.message}`);
+		throw new Error(`HTTP error ${response.status}: ${data.message ? data.message : response.message}`);
+	}
+	return response.ok;
+};
