@@ -387,7 +387,6 @@ const Profile = ({ handleCredentialChange, handleSignout, fetchDynamicData, upda
 
 	const renderOrdersForm = () => {
 		if (currentUser && orders && currentOperation === "orders") {
-			if (currentOrder) console.log(currentOrder[0])
 			return (
 				<div>
 				<div id="partform" className="partform d-flex justify-content-center align-items-center">
@@ -397,7 +396,7 @@ const Profile = ({ handleCredentialChange, handleSignout, fetchDynamicData, upda
 						</div>
 						<h4 className=" mb-3">Change address</h4>
 						<Form.Group className="mb-3">
-							<Form.Select name="OrderID" value={currentOrder[0].OrderID} onChange={fetchCurrentOrder}>
+							<Form.Select name="OrderID" value={currentOrder[0] ? currentOrder[0].OrderID : null} onChange={fetchCurrentOrder}>
 								{orders && Object.keys(orders).length > 0 ? (
 									Object.keys(orders).map((key) => (
 										<option key={orders[key].ReceiptID} value={orders[key].OrderID}>
@@ -410,7 +409,7 @@ const Profile = ({ handleCredentialChange, handleSignout, fetchDynamicData, upda
 							</Form.Select>
 						</Form.Group>
 						{renderCurrentOrder()}
-						{currentOrder && currentOrder[0].PaymentStatus !== "paid" && (
+						{currentOrder[0] && currentOrder[0].PaymentStatus !== "paid" && (
 							<Button variant="primary" type="submit">
 								Pay for order
 							</Button>
@@ -589,8 +588,8 @@ const Profile = ({ handleCredentialChange, handleSignout, fetchDynamicData, upda
 			customerButtons = (
 				<>
 					<Button onClick={() => handleModifyProfile("address")}>Change address details</Button>
-					<br />
-					<Button onClick={() => handleModifyProfile("payment")}>Change payment details</Button>
+					{/*<br />
+					<Button onClick={() => handleModifyProfile("payment")}>Change payment details</Button>*/}
 				</>
 			);
 			ordersButton = (
