@@ -2950,8 +2950,12 @@ const createPaymentIntent = async (amount, currency, customer) => {
 		return null;
 	}
 	
-	const customerSql = `SELECT c.CustomerID, c.UserID, u.Name, u.Email, a.AddressID, a.AddressTypeID, a.Street, a.City, a.State, a.PostalCode, a.Country FROM customers c LEFT JOIN users u ON c.UserID = u.UserID LEFT JOIN addresses a ON c.CustomerID = a.CustomerID WHERE a.AddressTypeID = 1 AND c.UserID = ?`;	
-	
+	const customerSql = `SELECT c.CustomerID, c.UserID, u.Name, u.Email, a.AddressID, a.AddressTypeID, a.Street, a.City, a.State, a.PostalCode, a.Country FROM customers c LEFT JOIN users u ON c.UserID = u.UserID LEFT JOIN addresses a ON c.CustomerID = a.CustomerID WHERE a.AddressTypeID = 1 AND c.UserID = ?`;
+
+	const originalTotal = Math.round(amount * 100);
+	const taxPrice = originalTotal * 0.255;
+	const newTotal = originalTotal + taxPrice;
+
 	try {
 		const [user] = await promisePool.query(customerSql, [customer.UserID]);
 		if (!user.length) {
@@ -2959,19 +2963,21 @@ const createPaymentIntent = async (amount, currency, customer) => {
 		}
 
 		const stripeCustomer = await generateStripeCustomer(user[0]);
+		console.log(stripeCustomer);
 		
 		const paymentIntent = await stripe.paymentIntents.create({
-			amount: Math.round(amount * 100), // Amount in cents
+			amount: Math.round(newTotal), // Amount in cents
 			currency: currency,
-			automatic_tax: { "enabled": true },
 			customer: stripeCustomer.id,
 			payment_method_types: ["card"]
 		});
+		
+		await storeTaxTransaction(paymentIntent.id, taxPrice);
 
 		console.log(paymentIntent);
 		return paymentIntent;
 	} catch (error) {
-		console.error(error);
+		throw new Error(`Error while creating paymentintent: ${error}`);
 	}
 };
 
@@ -2994,6 +3000,21 @@ const generateStripeCustomer = async (customer) => {
 	});
 	return stripeCustomer;
 };
+
+const storeTaxTransaction = async (paymentIntentId, taxAmount) => {
+	console.log(taxAmount);
+	try {
+		await stripe.paymentIntents.update(paymentIntentId, {
+			metadata: {
+				tax_transaction: `Tax Amount: ${Math.round(taxAmount/100)} EUR`
+			}
+		});
+		console.log(`Stored tax transaction for PaymentIntent ${paymentIntentId}`);
+	} catch (error) {
+		console.error("Error storing tax transaction:", error);
+	}
+};
+
 
 ////////////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////
@@ -4231,7 +4252,7 @@ app.post("/api/orders/add", authenticateSession, formFieldsValidator(orderSchema
 
 		// OrderID, OrderTypeID, CustomerID, ReceiptID, OrderDate, Status, TotalPrice, Currency, Items, PaymentMethod, PaymentProvider, TransactionID, PaymentStatus, PaymentDate, ModifiedAt
 		insertQuery += ", CustomerID = ?, TotalPrice = ?, OrderTypeID = ?, ReceiptID = ?, Status = ?, Currency = ?, PaymentProvider = ?, TransactionID = ?, PaymentMethod = ?, PaymentStatus = ?";
-		queryParams.push(parseInt(customer[0].CustomerID), calculatedPrice, 1, generateReceiptId(customer[0].CustomerID), "verifying", currency, "stripe", paymentIntent.id, "card", "unpaid");		
+		queryParams.push(parseInt(customer[0].CustomerID), paymentIntent.amount / 100, 1, generateReceiptId(customer[0].CustomerID), "verifying", paymentIntent.currency, "stripe", paymentIntent.id, paymentIntent.payment_method_types, "unpaid");		
 
 		const [result] = await promisePool.query(insertQuery, queryParams);
 		return res.status(200).json({ message: "Added address successfully", id: result.insertId, clientSecret: paymentIntent.client_secret });

@@ -180,7 +180,7 @@ const ShoppingCart = ({ postDynamicData, updateDynamicData }) => {
                     <ListGroup.Item>
                         {(totalPrice && totalPrice > 0) ? (
                             <p>
-                                Total price: <b>{totalPrice}</b> €
+                                Total price: <b>{totalPrice} + VAT (25.5%)</b> €
                             </p>
                         ) : (
                             <p>No price could be calculated!</p>
