@@ -121,7 +121,7 @@ const Profile = ({ handleCredentialChange, handleSignout, fetchDynamicData, upda
 			const orderData = await fetchDynamicData(null, "profile/orders", null);
 			if (orderData) {
 				setOrders(orderData);
-				const currentOrderData = await fetchDynamicData(null, `orders/${orderData[0].OrderID}`, null);
+				const currentOrderData = await fetchDynamicData(null, `orders/${orderData[orderData.length - 1].OrderID}`, null);
 				if (currentOrderData) setCurrentOrder(currentOrderData);
 			} 
 		} catch (error) {
@@ -356,6 +356,17 @@ const Profile = ({ handleCredentialChange, handleSignout, fetchDynamicData, upda
 
 	const renderCurrentOrder = () => {
 		const allowedFields = ["ReceiptID", "OrderDate", "Status", "TotalPrice", "PaymentMethod", "TransactionID", "PaymentStatus", "PaymentDate", "Items"];
+		const ignoreKeys = ["totalPrice", "table"];
+		const partNameMapping = {
+			chassis: "Chassis",
+			cpu: "Cpu",
+			cpu_cooler: "Cpu cooler",
+			gpu: "Gpu",
+			memory: "Memory",
+			motherboard: "Motherboard",
+			psu: "Psu",
+			storage: "Storage"
+		};
 		if (currentUser && currentOrder && currentOperation === "orders") {
 			return (
 				<ListGroup className="profile-details">
@@ -366,10 +377,22 @@ const Profile = ({ handleCredentialChange, handleSignout, fetchDynamicData, upda
 								allowedFields.includes(key) && (
 								key === "Items" ? (
 									<ListGroup.Item>
+
 									{Object.values(val).map((obj, idx) => 
-										<li>
-											{obj.Name} | {obj.Price || obj.TotalPrice}€ | #{obj.quantity} <br />
-										</li>
+										obj.table === "completedBuild" ? (
+											<li>
+												Completed build: {Object.entries(obj).filter(item => !ignoreKeys.includes(item[0])).length} parts | {obj.totalPrice}€
+											</li>
+										) : obj.table === "usedParts" ? (
+											<li>
+												Used part: {obj.Name} | {obj.Price}€ | #{obj.quantity} <br />
+											</li>
+										) : (
+											<li>
+												{obj.Name} | {obj.Price || obj.TotalPrice}€ | #{obj.quantity} <br />
+											</li>
+										)
+
 								   )}
 									</ListGroup.Item>
 								) : (
@@ -398,9 +421,9 @@ const Profile = ({ handleCredentialChange, handleSignout, fetchDynamicData, upda
 						<Form.Group className="mb-3">
 							<Form.Select name="OrderID" value={currentOrder[0] ? currentOrder[0].OrderID : null} onChange={fetchCurrentOrder}>
 								{orders && Object.keys(orders).length > 0 ? (
-									Object.keys(orders).map((key) => (
+									[...Object.keys(orders)].reverse().map((key) => (
 										<option key={orders[key].ReceiptID} value={orders[key].OrderID}>
-											{orders[key].ReceiptID}
+											{orders[key].ReceiptID} | {orders[key].TotalPrice}€
 										</option>
 									))
 								) : (

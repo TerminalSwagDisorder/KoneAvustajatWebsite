@@ -296,9 +296,11 @@ const renderAddForm = () => {
 								<Button className="user-select-button" onClick={() => handleAddToCart(part)}>
 									Add to Cart
 								</Button>
-								<Button className="user-select-button" onClick={() => handleAddToCompletedBuild(part)}>
-									Add to Build
-								</Button>
+								{/*
+									<Button className="user-select-button" onClick={() => handleAddToCompletedBuild(part)}>
+										Add to Build
+									</Button>
+								*/}
 							</td>
 						</tr>
 					))}
