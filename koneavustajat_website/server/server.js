@@ -2748,6 +2748,11 @@ const generateReceipt = async (result, customer, Items, calculatedPrice, payment
 			price = parseFloat(item.totalPrice).toFixed(2) || 0;
 			name = "Computer build";
 			manufacturer = "KoneAvustajat";
+		} else if (item.table === "usedParts") {
+			quantity = item.quantity || 1;
+			price = parseFloat(item.Price).toFixed(2) || 0;
+			name = `Käytetty tuote: ${item.Name || "-"}`;
+			manufacturer = item.Manufacturer || "-";
 		} else {
 			quantity = item.quantity || 1;
 			price = parseFloat(item.Price).toFixed(2) || 0;
@@ -2826,7 +2831,7 @@ const generateReceipt = async (result, customer, Items, calculatedPrice, payment
 				margin: [0, 20, 0, 20]
 			},
 			{
-				text: [{ text: "\nYhteensä (sis. ALV 24%):", bold: true }, ` ${calculatedPrice}€`],
+				text: [{ text: "\nYhteensä (sis. ALV 25.5%):", bold: true }, ` ${calculatedPrice}€`],
 				style: "rightAlign"
 			},
 			{
@@ -2856,7 +2861,7 @@ const generateReceipt = async (result, customer, Items, calculatedPrice, payment
 					{ text: "\nIlmainen korjaus", bold: true }, " koskee valmistusvirheistä johtuvia vikoja ja muita ongelmia, ",
 					"jotka ilmenevät normaalissa käytössä kolmen (3) kuukauden sisällä ostopäivästä. ",
 					"Ilmainen korjaus koskee vain alkuperäisiä komponentteja ja alkuperäistä kokoonpanoa.\n\n",
-					{ text: "Tuki", bold: true }, " sisältää teknistä apua ja neuvontaa kuuden (6) kuukauden ajan ostopäivästä."
+					{ text: "Tuki", bold: true }, " sisältää teknistä apua ja neuvontaa kuuden (6) kuukauden ajan ostopäivästä.\n\n"
 				]
 			},
 			{ text: "Huoltopalvelut:", style: "listHeader" },
