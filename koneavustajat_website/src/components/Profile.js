@@ -60,6 +60,7 @@ const Profile = ({ handleCredentialChange, handleSignout, fetchDynamicData, upda
 	const [orders, setOrders] = useState([]);
 	const [currentOrder, setCurrentOrder] = useState({});
 	const [showPaymentForm, setShowPaymentForm] = useState(false);
+	const [viewOrderDetails, setViewOrderDetails] = useState(false);
 	
 	
 	
@@ -74,8 +75,8 @@ const Profile = ({ handleCredentialChange, handleSignout, fetchDynamicData, upda
 
 	const passwordRegex = /^(?=.*[A-Z])(?=.*\d)[A-Za-z\d]{9,}$/;
 	const emailRegex =
-		/^[-A-Za-z0-9!#$%&'*+/=?^_`{|}~]+(?:\.[-A-Za-z0-9!#$%&'*+/=?^_`{|}~]+)*@(?:[A-Za-z0-9](?:[-A-Za-z0-9]*[A-Za-z0-9])?\.)+[A-Za-z0-9](?:[-A-Za-z0-9]*[A-Za-z0-9])?$/;
-	
+		/^[-A-Za-z0-9!#$%&'*+/=?^_`{|}~]+(?:\.[-A-Za-z0-9!#$%&'*+/=?^_`{|}~]+)*@(?:[A-Za-z0-9](?:[-A-Za-z0-9]*[A-Za-z0-9])?\.)+[A-Za-z0-9](?:[-A-Za-z0-9]*[A-Za-z0-9])?$/;	
+
 	useEffect(() => {
 		if (currentUser && currentUser.RoleID === 2) {
 			fetchAddressData();
@@ -92,6 +93,7 @@ const Profile = ({ handleCredentialChange, handleSignout, fetchDynamicData, upda
 	}, [currentOperation]);
 
 	useEffect(() => {
+		setViewOrderDetails(false);
 		setFormFields({...defaultFormFields});
 		if (currentOperation === "address") {
 			fetchAddressData();
@@ -107,7 +109,6 @@ const Profile = ({ handleCredentialChange, handleSignout, fetchDynamicData, upda
 			const data = await fetchDynamicData(null, "profile/addresses", null);
 			if (adressTypeData) setAddressTypes(adressTypeData);
 			if (data) {
-				console.log(data)
 				setCurrentAddress(data);
 				setCurrentAddressType(data[0].AddressTypeID || 1);
 			}
@@ -179,6 +180,7 @@ const Profile = ({ handleCredentialChange, handleSignout, fetchDynamicData, upda
 	};
 	
 	const closeForm = () => {
+		setViewOrderDetails(false);
 		setCurrentOperation("");
 		setFormFields({...defaultFormFields});
 		setEmailValid(false);
@@ -213,7 +215,7 @@ const Profile = ({ handleCredentialChange, handleSignout, fetchDynamicData, upda
 									type="text"
 									placeholder="Enter new name"
 									name="Name"
-									value={formFields.Name || ""}
+									value={formFields.Name}
 									onChange={handleInputChange}
 								/>
 							</Form.Group>
@@ -234,7 +236,7 @@ const Profile = ({ handleCredentialChange, handleSignout, fetchDynamicData, upda
 									placeholder="Enter new email"
 									name="Email"
 									onChange={handleInputChange}
-									value={formFields.Email || ""}
+									value={formFields.Email}
 									className={emailValid ? "valid-input" : "invalid-input"}
 								/>
 							</Form.Group>
@@ -245,7 +247,7 @@ const Profile = ({ handleCredentialChange, handleSignout, fetchDynamicData, upda
 										placeholder="Enter new password"
 										name="Password"
 										onChange={handleInputChange}
-										value={formFields.Password || ""}
+										value={formFields.Password}
 										className={passwordValid ? "valid-input" : "invalid-input"}
 									/>
 								</OverlayTrigger>
@@ -256,7 +258,7 @@ const Profile = ({ handleCredentialChange, handleSignout, fetchDynamicData, upda
 									placeholder="Enter current password"
 									name="currentPassword"
 									onChange={handleInputChange}
-									value={formFields.currentPassword || ""}
+									value={formFields.currentPassword}
 									required
 								/>
 							</Form.Group>
@@ -297,7 +299,7 @@ const Profile = ({ handleCredentialChange, handleSignout, fetchDynamicData, upda
 								placeholder="Enter new street"
 								name="Street"
 								onChange={handleInputChange}
-								value={formFields.Street || ""}
+								value={formFields.Street}
 							/>
 						</Form.Group>
 						<Form.Group className="mb-3">
@@ -306,7 +308,7 @@ const Profile = ({ handleCredentialChange, handleSignout, fetchDynamicData, upda
 								placeholder="Enter new city"
 								name="City"
 								onChange={handleInputChange}
-								value={formFields.City || ""}
+								value={formFields.City}
 							/>
 						</Form.Group>
 						<Form.Group className="mb-3">
@@ -315,7 +317,7 @@ const Profile = ({ handleCredentialChange, handleSignout, fetchDynamicData, upda
 								placeholder="Enter new state"
 								name="State"
 								onChange={handleInputChange}
-								value={formFields.State || ""}
+								value={formFields.State}
 							/>
 						</Form.Group>
 						<Form.Group className="mb-3">
@@ -324,7 +326,7 @@ const Profile = ({ handleCredentialChange, handleSignout, fetchDynamicData, upda
 								placeholder="Enter new postal code"
 								name="PostalCode"
 								onChange={handleInputChange}
-								value={formFields.PostalCode || ""}
+								value={formFields.PostalCode}
 							/>
 						</Form.Group>
 						<Form.Group className="mb-3">
@@ -333,7 +335,7 @@ const Profile = ({ handleCredentialChange, handleSignout, fetchDynamicData, upda
 								placeholder="Enter new country"
 								name="Country"
 								onChange={handleInputChange}
-								value={formFields.Country || ""}
+								value={formFields.Country}
 							/>
 						</Form.Group>
 						<Form.Group className="mb-3">
@@ -342,7 +344,7 @@ const Profile = ({ handleCredentialChange, handleSignout, fetchDynamicData, upda
 								placeholder="Enter current password"
 								name="currentPassword"
 								onChange={handleInputChange}
-								value={formFields.currentPassword || ""}
+								value={formFields.currentPassword}
 								required
 							/>
 						</Form.Group>
@@ -438,6 +440,17 @@ const Profile = ({ handleCredentialChange, handleSignout, fetchDynamicData, upda
 								Pay for order
 							</Button>
 						)}
+						
+						{currentOrder[0] && viewOrderDetails === false ? (
+							<Button variant="primary" onClick={() => setViewOrderDetails(true)}>
+								View order details
+							</Button>
+						) : (
+							<Button variant="primary" disabled>
+								View order details
+							</Button>
+						)}
+						
 					</Form>
 				</div>
 					{showPaymentForm && clientSecret && (
@@ -447,10 +460,167 @@ const Profile = ({ handleCredentialChange, handleSignout, fetchDynamicData, upda
 						/>
 					)}
 				</div>
+				
 			);
 		}
 	};
 
+	const renderBasedOnPart = () => {
+			if (currentOrder[0] && viewOrderDetails === true) {
+				return (
+					<div id="partform" className="partform d-flex justify-content-center align-items-center">
+						<Form className="adminForm border rounded shadow p-4 bg-opaque">
+							<div className="d-flex justify-content-end mb-3">
+								<CloseButton onClick={() => setViewOrderDetails(false)} />
+							</div>
+							<h4 className=" mb-3">Order details</h4>
+							{renderOrderDetails(currentOrder[0])}
+						</Form>
+					</div>
+				);
+			}
+		};
+
+	const renderOrderDetails = (data) => {
+		const allowedFields = ["Items", "Name", "Manufacturer", "ModelNumber", "SerialNumber", "Price", "Image", "Image_Url", "Url", "chassis", "cpu", "cpu_cooler", "gpu", "memory", "motherboard", "psu", "storage", "usedParts", "completedBuild"];
+		const topFields = ["ReceiptID", "OrderDate", "Status", "TotalPrice", "PaymentMethod", "TransactionID", "PaymentStatus", "PaymentDate"];
+
+		const partNameMapping = {
+			chassis: "Chassis",
+			cpu: "Cpu",
+			cpu_cooler: "Cpu cooler",
+			gpu: "Gpu",
+			memory: "Memory",
+			motherboard: "Motherboard",
+			psu: "Psu",
+			storage: "Storage",
+			usedParts: "Used part",
+			completedBuild: "Completed build"
+		};
+		return (
+			<>
+				{data.table && (
+					<b>{partNameMapping[data.table]}</b>
+				)}
+				{Object.entries(data).map(([key, value], index) => topFields.includes(key) && (
+					<ul key={index}>
+				  		<b>{key}</b>:{" "} {value}
+				  	</ul>
+				))}
+
+				{Object.entries(data).map(([key, value], index) => allowedFields.includes(key) && (						
+					<ul key={index}>
+						{key !== "Image" && key !== "Image_Url" && (
+						<> 
+							<b>{key === "table" ? partNameMapping[value] : key}</b>:{" "}
+						</>
+						)}
+						{key === "Url" || key === "Image_Url" ? (
+							<a href={value} target="_blank" rel="noopener noreferrer">
+								{value}
+							</a>
+						) : key === "Image" ? (
+							<Image
+								src={process.env.PUBLIC_URL + "/product_images/" + value}
+								alt={key}
+								style={{ width: "100px", height: "auto" }}
+							/>
+						) : Array.isArray(value) ? (
+							<> 
+								<ul>{value.map((item, idx) => (typeof item === "object" ? renderOrderDetails(item) : item))}</ul>
+							</>
+						) : typeof value === "object" ? (
+							<>
+								{renderOrderDetails(value)}
+							</>
+						) : (
+							value
+						)}
+					</ul>
+				))}
+			</>
+		)
+	};
+
+/*
+const renderOrderDetails = (data) => {
+		const allowedFields = ["table", "ReceiptID", "OrderDate", "Status", "TotalPrice", "PaymentMethod", "TransactionID", "PaymentStatus", "PaymentDate", "Items", "Name", "Manufacturer", "ModelNumber", "SerialNumber", "Price", "Image", "Image_Url", "Url", "chassis", "cpu", "cpu_cooler", "gpu", "memory", "motherboard", "psu", "storage", "usedParts", "completedBuild"];
+		
+		const partNameMapping = {
+			chassis: "Chassis",
+			cpu: "Cpu",
+			cpu_cooler: "Cpu cooler",
+			gpu: "Gpu",
+			memory: "Memory",
+			motherboard: "Motherboard",
+			psu: "Psu",
+			storage: "Storage",
+			usedParts: "Used part",
+			completedBuild: "Completed build"
+		};
+
+	if (typeof data === "object" && !Array.isArray(data)) {
+		return (
+			<div>
+				{data.table && (
+					<div style={{ marginBottom: "0.5rem" }}>
+						<b>{partNameMapping[data.table] || data.table}</b>
+					</div>
+				)}
+				<ul>
+					{Object.entries(data).map(([key, value], index) => {
+						if (!allowedFields.includes(key)) return null;
+						if (key === "table") return null;
+						return (
+							<li key={index}>
+								{key !== "Image" && key !== "Image_Url" && (
+									<>
+										<b>{key}:</b>{" "}
+									</>
+								)}
+								{key === "Url" || key === "Image_Url" ? (
+									<a href={value} target="_blank" rel="noopener noreferrer">
+										{value}
+									</a>
+								) : key === "Image" ? (
+									<Image
+										src={process.env.PUBLIC_URL + "/product_images/" + value}
+										alt={key}
+										style={{ width: "100px", height: "auto" }}
+									/>
+								) : Array.isArray(value) ? (
+									<ul>
+										{value.map((item, idx) => (
+											<li key={idx}>
+												{typeof item === "object" ? renderOrderDetails(item) : item}
+											</li>
+										))}
+									</ul>
+								) : typeof value === "object" ? (
+									renderOrderDetails(value)
+								) : (
+									value
+								)}
+							</li>
+						);
+					})}
+				</ul>
+			</div>
+		);
+	} else if (Array.isArray(data)) {
+		return (
+			<ul>
+				{data.map((item, idx) => (
+					<li key={idx}>{typeof item === "object" ? renderOrderDetails(item) : item}</li>
+				))}
+			</ul>
+		);
+	} else {
+		return data;
+	}
+};
+*/
+	
 	const renderUserData = () => {
 		if (currentUser) {
 			return (
@@ -647,6 +817,7 @@ const Profile = ({ handleCredentialChange, handleSignout, fetchDynamicData, upda
 					</Row>
 				</Col>
 			</Row>
+		{renderBasedOnPart()}
 		</Container>
 	);
 };

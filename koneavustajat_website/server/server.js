@@ -2968,7 +2968,7 @@ const createPaymentIntent = async (amount, currency, customer) => {
 		}
 
 		if (!user[0].Street || !user[0].PostalCode || !user[0].City) {
-			throw ("Missing required address data!");
+			throw ("Missing required billing address data (Street, Postal Code or City)!\nPlease change your address in the profile page.");
 		}
 
 		const stripeCustomer = await generateStripeCustomer(user[0]);

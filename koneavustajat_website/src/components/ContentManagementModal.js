@@ -192,7 +192,7 @@ const ContentManagementModal = ({ fetchWholeContent, fetchContentIdentifiers, ad
 				const success = await updateContent(formFields);
 				if (success) {
 					console.log(success);
-					displayError(success.message);
+					displayError(success.message, "success");
 					if (identifiers[0].startsWith(location.pathname === "/" ? "home" : location.pathname.slice(1))) {
 						await fetchPageContent({ page: identifiers[0] });
 					}
