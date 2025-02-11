@@ -11,4 +11,5 @@ stripe trigger payment_intent.payment_failed
 -Set up CMS texts
 -Check receipt for completed build in profile x	
 -Check that additional parts work x
--Add a way to view part details on orders
+-Add a way to view part details on orders x
+-Part search
