@@ -175,8 +175,8 @@ const ComputerWizardWizard = ({ wizardAlgorithm }) => {
 			}
 			//console.log(formFields);
 		} catch (error) {
-			console.error("Error updating build:", error);
-			displayError(`Error updating build: ${error}`);
+			displayError(`${error}`);
+			console.error(error);
 		}
 	};
 	

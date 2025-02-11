@@ -3,7 +3,7 @@
 // Desc: File containing code for api functionality
 
 import React from "react";
-import { checkAllowedTableNames, checkAllowedPartNames, checkSearchTerms, buildQuery, validateIdentifiers, checkRes } from "./helpers";
+import { checkAllowedTableNames, checkAllowedPartNames, checkSearchTerms, buildQuery, validateIdentifiers, checkRes, sanitizeData } from "./helpers";
 import "../style/style.scss";
 
 export const wizardAlgorithm = async (formFields) => {
@@ -25,7 +25,7 @@ export const wizardAlgorithm = async (formFields) => {
 		//alert("Build fetched.");
 		return data;
 	} catch (error) {
-		console.error("Error while fetching build:", error); 
+		console.error(error); 
 		throw error; 
 	}
 };
@@ -80,13 +80,15 @@ export const fetchDynamicData = async (page, tableName, partName) => {
 		const data = await response.json();
 
         await checkRes(response, data);
-
+		
+		const sanitizedData = sanitizeData(data);
+		
 		// If data is not correct format
-		if (!Array.isArray(data)) {
-		  return Object.values(data);
+		if (!Array.isArray(sanitizedData)) {
+		  return Object.values(sanitizedData);
 		}
 		
-		return data;
+		return sanitizedData;
 	} catch (error) {
 		console.error(error);
 		throw error;
@@ -128,7 +130,7 @@ export const updateDynamicData = async (formFields, tableName, partName, id) => 
 
 		return data;
 	} catch (error) {
-		console.error("Error updating data:", error);
+		console.error(error);
 		throw error;
 		
 
@@ -170,7 +172,7 @@ export const postDynamicData = async (formFields, tableName, partName) => {
 
 		return data;
 	} catch (error) {
-		console.error("Error posting data:", error);
+		console.error(error);
 		throw error;
 		
 
@@ -203,7 +205,7 @@ export const deleteDynamicData = async (tableName, partName, id) => {
 		
 		return true;
 	} catch (error) {
-		console.error("Error adding user:", error);
+		console.error(error);
 		throw error;
 		
 
@@ -226,12 +228,14 @@ export const fetchSearchData = async (searchTerms, tableName) => {
 
         await checkRes(response, data);
 
+		const sanitizedData = sanitizeData(data);
+		
 		// If data is not correct format
-		if (!Array.isArray(data)) {
-		  return Object.values(data);
+		if (!Array.isArray(sanitizedData)) {
+		  return Object.values(sanitizedData);
 		}
 		
-		return data;
+		return sanitizedData;
 	} catch (error) {
 		console.error(error);
 		throw error;
@@ -256,13 +260,15 @@ export const fetchSearchIdData = async (id, tableName, partName) => {
 
         await checkRes(response, data);
 
+		const sanitizedData = sanitizeData(data);
+
 		// If data is not correct format
-		if (!Array.isArray(data)) {
-		  return Object.values(data);
+		if (!Array.isArray(sanitizedData)) {
+		  return Object.values(sanitizedData);
 		}
-		console.log(data);
+		console.log(sanitizedData);
 		
-		return data;
+		return sanitizedData;
 	} catch (error) {
 		console.error(error);
 		throw error;
@@ -288,7 +294,7 @@ export const fetchDataAmount = async (tableName) => {
 
 		return data;
 	} catch (error) {
-		console.error("Error while getting pagination:", error);
+		console.error(error);
 		throw error;
 	}
     
@@ -307,7 +313,7 @@ export const fetchServerRoutes = async () => {
 
 		return data;
 	} catch (error) {
-		console.error("Error while getting pagination:", error);
+		console.error(error);
 		throw error;
 	}
     
@@ -318,24 +324,24 @@ export const fetchContent = async (identifiers) => {
 		await checkAllowedTableNames(["getroutes"], "text-content");
 
 		if (!identifiers) {
-			throw new Error("No identifiers defined!");
+			throw ("No identifiers defined!");
 		}
 		
 		if (typeof identifiers !== "object") {
-			throw new Error("Identifiers must be an object!");
+			throw ("Identifiers must be an object!");
 		}
 
 		const identifierKeys = Object.keys(identifiers);
 		const validKeys = ["page", "section", "specific"];
 		if (identifierKeys.length > 3 || identifierKeys.length < 1) {
-			throw new Error("Identifier amount is not allowed");
+			throw ("Identifier amount is not allowed");
 		}
 		if (identifierKeys.some((item) => !validKeys.includes(item))) {
-			throw new Error("Found invalid key in indentifiers");
+			throw ("Found invalid key in indentifiers");
 		}
 		const validIdentifiers = await validateIdentifiers(identifiers);
 		if (!validIdentifiers) {
-			throw new Error("Identifier hierarchy is incorrect");
+			throw("Identifier hierarchy is incorrect");
 		}
 		
 		const identifierValues = validKeys
@@ -367,12 +373,14 @@ export const fetchContent = async (identifiers) => {
 			}
 		}
 		
+		const sanitizedData = sanitizeData(data);
+		
 		// Return only data.contentMap
-		if (data.contentMap) {
-		  return data.contentMap;
+		if (sanitizedData.contentMap) {
+		  return sanitizedData.contentMap;
 		}
 		
-		return data;
+		return sanitizedData;
 	} catch (error) {
 		console.error(error);
 		throw error;
@@ -384,24 +392,24 @@ export const fetchWholeContent = async (identifiers) => {
 		await checkAllowedTableNames(["getroutes"], "text-content");
 
 		if (!identifiers) {
-			throw new Error("No identifiers defined!");
+			throw ("No identifiers defined!");
 		}
 		
 		if (typeof identifiers !== "object") {
-			throw new Error("Identifiers must be an object!");
+			throw ("Identifiers must be an object!");
 		}
 
 		const identifierKeys = Object.keys(identifiers);
 		const validKeys = ["page", "section", "specific"];
 		if (identifierKeys.length > 3 || identifierKeys.length < 1) {
-			throw new Error("Identifier amount is not allowed");
+			throw ("Identifier amount is not allowed");
 		}
 		if (identifierKeys.some((item) => !validKeys.includes(item))) {
-			throw new Error("Found invalid key in indentifiers");
+			throw ("Found invalid key in indentifiers");
 		}
 		const validIdentifiers = await validateIdentifiers(identifiers);
 		if (!validIdentifiers) {
-			throw new Error("Identifier hierarchy is incorrect");
+			throw ("Identifier hierarchy is incorrect");
 		}
 		
 		const identifierValues = validKeys
@@ -430,13 +438,15 @@ export const fetchWholeContent = async (identifiers) => {
 				}
 			});
 		}
+		
+		const sanitizedData = sanitizeData(data);
 
 		// Return only data.contentMap
-		if (data.content) {
-		  return data.content;
+		if (sanitizedData.content) {
+		  return sanitizedData.content;
 		}
 		
-		return data;
+		return sanitizedData;
 	} catch (error) {
 		console.error(error);
 		throw error;
@@ -460,7 +470,7 @@ export const fetchContentIdentifiers = async () => {
 		
 		return data;
 	} catch (error) {
-		console.error("Error while getting content identifiers:", error);
+		console.error(error);
 		throw error;
 	}
 };
@@ -500,7 +510,7 @@ export const addContent = async (formFields) => {
 
 		return data;
 	} catch (error) {
-		console.error("Error while adding content:", error);
+		console.error(error);
 		throw error;
 	}
 };
@@ -517,7 +527,7 @@ export const updateContent = async (formFields) => {
 			Status: formFields.Status	
 		};
 		console.log("Submitting form:", formFields);
-		if (formFields.Site_Identifier === "" || formFields.Language === "") throw new Error("Identifier fields not populated!");
+		if (formFields.Site_Identifier === "" || formFields.Language === "") throw ("Identifier fields not populated!");
 		await checkAllowedTableNames(["patchroutes"], "text-content/update");
 
 		if (formFields && typeof formFields === "object" && !Array.isArray(formFields)) formFields = JSON.stringify(formFields);
@@ -537,7 +547,7 @@ export const updateContent = async (formFields) => {
 
 		return data;
 	} catch (error) {
-		console.error("Error adding user:", error);
+		console.error(error);
 		throw error;
 		
 
@@ -574,7 +584,7 @@ export const handleSignin = async (event, formFields, handleUserChange) => {
 
 			}
 	} catch (error) {
-		console.error("Error signing user in:", error);
+		console.error(error);
 		throw error;
 	}
 };
@@ -601,7 +611,7 @@ export const handleSignup = async (event, formFields) => {
 
 		return true;
 	} catch (error) {
-		console.error("Error adding user:", error);
+		console.error(error);
 		throw error;
 		
 
@@ -654,7 +664,7 @@ export const checkIfSignedIn = async () => {
 			return null;
 		}
 	} catch (error) {
-		console.error("Error while fetching user:", error);
+		console.error(error);
 		throw error;
 	}
 };
@@ -682,7 +692,7 @@ export const refreshProfile = async () => {
 			return null;
 		}
 	} catch (error) {
-		console.error("Error while fetching user:", error);
+		console.error(error);
 		throw error;
 	}
 };
@@ -716,14 +726,14 @@ export const handleCredentialChange = async (event, formFields) => {
 		} else {
 			if (data.message ? data.message : response.message) {
 				//alert(`HTTP error ${response.status}: ${data.message ? data.message : response.message}`);
-				throw new Error(data.error);
+				throw (data.error);
 			} else {
 				//alert("Failed change credentials. Please try again.");
-				throw new Error(data.error);
+				throw (data.error);
 			}
 		}
     } catch (error) {
-        console.error("Error updating credentials:", error);
+		console.error(error);
 		throw error;
     }
 };

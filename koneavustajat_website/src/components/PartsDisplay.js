@@ -18,8 +18,8 @@ const PartsDisplay = ({ fetchDynamicData }) => {
 			const data = await fetchDynamicData(page, "part", partName);
 			setParts(data);
 		} catch (error) {
-			console.error("Error fetching parts:", error);
-			displayError(`Error fetching parts: ${error.message}`);
+			displayError(`${error}`);
+			console.error(error);
 		} finally {
 			setLoading(false);
 		}
@@ -46,8 +46,8 @@ const PartsDisplay = ({ fetchDynamicData }) => {
 				return;
 			}
 		} catch (error) {
-			displayError(`Error while fetching parts: \n${error}`);
-			console.error(`Error while fetching parts: \n${error}`);
+			displayError(`${error}`);
+			console.error(error);
 		}
 	};
 

@@ -108,8 +108,8 @@ const ComputerWizardBrowse = ({ fetchDynamicData, fetchDataAmount, updateDynamic
 			setParts(data);
 			//console.log(data);
 		} catch (error) {
-			displayError(`Error while fetching parts: ${error}`);
-			console.error("Error while fetching parts:", error);
+			displayError(`${error}`);
+			console.error(error);
 		}
 	};
 
@@ -130,8 +130,8 @@ const ComputerWizardBrowse = ({ fetchDynamicData, fetchDataAmount, updateDynamic
 				closeForm();
 			}
 		} catch (error) {
-			displayError(`Error modifying data: ${error}`);
-			console.error("Error modifying data:", error);
+			displayError(`${error}`);
+			console.error(error);
 		}
 	};
 

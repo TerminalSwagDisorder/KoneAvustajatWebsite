@@ -9,7 +9,7 @@ import "../style/style.scss";
 export const checkAllowedTableNames = async (routeTypeArr, tableName) => {
     if (!Array.isArray(routeTypeArr)) {
         // console.error("Function parameter 1 must be an array!");
-        throw new Error("Function parameter 1 must be an array!");
+        throw ("Function parameter 1 must be an array!");
     }
 
     const allowedTableNamesArray = [];
@@ -42,7 +42,7 @@ export const checkAllowedTableNames = async (routeTypeArr, tableName) => {
     });
 
     if (!isTableNameAllowed || tableName === "") {
-        throw new Error(`tableName "${tableName}" is not allowed!`);
+        throw (`tableName "${tableName}" is not allowed!`);
     }
 
     return allowedTableNamesArray;
@@ -52,7 +52,7 @@ export const checkAllowedPartNames = async (partName) => {
     const allowedPartNamesArray = ["chassis", "cpu", "cpu_cooler", "gpu", "memory", "motherboard", "psu", "storage", "part_inventory", "inventory"];
 
     if (!allowedPartNamesArray.includes(partName) || partName === "") {
-        throw new Error(`partName "${partName}" is not allowed!`);
+        throw (`partName "${partName}" is not allowed!`);
     }
 
     return true;
@@ -70,11 +70,11 @@ export const checkSearchTerms2 = async (searchTerms) => {
             if (typeof term === "string") {
                 correctSearchTerms[term] = term;
             } else {
-                throw new Error(`Invalid array element: ${term}. Expected a string.`);
+                throw(`Invalid array element: ${term}. Expected a string.`);
             }
         }
     } else {
-        throw new Error(`Something went wrong with searchTerms => ${searchTerms}`);
+        throw(`Something went wrong with searchTerms => ${searchTerms}`);
     }
 
     return correctSearchTerms;
@@ -94,7 +94,7 @@ export const checkSearchTerms = async (searchTerms) => {
             if (typeof term === "string" && term !== undefined && term !== null && term !== "") {
                 correctSearchTerms.tableName = term;
             } else {
-                throw new Error(`Invalid array element: ${term}. Expected a string.`);
+                throw(`Invalid array element: ${term}. Expected a string.`);
             }
         }
     } else if (typeof searchTerms === "object" && searchTerms !== null) {
@@ -105,7 +105,7 @@ export const checkSearchTerms = async (searchTerms) => {
         }
         correctSearchTerms = searchTerms;
     } else {
-        throw new Error(
+        throw(
             `Invalid searchTerms type. Expected an object, array, or string but received: ${typeof searchTerms}`
         );
     }
@@ -115,15 +115,15 @@ export const checkSearchTerms = async (searchTerms) => {
 
 export const buildQuery = async (correctSearchTerms, itemsBool, page = null) => {
     if (Array.isArray(correctSearchTerms)) {
-        throw new Error("Invalid function parameter 1. Expected an object but received: Array");
+        throw("Invalid function parameter 1. Expected an object but received: Array");
     }
 
     if (typeof correctSearchTerms !== "object" || correctSearchTerms === null) {
-        throw new Error(`Invalid function parameter 1. Expected an object but received: ${typeof correctSearchTerms}`);
+        throw(`Invalid function parameter 1. Expected an object but received: ${typeof correctSearchTerms}`);
     }
 
     if (typeof itemsBool !== "boolean") {
-        throw new Error(`Invalid function parameter 2. Expected a boolean but received: ${typeof itemsBool}`);
+        throw(`Invalid function parameter 2. Expected a boolean but received: ${typeof itemsBool}`);
     }
 
     const params = new URLSearchParams();
@@ -176,7 +176,23 @@ export const validateIdentifiers = async (identifiers) => {
 export const checkRes = async (response, data) => {
 	if (!response.ok) {
 		//alert(`HTTP error ${response.status}: ${data.message ? data.message : response.message}`);
-		throw new Error(`HTTP error ${response.status}: ${data.message ? data.message : response.message}`);
+		throw (`HTTP error ${response.status}: ${data.message ? data.message : response.message}`);
 	}
 	return response.ok;
+};
+
+export const sanitizeData = (data) => {
+	if (data === null || data === undefined) {
+		return "";
+	}
+
+	if (Array.isArray(data)) {
+		return data.map(sanitizeData);
+	}
+
+	if (typeof data === "object") {
+		return Object.fromEntries(Object.entries(data).map(([key, value]) => [key, sanitizeData(value)]));
+	}
+
+	return data;
 };

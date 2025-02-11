@@ -107,12 +107,13 @@ const Profile = ({ handleCredentialChange, handleSignout, fetchDynamicData, upda
 			const data = await fetchDynamicData(null, "profile/addresses", null);
 			if (adressTypeData) setAddressTypes(adressTypeData);
 			if (data) {
+				console.log(data)
 				setCurrentAddress(data);
 				setCurrentAddressType(data[0].AddressTypeID || 1);
 			}
 		} catch (error) {
-			displayError(`Error while fetching addresses: ${error}`);
-			console.error("Error while fetching addresses:", error);
+			displayError(`${error}`);
+			console.error(error);
 		}
 	};
 	
@@ -125,8 +126,8 @@ const Profile = ({ handleCredentialChange, handleSignout, fetchDynamicData, upda
 				if (currentOrderData) setCurrentOrder(currentOrderData);
 			} 
 		} catch (error) {
-			displayError(`Error while fetching orders: ${error}`);
-			console.error("Error while fetching orders:", error);
+			displayError(`${error}`);
+			console.error(error);
 		}
 	};
 	
@@ -140,8 +141,8 @@ const Profile = ({ handleCredentialChange, handleSignout, fetchDynamicData, upda
 			const currentOrderData = await fetchDynamicData(null, `orders/${orderID}`, null);
 			if (currentOrderData) setCurrentOrder(currentOrderData);
 		} catch (error) {
-			displayError(`Error while fetching orders: ${error}`);
-			console.error("Error while fetching orders:", error);
+			displayError(`${error}`);
+			console.error(error);
 
 		}
 	};
@@ -212,7 +213,7 @@ const Profile = ({ handleCredentialChange, handleSignout, fetchDynamicData, upda
 									type="text"
 									placeholder="Enter new name"
 									name="Name"
-									value={formFields.Name}
+									value={formFields.Name || ""}
 									onChange={handleInputChange}
 								/>
 							</Form.Group>
@@ -233,7 +234,7 @@ const Profile = ({ handleCredentialChange, handleSignout, fetchDynamicData, upda
 									placeholder="Enter new email"
 									name="Email"
 									onChange={handleInputChange}
-									value={formFields.Email}
+									value={formFields.Email || ""}
 									className={emailValid ? "valid-input" : "invalid-input"}
 								/>
 							</Form.Group>
@@ -244,7 +245,7 @@ const Profile = ({ handleCredentialChange, handleSignout, fetchDynamicData, upda
 										placeholder="Enter new password"
 										name="Password"
 										onChange={handleInputChange}
-										value={formFields.Password}
+										value={formFields.Password || ""}
 										className={passwordValid ? "valid-input" : "invalid-input"}
 									/>
 								</OverlayTrigger>
@@ -255,7 +256,7 @@ const Profile = ({ handleCredentialChange, handleSignout, fetchDynamicData, upda
 									placeholder="Enter current password"
 									name="currentPassword"
 									onChange={handleInputChange}
-									value={formFields.currentPassword}
+									value={formFields.currentPassword || ""}
 									required
 								/>
 							</Form.Group>
@@ -296,7 +297,7 @@ const Profile = ({ handleCredentialChange, handleSignout, fetchDynamicData, upda
 								placeholder="Enter new street"
 								name="Street"
 								onChange={handleInputChange}
-								value={formFields.Street}
+								value={formFields.Street || ""}
 							/>
 						</Form.Group>
 						<Form.Group className="mb-3">
@@ -305,7 +306,7 @@ const Profile = ({ handleCredentialChange, handleSignout, fetchDynamicData, upda
 								placeholder="Enter new city"
 								name="City"
 								onChange={handleInputChange}
-								value={formFields.City}
+								value={formFields.City || ""}
 							/>
 						</Form.Group>
 						<Form.Group className="mb-3">
@@ -314,7 +315,7 @@ const Profile = ({ handleCredentialChange, handleSignout, fetchDynamicData, upda
 								placeholder="Enter new state"
 								name="State"
 								onChange={handleInputChange}
-								value={formFields.State}
+								value={formFields.State || ""}
 							/>
 						</Form.Group>
 						<Form.Group className="mb-3">
@@ -323,7 +324,7 @@ const Profile = ({ handleCredentialChange, handleSignout, fetchDynamicData, upda
 								placeholder="Enter new postal code"
 								name="PostalCode"
 								onChange={handleInputChange}
-								value={formFields.PostalCode}
+								value={formFields.PostalCode || ""}
 							/>
 						</Form.Group>
 						<Form.Group className="mb-3">
@@ -332,7 +333,7 @@ const Profile = ({ handleCredentialChange, handleSignout, fetchDynamicData, upda
 								placeholder="Enter new country"
 								name="Country"
 								onChange={handleInputChange}
-								value={formFields.Country}
+								value={formFields.Country || ""}
 							/>
 						</Form.Group>
 						<Form.Group className="mb-3">
@@ -341,7 +342,7 @@ const Profile = ({ handleCredentialChange, handleSignout, fetchDynamicData, upda
 								placeholder="Enter current password"
 								name="currentPassword"
 								onChange={handleInputChange}
-								value={formFields.currentPassword}
+								value={formFields.currentPassword || ""}
 								required
 							/>
 						</Form.Group>
@@ -531,8 +532,8 @@ const Profile = ({ handleCredentialChange, handleSignout, fetchDynamicData, upda
 					closeForm();
 				}
 			} catch (error) {
-				displayError(`Error updating credentials: ${error}`);
-				console.error("Error updating credentials:", error);
+				displayError(`${error}`);
+				console.error(error);
 			}
 		} else if (currentOperation === "address") {
 			const allowedFields = ["AddressTypeID", "Street", "City", "State", "PostalCode", "Country", "currentPassword"];
@@ -566,8 +567,8 @@ const Profile = ({ handleCredentialChange, handleSignout, fetchDynamicData, upda
 					closeForm();
 				}
 			} catch (error) {
-				displayError(`Error updating credentials: ${error}`);
-				console.error("Error updating credentials:", error);
+				displayError(`${error}`);
+				console.error(error);
 			}
 		} else if (currentOperation === "orders" && currentOrder[0]) {
 			try {											//formFields, tableName, partName, id
@@ -579,8 +580,8 @@ const Profile = ({ handleCredentialChange, handleSignout, fetchDynamicData, upda
 					throw new Error("Could not initiate payment. No client secret received!");
 				}
 			} catch (error) {
-				displayError(`Error updating order: ${error}`);
-				console.error("Error updating order:", error);
+				displayError(`${error}`);
+				console.error(error);
 			}
 		}
 	};
@@ -589,7 +590,7 @@ const Profile = ({ handleCredentialChange, handleSignout, fetchDynamicData, upda
 		console.log("transactionId:", transactionId);
 		const verifyPayment = await updateDynamicData({ TransactionID: transactionId }, `orders/update/${currentOrder[0].OrderID}/verify`, null);
 		if (verifyPayment) {
-			displayError("Payment Succeeded!");
+			displayError("Payment Succeeded!", "success");
 			await fetchOrders();
 			closeForm();
 			setShowPaymentForm(false);

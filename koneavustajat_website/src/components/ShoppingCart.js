@@ -96,8 +96,8 @@ const ShoppingCart = ({ postDynamicData, updateDynamicData }) => {
 				throw new Error("Could not initiate payment. No client secret received!");
 			}
 		} catch (error) {
-			displayError(`Error adding order: ${error}`);
-			console.error("Error adding order:", error);
+			displayError(`${error}`);
+			console.error(error);
 		}
 	};
 

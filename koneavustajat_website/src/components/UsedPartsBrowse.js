@@ -122,8 +122,8 @@ const UsedPartsBrowse = ({ fetchDynamicData, fetchDataAmount, postDynamicData, u
 			setParts(data);
 			//console.log(data);
 		} catch (error) {
-			displayError(`Error while fetching used parts: ${error}`);
-			console.error("Error while fetching used parts:", error);
+			displayError(`${error}`);
+			console.error(error);
 		}
 	};
 
@@ -150,8 +150,8 @@ const UsedPartsBrowse = ({ fetchDynamicData, fetchDataAmount, postDynamicData, u
 				return;
 			}
 		} catch (error) {
-			displayError(`Error while fetching parts: \n${error}`);
-			console.error(`Error while fetching parts: \n${error}`);
+			displayError(`${error}`);
+			console.error(error);
 		}
 	};
 
@@ -172,8 +172,8 @@ const UsedPartsBrowse = ({ fetchDynamicData, fetchDataAmount, postDynamicData, u
 				closeForm();
 			}
 		} catch (error) {
-			console.error("Error updating credentials:", error);
-			displayError(`Error updating credentials: ${error}`);
+			displayError(`${error}`);
+			console.error(error);
 		}
 	};
 

@@ -908,7 +908,7 @@ const checkRegex = (req, res, next) => {
 const handleServerError = (error) => {
 	console.error(error);
 	// If there is a status message or data then use that, otherwise the defaults
-	const message = error.response ? error.response.data : "Internal Server Error";
+	const message = error.response ? error.response.data : `${error}`;
 	const status = error.response ? error.response.status : 500;
 	return [status, message];
 };
@@ -1173,7 +1173,7 @@ const insertToPartIndex = async (items = 250) => {
 				if (response.body.errors) {
 					const failedItems = response.body.items.filter(item => item.index && item.index.error);
 					console.error(`Errors occurred during bulk indexing for ${part}`, failedItems[0].index.error);
-					throw new Error(`This error has caused problems: ${failedItems[0].index.error}`);
+					throw(`This error has caused problems: ${failedItems[0].index.error}`);
 				} else {
 					console.log(`Data successfully indexed to the ${part} index`);
 				}
@@ -1191,7 +1191,7 @@ const insertSingleToPartIndex = async (part, data) => {
 	try {
 		const partTypes = ["chassis", "cpu", "cpu_cooler", "gpu", "memory", "motherboard", "psu", "storage", "part_inventory"];
 		if (!partTypes.includes(part.toLowerCase())) {
-			throw new Error(`${part} is not a valid part name!`);
+			throw (`${part} is not a valid part name!`);
 		}
 
 		const normalizedRow = {};
@@ -1212,7 +1212,7 @@ const insertSingleToPartIndex = async (part, data) => {
 const purgePartIndices = async (confirmation) => {
 	try {
 		if (String(confirmation).toLowerCase() !== "true") {
-			throw new Error('Confirmation required: You must provide the value "true" to purge all part indices!');
+			throw ('Confirmation required: You must provide the value "true" to purge all part indices!');
 		}
 		
 		const partTypes = ["chassis", "cpu", "cpu_cooler", "gpu", "memory", "motherboard", "psu", "storage", "part_inventory"];
@@ -1236,7 +1236,7 @@ const deleteAllFromPartIndex = async (part) => {
 	try {
 		const partTypes = ["chassis", "cpu", "cpu_cooler", "gpu", "memory", "motherboard", "psu", "storage", "part_inventory"];
 		if (!partTypes.includes(part.toLowerCase())) {
-			throw new Error(`${part} is not a valid part name!`);
+			throw (`${part} is not a valid part name!`);
 		}
 
 		// Delete all data from index without deleting the index
@@ -1259,7 +1259,7 @@ const deleteSingleFromPartIndex = async (part, dataId) => {
 	try {
 		const partTypes = ["chassis", "cpu", "cpu_cooler", "gpu", "memory", "motherboard", "psu", "storage", "part_inventory"];
 		if (!partTypes.includes(part.toLowerCase())) {
-			throw new Error(`${part} is not a valid part name!`);
+			throw (`${part} is not a valid part name!`);
 		}
 
 		const response = await client.delete({
@@ -2964,7 +2964,11 @@ const createPaymentIntent = async (amount, currency, customer) => {
 	try {
 		const [user] = await promisePool.query(customerSql, [customer.UserID]);
 		if (!user.length) {
-			throw new Error("Customer not found");
+			throw ("Customer not found");
+		}
+
+		if (!user[0].Street || !user[0].PostalCode || !user[0].City) {
+			throw ("Missing required address data!");
 		}
 
 		const stripeCustomer = await generateStripeCustomer(user[0]);
@@ -2982,7 +2986,7 @@ const createPaymentIntent = async (amount, currency, customer) => {
 		console.log(paymentIntent);
 		return paymentIntent;
 	} catch (error) {
-		throw new Error(`Error while creating paymentintent: ${error}`);
+		throw (`Error while trying to pay: ${error}`);
 	}
 };
 
@@ -2996,9 +3000,9 @@ const generateStripeCustomer = async (customer) => {
 		name: customer.Name,
 		email: customer.Email,
 		address: {
-			line1: customer.Street || "Ei määritelty",
-			postal_code: customer.PostalCode || "00000",
-			city: customer.City || "Ei määritelty",
+			line1: customer.Street,
+			postal_code: customer.PostalCode,
+			city: customer.City,
 			country: "FI" // Finland
 		},
 		metadata: { userId: customer.UserID }
@@ -3771,6 +3775,38 @@ app.get("/api/profile/orders", authenticateSession, async (req, res) => {
 	}
 });
 
+app.get("/api/profile/orders/:id", idValidator, authenticateSession, async (req, res) => {
+	console.log("API search parts by id accessed");
+
+	const userId = req.user.UserID;
+	const orderId = req.validatedId;
+
+	const customerSql = "SELECT * FROM customers WHERE UserID = ?";
+	const sql = "SELECT * FROM orders WHERE CustomerID = ? AND OrderID = ?";
+	try {
+		const [customer] = await promisePool.query(customerSql, [userId]);
+		if (!customer.length) {
+			return res.status(401).json({ message: "User is not a customer!" });
+		}
+
+		const [orders] = await promisePool.query(sql, [customer[0].CustomerID, orderId]);
+		if (!orders.length) {
+			return res.status(404).json({ message: "No orders found" });
+		}
+
+		// Items needs to be parsed
+		const parseInventory = orders.map((item) => ({
+			...item,
+			Items: item.Items ? JSON.parse(item.Items) : null
+		}));
+
+		return res.status(200).json(parseInventory);
+	} catch (error) {
+		const [status, message] = handleServerError(error);
+		return res.status(status).json({ message: message });
+	}
+});
+
 // Update own user credentials
 app.patch("/api/profile", authenticateSession, profileImgUpload.single("ProfileImage"), formFieldsValidator(userUpdateSchema), userFieldsValidator, async (req, res) => {
 		console.log("API update own credentials accessed");
@@ -4095,7 +4131,7 @@ app.get("/api/inventory", routePagination, tableSearch("inventory"), async (req,
 
 
 app.post("/api/inventory/add", authenticateSession, formFieldsValidator(inventorySchema), async (req, res) => {
-	console.log("API add address accessed");
+	console.log("API add inventory accessed");
 
 	const userId = req.user.UserID;
 	const jsonFormFields = req.validatedForm;
@@ -4260,7 +4296,7 @@ app.post("/api/orders/add", authenticateSession, formFieldsValidator(orderSchema
 		queryParams.push(parseInt(customer[0].CustomerID), paymentIntent.amount / 100, 1, generateReceiptId(customer[0].CustomerID), "verifying", paymentIntent.currency, "stripe", paymentIntent.id, paymentIntent.payment_method_types, "unpaid");		
 
 		const [result] = await promisePool.query(insertQuery, queryParams);
-		return res.status(200).json({ message: "Added address successfully", id: result.insertId, clientSecret: paymentIntent.client_secret });
+		return res.status(200).json({ message: "Added order successfully", id: result.insertId, clientSecret: paymentIntent.client_secret });
 	} catch (error) {
 		const [status, message] = handleServerError(error);
 		return res.status(status).json({ message: message });
