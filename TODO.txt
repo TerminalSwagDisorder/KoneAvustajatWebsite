@@ -6,7 +6,7 @@ stripe trigger payment_intent.payment_failed
 
 -Stripe tax x
 -Receipt download button in profile
--Admin user page -> add full user details
+-Admin user page -> add full user details & orders
 -Make custom frontend error module x
 -Set up CMS texts
 -Check receipt for completed build in profile x	
