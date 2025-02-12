@@ -41,7 +41,8 @@ import {
 	fetchContentIdentifiers,
 	fetchWholeContent,
 	addContent,
-	updateContent
+	updateContent,
+	fetchSearchData
 } from "./api/api";
 import { ContentProvider, ModalProvider, useAuth, PaymentProvider, ErrorProvider } from "./utils/Contexts";
 import { ProtectedRoute } from "./utils/AuthUtils";
@@ -98,7 +99,7 @@ function App() {
 						<Route path="signup" element={<ProtectedRoute unloggedOnly><Signup handleSignup={handleSignup} /></ProtectedRoute>} />
 						<Route path="Signin" element={<ProtectedRoute unloggedOnly><Signin handleSignin={handleSignin} checkIfSignedIn={checkIfSignedIn}/></ProtectedRoute>} />
 						<Route path="computerwizard" element={<ComputerWizard />}>
-							<Route path="browse" element={<ComputerWizardBrowse fetchDynamicData={fetchDynamicData} fetchDataAmount={fetchDataAmount} updateDynamicData={updateDynamicData} deleteDynamicData={deleteDynamicData} />} />
+							<Route path="browse" element={<ComputerWizardBrowse fetchDynamicData={fetchDynamicData} fetchDataAmount={fetchDataAmount} updateDynamicData={updateDynamicData} deleteDynamicData={deleteDynamicData} fetchSearchData={fetchSearchData} />} />
 							<Route path="wizard" element={<ComputerWizardWizard wizardAlgorithm={wizardAlgorithm} />} />
 							<Route path="build" element={<ComputerWizardBuild />} />
 						</Route>

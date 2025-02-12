@@ -220,7 +220,7 @@ export const fetchSearchData = async (searchTerms, tableName) => {
 		
 		const query = await buildQuery(correctSearchTerms, false);
 
-		const response = await fetch(`http://localhost:4000/api/${tableName}/search?${query}`, {
+		const response = await fetch(`http://localhost:4000/api/${tableName}?${query}`, {
 			method: "GET",
 			credentials: "include", // Important, because we're using cookies
 		});

@@ -4024,7 +4024,7 @@ app.patch("/api/part/update/:part/:id", authenticateSession, productImgUpload.si
 	}
 );
 
-app.get("/api/part/id", tableValidator(partNameSchema, "partName"), idValidator, async (req, res) => {
+app.get("/api/part/:id", tableValidator(partNameSchema, "partName"), idValidator, async (req, res) => {
 	console.log("API search parts by id accessed");
 
 	const id = req.validatedId;

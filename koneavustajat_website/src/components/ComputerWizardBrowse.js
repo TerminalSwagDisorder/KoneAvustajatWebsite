@@ -20,7 +20,7 @@ import { addToCompletedBuild, removeFromCompletedBuild, clearCompletedBuild } fr
 import { useAuth, useError } from "../utils/Contexts";
 
 
-const ComputerWizardBrowse = ({ fetchDynamicData, fetchDataAmount, updateDynamicData, deleteDynamicData }) => {
+const ComputerWizardBrowse = ({ fetchDynamicData, fetchDataAmount, updateDynamicData, deleteDynamicData, fetchSearchData }) => {
 	const { displayError } = useError();
 	const { currentUser } = useAuth();
 	const [parts, setParts] = useState([]);
@@ -28,14 +28,15 @@ const ComputerWizardBrowse = ({ fetchDynamicData, fetchDataAmount, updateDynamic
 		key: "cpu",
 		value: "Cpu"
 	});
-	const [error, setError] = useState(null);
-	const [loading, setLoading] = useState(true);
 	const [totalPages, setTotalPages] = useState(0);
 	const [page, setPage] = useState(1);
 	const [selectedPart, setSelectedPart] = useState("");
 	const [inputValue, setInputValue] = useState("");
 	const [currentOperation, setCurrentOperation] = useState("");
 	const [formFields, setFormFields] = useState({});
+	const [searchActive, setSearchActive] = useState(false);
+	const [searchKey, setSearchKey] = useState("");
+	const [searchTerm, setSearchTerm] = useState({});
 	const shoppingCart = useSelector((state) => state.shoppingCart.shoppingCart);
 	const completedBuild = useSelector((state) => state.wizard.completedBuild);
 	const dispatch = useDispatch();
@@ -47,6 +48,10 @@ const ComputerWizardBrowse = ({ fetchDynamicData, fetchDataAmount, updateDynamic
 	}, []);
 
 	// Update run fetchData when pagination changes
+	useEffect(() => {
+		console.log(searchTerm);
+	}, [searchTerm]);
+
 	useEffect(() => {
 		fetchData();
 	}, [page]);
@@ -100,6 +105,25 @@ const ComputerWizardBrowse = ({ fetchDynamicData, fetchDataAmount, updateDynamic
 	const handlePartTypeChange = (value) => {
 		setPartName(value);
 		setPage(1);
+	};
+	
+	const handleSearchKey = (value) => {
+		setSearchKey(value);
+	};
+	
+	const handleSearchTerm = (event) => {
+		event.preventDefault();
+		setSearchTerm((prevFields) => ({
+			...prevFields,
+			[searchKey]: event.target.value,
+		}));
+	};
+
+	const handleSearchRendering = (searchType) => {
+		setSearchActive(true);
+		if (searchActive) {
+			setSearchActive(false);
+		}
 	};
 
 	const fetchData = async () => {
@@ -164,6 +188,46 @@ const ComputerWizardBrowse = ({ fetchDynamicData, fetchDataAmount, updateDynamic
 			}
 			setCurrentOperation("view");
 			setSelectedPart(selectedPart);
+		}
+	};
+
+	const fetchSearchTermData = async (event) => {
+		event.preventDefault();
+		try {
+			if (!searchActive) {
+				displayError("Search is not active!");
+				return;
+			}
+			if (searchTerm === "" || searchTerm === " " || searchTerm === undefined || searchTerm === null) {
+				displayError("Search term cannot be empty!");
+				return;
+			}
+			const data = await fetchSearchData(searchTerm, "part");
+			console.log(data)
+			console.log(data.length)
+					
+			if (!data || data.length === 0) {
+				displayError("No data found using this search term!");
+				return;
+			}
+
+			setSearchActive(true);
+			setParts(data);
+			
+
+		} catch (error) {
+			displayError(error);
+			console.error(error);
+		}
+	};
+
+	const clearSearchTerm = async () => {
+		try {
+			if (searchTerm) setSearchTerm("");
+			setSearchActive(false);
+			await fetchData();
+		} catch (error) {
+			console.error("Error while fetching medusers:", error);
 		}
 	};
 
@@ -407,11 +471,77 @@ const ComputerWizardBrowse = ({ fetchDynamicData, fetchDataAmount, updateDynamic
 			);
 		}
 	}
+	
+	const searchButton = () => {
+		return (
+			<Button onClick={() => handleSearchRendering("emailsearch")}>Search medusers by email</Button>
+		)
+	}
+
+	const renderSearch = () => {
+		
+		if (searchActive && parts) {
+			const searchTerms = Object.keys(parts[0]).map((key) => key);
+			return (
+			<div className="searchForm">
+				<Form
+					className="bg-opaque"
+					onSubmit={fetchSearchTermData}
+					style={{ width: "400px" }}
+				>
+					<Dropdown>
+						<Dropdown.Toggle variant="success" id="dropdown-basic">
+							{searchKey + " chosen" || "Choose search type"}
+						</Dropdown.Toggle>
+
+						<Dropdown.Menu>
+							{Object.keys(parts[0]).map((key) => (
+								<Dropdown.Item
+									key={key}
+									onClick={() => handleSearchKey(key)}>
+									{key}
+
+								</Dropdown.Item>
+							))}
+						</Dropdown.Menu>
+					</Dropdown>
+					{renderSearchInput(searchKey)}
+					<Button style={{ width: "40%" }} type="submit">
+						Search
+					</Button>
+					<Button style={{ width: "40%" }} onClick={() => clearSearchTerm()} disabled={!searchActive}>
+					Clear
+					</Button>
+				</Form>
+				<br />
+			</div>
+			)
+		}
+	}
+	
+	const renderSearchInput = (key) => {
+		if (!key) return;
+		return (
+			<Form.Group className="mb-3">
+				<Form.Label>{key}</Form.Label>
+				<Form.Control 
+				type="text" 
+				id="search" 
+				name="search" 
+				value={searchTerm[key] || ""} 
+				onChange={handleSearchTerm} 
+			/>
+			</Form.Group>
+		);
+	};
+
 
 	return (
 		<div>
 			{renderPartChoice()}
 			{renderPartViewAlert()}
+			{searchButton()}
+			{renderSearch()}
 			{renderBasedOnPart()}
 			{renderPartModification()}
 			{renderPartDeletion()}
