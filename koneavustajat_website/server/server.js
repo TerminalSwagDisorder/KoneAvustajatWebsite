@@ -793,6 +793,12 @@ const formFieldsValidator = (schema) => {
 	return (req, res, next) => {
 		let unvalidatedData;
 
+		try {
+			checkItemLength(req.body);
+		} catch (error) {
+			return res.status(400).json({ message: `Invalid data length: ${error}` });
+		}
+
 		if (req.headers["content-type"] && req.headers["content-type"].includes("multipart/form-data")) {
 			unvalidatedData = req.body;
 		} else {
@@ -827,6 +833,7 @@ const formFieldsValidator = (schema) => {
 
 const userFieldsValidator = (req, res, next) => {
 	let formFields = req.validatedForm;
+
 
 	if (typeof formFields === "string") {
 		try {
@@ -3022,8 +3029,18 @@ const storeTaxTransaction = async (paymentIntentId, taxAmount) => {
 		});
 		console.log(`Stored tax transaction for PaymentIntent ${paymentIntentId}`);
 	} catch (error) {
-		console.error("Error storing tax transaction:", error);
+		throw(`Error storing tax transaction: ${error}`);
 	}
+};
+
+const checkItemLength = (item) => {
+	if (item === "" || item === null || item === undefined) throw ("Cannot check length of empty item!");
+
+	if (Array.isArray(item) && item.length === 0) throw ("Array is empty!");
+	if (typeof item === "object" && Object.keys(item).length === 0) throw ("Object is empty!");
+	if (typeof item === "string" && item.trim().length === 0) throw ("String is empty!");
+
+	return true;
 };
 
 
@@ -4186,6 +4203,58 @@ app.post("/api/inventory/add", authenticateSession, formFieldsValidator(inventor
 		return res.status(status).json({ message: message });
 	}
 });
+
+app.patch("/api/part/update/:part/:id", authenticateSession, productImgUpload.single("ProductImage"), idValidator, tableValidator(partNameSchema, "partName"), formFieldsValidator(partSchema), async (req, res) => {
+		console.log("API part accessed");
+		const { part } = req.params;
+		const id = req.validatedId;
+		const jsonFormFields = req.validatedForm;
+		const ProductImage = req.file; // Product image
+		const allowedFieldsSql = `SELECT DISTINCT column_name FROM information_schema.columns WHERE table_name IN ('part_inventory') AND table_schema = '${process.env.DB_NAME}';`;
+
+		try {
+			const [allowedColumns] = await promisePool.query(allowedFieldsSql);
+			const allowedFields = allowedColumns.map(item => item.column_name);
+
+			// SQL query to update part data
+			// updateQuery allows for multiple fields to be updated simultaneously
+			let updateQuery = "UPDATE part_inventory SET ";
+			let queryParams = [];
+
+			// More dynamic way of updating parts
+			for (const key in jsonFormFields) {
+				console.log(key);
+				if (allowedFields.includes(key)) {
+					if (jsonFormFields.hasOwnProperty(key)) {
+						if (jsonFormFields[key] !== "") {
+							updateQuery += key.charAt(0).toUpperCase() + key.slice(1) + " = ?, "; // Since the first letters are capitalized in the db
+							queryParams.push(jsonFormFields[key]);	
+						}
+					}
+				}
+			}
+
+			// Remove trailing comma and space
+			if (queryParams.length > 0) {
+				updateQuery = updateQuery.slice(0, -2);
+			}
+
+			updateQuery += " WHERE ID = ?";
+			queryParams.push(parseInt(id));
+
+			const [result] = await promisePool.query(updateQuery, queryParams);
+			if (result.affectedRows === 0) {
+				return res.status(404).json({ message: "Item not found" });
+			}
+
+			return res.status(200).json({ message: "Part updated successfully" });
+		} catch (error) {
+			const [status, message] = handleServerError(error);
+			return res.status(status).json({ message: message });
+
+		}
+	}
+);
 
 app.get("/api/inventory/:id", idValidator, async (req, res) => {
 	console.log("API search parts by id accessed");
