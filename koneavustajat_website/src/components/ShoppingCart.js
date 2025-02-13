@@ -102,7 +102,7 @@ const ShoppingCart = ({ postDynamicData, updateDynamicData }) => {
 	};
 
 	const handlePaymentSuccess = async (transactionId) => {
-		const verifyPayment = await updateDynamicData({ TransactionID: transactionId }, `orders/update/${currentOrder}/verify`, null);
+		const verifyPayment = await updateDynamicData({ TransactionID: transactionId }, `orders/update/${currentOrder}/verify`, null, null);
 		if (verifyPayment) {
 			displayError("Payment Succeeded!", "success");
 			handleClearCart();

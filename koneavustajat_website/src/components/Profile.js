@@ -482,7 +482,7 @@ const Profile = ({ handleCredentialChange, handleSignout, fetchDynamicData, upda
 		};
 
 	const renderOrderDetails = (data) => {
-		const allowedFields = ["Items", "Name", "Manufacturer", "ModelNumber", "SerialNumber", "Price", "Image", "Image_Url", "Url", "chassis", "cpu", "cpu_cooler", "gpu", "memory", "motherboard", "psu", "storage", "usedParts", "completedBuild"];
+		const allowedFields = ["Items", "Name", "Manufacturer", "ModelNumber", "SerialNumber", "Price", "Image", "Image_Url", "Url", "chassis", "cpu", "cpu_cooler", "gpu", "memory", "motherboard", "psu", "storage", "usedParts", "completedBuild", "quantity"];
 		const topFields = ["ReceiptID", "OrderDate", "Status", "TotalPrice", "PaymentMethod", "TransactionID", "PaymentStatus", "PaymentDate"];
 
 		const partNameMapping = {
@@ -542,85 +542,6 @@ const Profile = ({ handleCredentialChange, handleSignout, fetchDynamicData, upda
 		)
 	};
 
-/*
-const renderOrderDetails = (data) => {
-		const allowedFields = ["table", "ReceiptID", "OrderDate", "Status", "TotalPrice", "PaymentMethod", "TransactionID", "PaymentStatus", "PaymentDate", "Items", "Name", "Manufacturer", "ModelNumber", "SerialNumber", "Price", "Image", "Image_Url", "Url", "chassis", "cpu", "cpu_cooler", "gpu", "memory", "motherboard", "psu", "storage", "usedParts", "completedBuild"];
-		
-		const partNameMapping = {
-			chassis: "Chassis",
-			cpu: "Cpu",
-			cpu_cooler: "Cpu cooler",
-			gpu: "Gpu",
-			memory: "Memory",
-			motherboard: "Motherboard",
-			psu: "Psu",
-			storage: "Storage",
-			usedParts: "Used part",
-			completedBuild: "Completed build"
-		};
-
-	if (typeof data === "object" && !Array.isArray(data)) {
-		return (
-			<div>
-				{data.table && (
-					<div style={{ marginBottom: "0.5rem" }}>
-						<b>{partNameMapping[data.table] || data.table}</b>
-					</div>
-				)}
-				<ul>
-					{Object.entries(data).map(([key, value], index) => {
-						if (!allowedFields.includes(key)) return null;
-						if (key === "table") return null;
-						return (
-							<li key={index}>
-								{key !== "Image" && key !== "Image_Url" && (
-									<>
-										<b>{key}:</b>{" "}
-									</>
-								)}
-								{key === "Url" || key === "Image_Url" ? (
-									<a href={value} target="_blank" rel="noopener noreferrer">
-										{value}
-									</a>
-								) : key === "Image" ? (
-									<Image
-										src={process.env.PUBLIC_URL + "/product_images/" + value}
-										alt={key}
-										style={{ width: "100px", height: "auto" }}
-									/>
-								) : Array.isArray(value) ? (
-									<ul>
-										{value.map((item, idx) => (
-											<li key={idx}>
-												{typeof item === "object" ? renderOrderDetails(item) : item}
-											</li>
-										))}
-									</ul>
-								) : typeof value === "object" ? (
-									renderOrderDetails(value)
-								) : (
-									value
-								)}
-							</li>
-						);
-					})}
-				</ul>
-			</div>
-		);
-	} else if (Array.isArray(data)) {
-		return (
-			<ul>
-				{data.map((item, idx) => (
-					<li key={idx}>{typeof item === "object" ? renderOrderDetails(item) : item}</li>
-				))}
-			</ul>
-		);
-	} else {
-		return data;
-	}
-};
-*/
-	
 	const renderUserData = () => {
 		if (currentUser) {
 			return (

@@ -95,11 +95,11 @@ export const fetchDynamicData = async (page, tableName, partName = "") => {
 	}
 };
 
-export const updateDynamicData = async (formFields, tableName, partName, id) => {
+export const updateDynamicData = async (formFields, tableName, partName = null, id = null) => {
 	try {
 		console.log(`http://localhost:4000/api/${tableName}/update/${partName}/${id}`);
 		console.log(formFields);
-		await checkAllowedTableNames(["patchroutes"], tableName);
+		await checkAllowedTableNames(["patchroutes"], `${tableName}${partName ? "/" + partName : ""}${id ? "/" + id : ""}`);
 		
 		if (partName) {
 			await checkAllowedPartNames(partName);
