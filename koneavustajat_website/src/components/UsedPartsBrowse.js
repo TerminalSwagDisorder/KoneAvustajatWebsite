@@ -1,13 +1,13 @@
 import React, { useState, useEffect } from "react";
 import { Link } from 'react-router-dom';
-import { Button, Container, Table, Form, CloseButton } from 'react-bootstrap';
+import { Button, Container, Table, Form, CloseButton, Dropdown } from 'react-bootstrap';
 import { useSelector, useDispatch } from "react-redux";
 import { addToShoppingCart, removeFromShoppingCart, clearShoppingCart } from "../redux/shoppingCartSlice";
 import { addToCompletedBuild, removeFromCompletedBuild, clearCompletedBuild } from "../redux/wizardSlice";
 import { useAuth, useError } from "../utils/Contexts";
 
 
-const UsedPartsBrowse = ({ fetchDynamicData, fetchDataAmount, postDynamicData, updateDynamicData }) => {
+const UsedPartsBrowse = ({ fetchDynamicData, fetchDataAmount, postDynamicData, updateDynamicData, fetchSearchData }) => {
     const { displayError } = useError();
 	const { currentUser } = useAuth();
 	const formFieldsDefault = {
@@ -21,14 +21,18 @@ const UsedPartsBrowse = ({ fetchDynamicData, fetchDataAmount, postDynamicData, u
 		AdditionalDetails: ""
 	};
 	const [parts, setParts] = useState([]);
-	const [partName, setPartName] = useState("cpu");
-	const [error, setError] = useState(null);
-	const [loading, setLoading] = useState(true);
+	const [partName, setPartName] = useState({
+		key: "",
+		value: ""
+	});
 	const [totalPages, setTotalPages] = useState(0);
 	const [page, setPage] = useState(1);
 	const [selectedPart, setSelectedPart] = useState("");
 	const [currentOperation, setCurrentOperation] = useState("");
 	const [formFields, setFormFields] = useState(formFieldsDefault);
+	const [searchActive, setSearchActive] = useState(false);
+	const [searchKey, setSearchKey] = useState("ID");
+	const [searchTerm, setSearchTerm] = useState({});
 	const shoppingCart = useSelector((state) => state.shoppingCart.shoppingCart);
 	const completedBuild = useSelector((state) => state.wizard.completedBuild);
 	const dispatch = useDispatch();
@@ -55,10 +59,20 @@ const UsedPartsBrowse = ({ fetchDynamicData, fetchDataAmount, postDynamicData, u
 		8: "storage"
 	};
 
+	const partNameMapping = {
+		chassis: "Chassis",
+		cpu: "Cpu",
+		cpu_cooler: "Cpu cooler",
+		gpu: "Gpu",
+		memory: "Memory",
+		motherboard: "Motherboard",
+		psu: "Psu",
+		storage: "Storage"
+	};
+
 	// On initial page load
 	useEffect(() => {
 		fetchData();
-		handlePagination();
 
 	}, []);
 
@@ -119,6 +133,7 @@ const UsedPartsBrowse = ({ fetchDynamicData, fetchDataAmount, postDynamicData, u
 	const fetchData = async () => {
 		try {
 			const data = await fetchDynamicData(page, "inventory");
+			await handlePagination();
 			setParts(data);
 			//console.log(data);
 		} catch (error) {
@@ -127,10 +142,22 @@ const UsedPartsBrowse = ({ fetchDynamicData, fetchDataAmount, postDynamicData, u
 		}
 	};
 
-	const handleSearchTerm = (event) => {
-		event.preventDefault();
-		setPartName(event.target.value);
+
+	const handleSearchKey = (value) => {
+		setSearchKey(value);
 	};
+	
+	const handleSearchTerm = (event) => {
+		setSearchTerm((prevFields) => ({
+			...prevFields,
+			[event.target.name]: event.target.type === "checkbox" ? event.target.checked : event.target.value
+		}));
+	};
+
+	const handleSearchRendering = () => {
+		setSearchActive(searchActive === true ? false : true);
+	};
+
 
 	const closeForm = () => {
 		setFormFields(formFieldsDefault);
@@ -141,17 +168,48 @@ const UsedPartsBrowse = ({ fetchDynamicData, fetchDataAmount, postDynamicData, u
 	const fetchSearchTermData = async (event) => {
 		event.preventDefault();
 		try {
-			if (partName !== "" && partName !== " " && partName !== undefined && partName !== null) {
-				const data = await await fetchDynamicData(page, "inventory", partName);
-				setParts(data);
-				setPage(1);
-			} else {
-				displayError("Search term cannot be empty!");
+			if (!searchActive) {
+				displayError("Search is not active!");
 				return;
 			}
+
+			if (!searchTerm || Object.keys(searchTerm).length === 0) {
+				displayError("Search cannot be empty!");
+				return;
+			}
+
+			const emptyCheck = Object.entries(searchTerm).every(([key, value]) => key === "inverted" || key === "strict" || value == null || String(value).trim() === "");
+			if (emptyCheck) {
+				displayError("Search cannot be empty!");
+				return;
+			}
+			
+			const data = await fetchSearchData(searchTerm, "inventory");
+			
+			if (!data || data.length === 0) {
+				displayError("No data found using this search term!");
+				return;
+			}
+
+			setSearchActive(true);
+			setParts(data);
+			setTotalPages(1);
+			setPage(1);
+			displayError(`Found ${data.length} items from the search.`, "success");
+
 		} catch (error) {
-			displayError(`${error}`);
+			displayError(error);
 			console.error(error);
+		}
+	};
+
+	const clearSearchTerm = async () => {
+		try {
+			if (searchTerm) setSearchTerm({});
+			//setSearchActive(false);
+			await fetchData();
+		} catch (error) {
+			displayError(`Error while fetching data: ${error}`);
 		}
 	};
 
@@ -175,6 +233,13 @@ const UsedPartsBrowse = ({ fetchDynamicData, fetchDataAmount, postDynamicData, u
 			displayError(`${error}`);
 			console.error(error);
 		}
+	};
+
+	const handlePartTypeChange = (event) => {
+		const selectedKey = event.target.value;
+		const selectedValue = partNameMapping[selectedKey] || {};							
+		handleSearchTerm(event);
+		setPartName({ key: selectedKey, value: selectedValue });
 	};
 
 	/*const searchParts = () => {
@@ -202,6 +267,161 @@ const UsedPartsBrowse = ({ fetchDynamicData, fetchDataAmount, postDynamicData, u
 			</div>
 		);
 	};*/
+	
+	const searchButton = () => {
+		return (
+			<>
+				<Button onClick={() => handleSearchRendering()}>Toggle search</Button>
+				<Button onClick={() => clearSearchTerm()} disabled={Object.entries(searchTerm).length === 0}>Clear search</Button>
+			</>
+		)
+	}
+
+	const renderSearch = () => {
+		// "strict", "priceMin", "priceMax", "priceRange", "inverted"
+		if (searchActive && parts) {
+			//const searchTerms = Object.keys(parts[0]).map((key) => key);
+			return (
+			<div className="searchForm">
+				<Form
+					className="bg-opaque"
+					onSubmit={fetchSearchTermData}
+					style={{ width: "400px" }}
+				>
+					<Dropdown>
+						<Dropdown.Toggle variant="success" id="dropdown-basic">
+							{searchKey || "Choose search type"}
+						</Dropdown.Toggle>
+
+						<Dropdown.Menu>
+							{Object.keys(parts[0] || {}).map((key) => (
+								<Dropdown.Item
+									key={key}
+									onClick={() => handleSearchKey(key)}>
+									{key}
+
+								</Dropdown.Item>
+							))}
+						</Dropdown.Menu>
+					</Dropdown>
+					{renderSearchInput(searchKey)}
+					<Button style={{ width: "40%" }} type="submit">
+						Search
+					</Button>
+					<Button style={{ width: "40%" }} onClick={() => clearSearchTerm()} disabled={!searchActive}>
+					Clear
+					</Button>
+				</Form>
+				<br />
+			</div>
+			)
+		}
+	}
+	
+	const renderSearchInput = (key) => {
+		if (!key) return;
+		return (
+			<>
+
+				{key === "PartTypeID" ? (
+					<>
+						<br />
+						<Form.Select 
+							value={searchTerm.partName || ""}
+							name="partName"
+							onChange={handlePartTypeChange}>
+							<option value="">
+								None
+							</option>
+							{Object.keys(partNameMapping).map((k) => (
+								<option
+									key={k}
+									value={k}
+								>
+									{partNameMapping[k]}
+								</option>
+							))}
+						</Form.Select>
+						<br />
+						<br />
+					</>
+				) : (
+					<Form.Group className="mb-3">
+						<Form.Label>{key}</Form.Label>
+						<Form.Control 
+						type="text" 
+						id={key}
+						name={key} 
+						value={searchTerm[key] || ""} 
+						onChange={handleSearchTerm} 
+						/>
+					</Form.Group>
+
+				)}
+				<Form.Group className="mb-3">
+					<Form.Check
+						type="checkbox"
+						label="Strict search"
+						name="strict"
+						onChange={handleSearchTerm}
+						id="strict"
+						checked={Boolean(searchTerm.strict)}
+					/>
+				</Form.Group>
+				<Form.Group className="mb-3">
+					<Form.Check
+						type="checkbox"
+						label="Inverted search"
+						name="inverted"
+						onChange={handleSearchTerm}
+						id="inverted"
+						checked={Boolean(searchTerm.inverted)}
+					/>
+				</Form.Group>
+				<Form.Group className="mb-3">
+					<Form.Label>Max price</Form.Label>
+					<Form.Control 
+					type="number" 
+					id="priceMax"
+					name="priceMax"
+					value={searchTerm.priceMax || ""} 
+					onChange={handleSearchTerm} 
+					/>
+				</Form.Group>
+				<Form.Group className="mb-3">
+					<Form.Label>Min price</Form.Label>
+					<Form.Control 
+					type="number" 
+					id="priceMin"
+					name="priceMin"
+					value={searchTerm.priceMin || ""} 
+					onChange={handleSearchTerm} 
+					/>
+				</Form.Group>
+				<Form.Group className="mb-3">
+					<Form.Label>Max available</Form.Label>
+					<Form.Control 
+					type="number" 
+					id="availableMax"
+					name="availableMax"
+					value={searchTerm.availableMax || ""} 
+					onChange={handleSearchTerm} 
+					/>
+				</Form.Group>
+				<Form.Group className="mb-3">
+					<Form.Label>Min available</Form.Label>
+					<Form.Control 
+					type="number" 
+					id="availableMin"
+					name="availableMin"
+					value={searchTerm.availableMin || ""} 
+					onChange={handleSearchTerm} 
+					/>
+				</Form.Group>
+			</>
+		);
+	};
+
 
 const renderAddForm = () => {
 	if (currentUser && currentUser.RoleID === 4 && currentOperation !== "add") {
@@ -316,6 +536,8 @@ const renderAddForm = () => {
 		<h1>Used Parts</h1>
 		{/*searchParts()*/}
 		{renderAddForm()}
+		{searchButton()}
+		{renderSearch()}
 		{renderPagination(page, totalPages)}
 		<Table responsive="md" hover bordered className="table-striped">
 			<thead>

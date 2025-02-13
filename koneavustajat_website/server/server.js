@@ -704,7 +704,9 @@ const searchSanitization = (key, value, term) => {
 			"availableMax",
 			"availableRange",
 			"DateAdded",
-			"additionaldetails"
+			"additionaldetails",
+			"availableMin",
+			"availableMax"
 		],
 		opensearch: [
 			"method",
@@ -749,7 +751,7 @@ const tableSearch = (searchContext = "cpu") => {
 	// Default value if not defined
 	return (req, res, next) => {
 		let searchTerms = {};
-		const partName = req.query.partName ? req.query.partName : (req.query.partName = searchContext);
+		const partName = req.query.partName ? req.query.partName : searchContext;
 		for (let term in req.query) {
 			const excludedParams = ["items", "page", "partName"];
 			if (!excludedParams.includes(term)) {
@@ -4050,12 +4052,28 @@ app.get("/api/inventory", routePagination, tableSearch("inventory"), async (req,
 
 	const { items, offset } = req.pagination;
 	const searchTerms = req.searchTerms;
+	const partName = req.query.partName; 
 	let sql;
 	let notOperator = "";
 	let sqlParams = [];
 
 	let searchQuery = " WHERE 1=1";
 
+	if (partName) {
+		const partTypeMapping = {
+			chassis: 1,
+			cpu: 2,
+			cpu_cooler: 3,
+			gpu: 4,
+			memory: 5,
+			motherboard: 6,
+			psu: 7,
+			storage: 8
+		};
+		
+		searchTerms.PartTypeID = partTypeMapping[partName];
+	}
+	
 	if (searchTerms.priceMin) {
 		searchQuery += " AND Price >= ?";
 		sqlParams.push(searchTerms.priceMin);

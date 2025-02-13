@@ -128,7 +128,7 @@ export const buildQuery = async (correctSearchTerms, itemsBool, page = null) => 
 
     const params = new URLSearchParams();
     for (const term in correctSearchTerms) {
-        if (term !== "page") {
+        if (term !== "page" && correctSearchTerms[term] !== "" && correctSearchTerms[term] !== null) {
             params.append(term, correctSearchTerms[term]);
         }
     }

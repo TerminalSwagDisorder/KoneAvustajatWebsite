@@ -35,7 +35,7 @@ const ComputerWizardBrowse = ({ fetchDynamicData, fetchDataAmount, updateDynamic
 	const [currentOperation, setCurrentOperation] = useState("");
 	const [formFields, setFormFields] = useState({});
 	const [searchActive, setSearchActive] = useState(false);
-	const [searchKey, setSearchKey] = useState("");
+	const [searchKey, setSearchKey] = useState("ID");
 	const [searchTerm, setSearchTerm] = useState({});
 	const shoppingCart = useSelector((state) => state.shoppingCart.shoppingCart);
 	const completedBuild = useSelector((state) => state.wizard.completedBuild);
@@ -44,7 +44,6 @@ const ComputerWizardBrowse = ({ fetchDynamicData, fetchDataAmount, updateDynamic
 	// On initial page load
 	useEffect(() => {
 		fetchData();
-		handlePagination();
 	}, []);
 
 	// Update run fetchData when pagination changes
@@ -58,7 +57,6 @@ const ComputerWizardBrowse = ({ fetchDynamicData, fetchDataAmount, updateDynamic
 
 	useEffect(() => {
 		fetchData();
-		handlePagination();
 	}, [partName]);
 
 	const handleAddToCart = (item) => {
@@ -106,29 +104,27 @@ const ComputerWizardBrowse = ({ fetchDynamicData, fetchDataAmount, updateDynamic
 		setPartName(value);
 		setPage(1);
 	};
-	
+
 	const handleSearchKey = (value) => {
 		setSearchKey(value);
 	};
 	
 	const handleSearchTerm = (event) => {
-		event.preventDefault();
 		setSearchTerm((prevFields) => ({
 			...prevFields,
-			[searchKey]: event.target.value,
+			[event.target.name]: event.target.type === "checkbox" ? event.target.checked : event.target.value
 		}));
 	};
 
-	const handleSearchRendering = (searchType) => {
-		setSearchActive(true);
-		if (searchActive) {
-			setSearchActive(false);
-		}
+	const handleSearchRendering = () => {
+		setSearchActive(searchActive === true ? false : true);
 	};
 
 	const fetchData = async () => {
 		try {
 			const data = await fetchDynamicData(page, "part", partName.key);
+			await handlePagination();
+
 			setParts(data);
 			//console.log(data);
 		} catch (error) {
@@ -198,14 +194,22 @@ const ComputerWizardBrowse = ({ fetchDynamicData, fetchDataAmount, updateDynamic
 				displayError("Search is not active!");
 				return;
 			}
-			if (searchTerm === "" || searchTerm === " " || searchTerm === undefined || searchTerm === null) {
-				displayError("Search term cannot be empty!");
+			
+			if (!searchTerm || Object.keys(searchTerm).length === 0) {
+				displayError("Search cannot be empty!");
 				return;
 			}
+
+			const emptyCheck = Object.entries(searchTerm).every(([key, value]) => key === "inverted" || key === "strict" || value == null || String(value).trim() === "");
+			if (emptyCheck) {
+				displayError("Search cannot be empty!");
+				return;
+			}
+			
+			searchTerm.partName = partName.key;
+			
 			const data = await fetchSearchData(searchTerm, "part");
-			console.log(data)
-			console.log(data.length)
-					
+			
 			if (!data || data.length === 0) {
 				displayError("No data found using this search term!");
 				return;
@@ -213,7 +217,9 @@ const ComputerWizardBrowse = ({ fetchDynamicData, fetchDataAmount, updateDynamic
 
 			setSearchActive(true);
 			setParts(data);
-			
+			setTotalPages(1);
+			setPage(1);
+			displayError(`Found ${data.length} items from the search.`, "success");
 
 		} catch (error) {
 			displayError(error);
@@ -223,11 +229,11 @@ const ComputerWizardBrowse = ({ fetchDynamicData, fetchDataAmount, updateDynamic
 
 	const clearSearchTerm = async () => {
 		try {
-			if (searchTerm) setSearchTerm("");
-			setSearchActive(false);
+			if (searchTerm) setSearchTerm({});
+			//setSearchActive(false);
 			await fetchData();
 		} catch (error) {
-			console.error("Error while fetching medusers:", error);
+			displayError(`Error while fetching data: ${error}`);
 		}
 	};
 
@@ -474,14 +480,17 @@ const ComputerWizardBrowse = ({ fetchDynamicData, fetchDataAmount, updateDynamic
 	
 	const searchButton = () => {
 		return (
-			<Button onClick={() => handleSearchRendering("emailsearch")}>Search medusers by email</Button>
+			<>
+				<Button onClick={() => handleSearchRendering()}>Toggle search</Button>
+				<Button onClick={() => clearSearchTerm()}  disabled={Object.entries(searchTerm).length === 0}>Clear search</Button>
+			</>
 		)
 	}
 
 	const renderSearch = () => {
-		
+		// "strict", "priceMin", "priceMax", "priceRange", "inverted"
 		if (searchActive && parts) {
-			const searchTerms = Object.keys(parts[0]).map((key) => key);
+			//const searchTerms = Object.keys(parts[0]).map((key) => key);
 			return (
 			<div className="searchForm">
 				<Form
@@ -491,11 +500,11 @@ const ComputerWizardBrowse = ({ fetchDynamicData, fetchDataAmount, updateDynamic
 				>
 					<Dropdown>
 						<Dropdown.Toggle variant="success" id="dropdown-basic">
-							{searchKey + " chosen" || "Choose search type"}
+							{searchKey || "Choose search type"}
 						</Dropdown.Toggle>
 
 						<Dropdown.Menu>
-							{Object.keys(parts[0]).map((key) => (
+							{Object.keys(parts[0] || {}).map((key) => (
 								<Dropdown.Item
 									key={key}
 									onClick={() => handleSearchKey(key)}>
@@ -522,16 +531,58 @@ const ComputerWizardBrowse = ({ fetchDynamicData, fetchDataAmount, updateDynamic
 	const renderSearchInput = (key) => {
 		if (!key) return;
 		return (
-			<Form.Group className="mb-3">
-				<Form.Label>{key}</Form.Label>
-				<Form.Control 
-				type="text" 
-				id="search" 
-				name="search" 
-				value={searchTerm[key] || ""} 
-				onChange={handleSearchTerm} 
-			/>
-			</Form.Group>
+			<>
+				<Form.Group className="mb-3">
+					<Form.Label>{key}</Form.Label>
+					<Form.Control 
+					type="text" 
+					id={key}
+					name={key} 
+					value={searchTerm[key] || ""} 
+					onChange={handleSearchTerm} 
+					/>
+				</Form.Group>
+				<Form.Group className="mb-3">
+					<Form.Check
+						type="checkbox"
+						label="Strict search"
+						name="strict"
+						onChange={handleSearchTerm}
+						id="strict"
+						checked={Boolean(searchTerm.strict)}
+					/>
+				</Form.Group>
+				<Form.Group className="mb-3">
+					<Form.Check
+						type="checkbox"
+						label="Inverted search"
+						name="inverted"
+						onChange={handleSearchTerm}
+						id="inverted"
+						checked={Boolean(searchTerm.inverted)}
+					/>
+				</Form.Group>
+				<Form.Group className="mb-3">
+					<Form.Label>Max price</Form.Label>
+					<Form.Control 
+					type="number" 
+					id="priceMax"
+					name="priceMax"
+					value={searchTerm.priceMax || ""} 
+					onChange={handleSearchTerm} 
+					/>
+				</Form.Group>
+				<Form.Group className="mb-3">
+					<Form.Label>Min price</Form.Label>
+					<Form.Control 
+					type="number" 
+					id="priceMin"
+					name="priceMin"
+					value={searchTerm.priceMin || ""} 
+					onChange={handleSearchTerm} 
+					/>
+				</Form.Group>
+			</>
 		);
 	};
 
@@ -540,11 +591,11 @@ const ComputerWizardBrowse = ({ fetchDynamicData, fetchDataAmount, updateDynamic
 		<div>
 			{renderPartChoice()}
 			{renderPartViewAlert()}
-			{searchButton()}
-			{renderSearch()}
 			{renderBasedOnPart()}
 			{renderPartModification()}
 			{renderPartDeletion()}
+			{searchButton()}
+			{renderSearch()}
 			{renderPagination(page, totalPages)}
 			<Table responsive="md" hover bordered className="table-striped">
 				<thead>

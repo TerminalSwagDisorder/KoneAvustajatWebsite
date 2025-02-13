@@ -103,7 +103,7 @@ function App() {
 							<Route path="wizard" element={<ComputerWizardWizard wizardAlgorithm={wizardAlgorithm} />} />
 							<Route path="build" element={<ComputerWizardBuild />} />
 						</Route>
-						<Route path="usedparts" element={<UsedPartsBrowse fetchDynamicData={fetchDynamicData} fetchDataAmount={fetchDataAmount} postDynamicData={postDynamicData} updateDynamicData={updateDynamicData} />} />
+						<Route path="usedparts" element={<UsedPartsBrowse fetchDynamicData={fetchDynamicData} fetchDataAmount={fetchDataAmount} postDynamicData={postDynamicData} updateDynamicData={updateDynamicData} fetchSearchData={fetchSearchData} />} />
 							{shoppingCart && totalCartItems && totalCartItems > 0 && (
 									<Route path="shoppingcart" element={<ShoppingCart postDynamicData={postDynamicData} updateDynamicData={updateDynamicData} />} />
 							)}

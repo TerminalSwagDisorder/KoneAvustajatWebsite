@@ -59,7 +59,7 @@ export const fetchUsers = async (page) => {
 
 
 // Fetch different types of data from pages
-export const fetchDynamicData = async (page, tableName, partName) => {
+export const fetchDynamicData = async (page, tableName, partName = "") => {
 	try {
 		await checkAllowedTableNames(["getroutes"], tableName);
 		
