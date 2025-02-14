@@ -139,8 +139,6 @@ export const updateDynamicData = async (formFields, tableName, partName = null, 
 
 export const postDynamicData = async (formFields, tableName, partName) => {
 	try {
-		console.log(`http://localhost:4000/api/${tableName}/update/${partName}`);
-		console.log(formFields);
 		await checkAllowedTableNames(["postroutes"], tableName);
 		
 		if (partName) {
@@ -179,9 +177,8 @@ export const postDynamicData = async (formFields, tableName, partName) => {
 	}
 };
 
-export const deleteDynamicData = async (tableName, partName, id) => {
+export const deleteDynamicData = async (tableName, partName = null, id = null) => {
 	try {
-		console.log(`http://localhost:4000/api/${tableName}/delete/${partName}/${id}`);
 		await checkAllowedTableNames(["deleteroutes"], tableName);
 		
 		if (partName) {
@@ -191,7 +188,7 @@ export const deleteDynamicData = async (tableName, partName, id) => {
 		}
 
 		// api call to register a new user
-		const response = await fetch(`http://localhost:4000/api/${tableName}/delete/${partName}/${id}`, {
+		const response = await fetch(`http://localhost:4000/api/${tableName}${tableName.includes("/delete") ? "" : "/delete"}/${partName ? "/" + partName : ""}${id ? "/" + id : ""}`, {
 			method: "DELETE",
 			headers: {
 				"Content-Type": "application/json"
@@ -657,11 +654,11 @@ export const checkIfSignedIn = async () => {
 
 		// If the user is authenticated, return user data
 		if (response.ok) {
-			return data.userData;
+			return data;
 		} else {
 			// If authentication fails
 			// User is not signed in (invalid token or other error)
-			return null;
+			return data.message;
 		}
 	} catch (error) {
 		console.error(error);

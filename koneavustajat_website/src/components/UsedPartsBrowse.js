@@ -1,13 +1,14 @@
 import React, { useState, useEffect } from "react";
-import { Link } from 'react-router-dom';
-import { Button, Container, Table, Form, CloseButton, Dropdown } from 'react-bootstrap';
+import { Link } from "react-router-dom";
+import { Button, Container, Table, Form, CloseButton, Dropdown, Alert } from "react-bootstrap";
+import { CiDesktopMouse1 } from "react-icons/ci";
 import { useSelector, useDispatch } from "react-redux";
 import { addToShoppingCart, removeFromShoppingCart, clearShoppingCart } from "../redux/shoppingCartSlice";
 import { addToCompletedBuild, removeFromCompletedBuild, clearCompletedBuild } from "../redux/wizardSlice";
 import { useAuth, useError } from "../utils/Contexts";
 
 
-const UsedPartsBrowse = ({ fetchDynamicData, fetchDataAmount, postDynamicData, updateDynamicData, fetchSearchData }) => {
+const UsedPartsBrowse = ({ fetchDynamicData, fetchDataAmount, postDynamicData, updateDynamicData, fetchSearchData, deleteDynamicData }) => {
     const { displayError } = useError();
 	const { currentUser } = useAuth();
 	const formFieldsDefault = {
@@ -120,7 +121,9 @@ const UsedPartsBrowse = ({ fetchDynamicData, fetchDataAmount, postDynamicData, u
 		setPage(newPage);
 	};
 
-	const handleSelectPart = (part) => {
+	const handleSelectPart = (part, operation) => {
+		setFormFields({});
+		setCurrentOperation(operation);
 		setSelectedPart(part);
 		window.scrollTo(0, 180);
 	};
@@ -218,16 +221,69 @@ const UsedPartsBrowse = ({ fetchDynamicData, fetchDataAmount, postDynamicData, u
 			...prevFields,
 			[event.target.name]: event.target.value,
 		}));
+
+		if (event.target.name === "PartID") {
+			let partId = parseInt(event.target.value, 10);
+
+			if (partId < parts[0].PartID) {
+				partId = parts[parts.length - 1].PartID;
+			}
+			if (partId > parts[parts.length - 1].PartID) {
+				partId = parts[0].PartID;
+			}
+
+			let selectedPart = parts.find((part) => part.PartID === partId);
+			console.log(selectedPart);
+			if (selectedPart === undefined || typeof selectedPart !== "object" || typeof selectedPart === "undefined") {
+				selectedPart = {
+					PartID: partId,
+					Name: "Not a part",
+					Error: "Invalid part: Inventory part with the PartID does not exist"
+				};
+			}
+			setCurrentOperation("view");
+			setSelectedPart(selectedPart);
+		}
 	};
 	
-	const handleSubmit = async (event) => {
+	const handleSubmit2 = async (event) => {
 		event.preventDefault();
 		try {
 			const success = await postDynamicData(formFields, "inventory/add");
 			if (success) {
 				await fetchData();
-				await handlePagination();
 				closeForm();
+				displayError("Item added successfully!", "success");
+			}
+		} catch (error) {
+			displayError(`${error}`);
+			console.error(error);
+		}
+	};
+
+	const handleSubmit = async (event) => {
+		event.preventDefault();
+		try {
+			let success = false;
+			if (currentOperation === "add") {
+				success = await postDynamicData(formFields, "inventory/add");
+			} else if (currentOperation === "modify") {
+				success = await updateDynamicData(formFields, "inventory/update", null, selectedPart.PartID);
+			} else if (currentOperation === "delete") {
+				success = await deleteDynamicData("inventory/delete", null, selectedPart.PartID);
+			} else {
+				console.error("No valid part operation for submission");
+				displayError("No valid part operation for submission");
+			}
+			if (success) {
+				const operationMessages = {
+					add: "added",
+					modify: "modified",
+					delete: "deleted"
+				};
+				await fetchData();
+				closeForm();
+				displayError(`Item ${operationMessages[currentOperation] || "invalid operation"} successfully!`, "success");
 			}
 		} catch (error) {
 			displayError(`${error}`);
@@ -242,32 +298,152 @@ const UsedPartsBrowse = ({ fetchDynamicData, fetchDataAmount, postDynamicData, u
 		setPartName({ key: selectedKey, value: selectedValue });
 	};
 
-	/*const searchParts = () => {
-		return (
-			<div className="searchForm">
-				<Form
-					onSubmit={fetchSearchTermData}
-					style={{ width: "400px" }}
-				>
-					<Form.Group className="mb-3">
-						<Form.Label>Part name</Form.Label>
-						<Form.Control
-							type="text"
-							id="search"
-							name="search"
-							value={partName}
-							onChange={handleSearchTerm}
-							/>
-					<Button style={{ width: "40%" }} type="submit">
-						Search
+	const renderPartModification = () => {
+		if (currentUser && currentUser.RoleID === 4 && selectedPart && currentOperation === "modify") {
+			return (
+				<div id="partform" className="partform d-flex justify-content-center align-items-center">
+					<Form onSubmit={handleSubmit} className="adminForm border rounded shadow p-4 bg-opaque">
+						<div className="d-flex justify-content-end mb-3">
+							<CloseButton onClick={() => closeForm()} />
+						</div>
+						<h4 className=" mb-3">Modify part</h4>
+						{Object.keys(selectedPart).map((key, index) => (
+							<ul key={index}>
+									<b>{key}</b>:{" "}
+									{key === "PartID" ? (
+										selectedPart[key]
+									) : key === "PartTypeID" ? (
+										<Form.Group className="mb-3">
+											<Form.Select 
+												value={formFields.PartTypeID || selectedPart.PartTypeID}
+												name="PartTypeID"
+												onChange={handleInputChange}>
+												<option value="">
+													None
+												</option>
+												{Object.keys(partTypeMapping).map((k) => (
+													<option
+														key={k}
+														value={k}
+													>
+														{partTypeMapping[k]}
+													</option>
+												))}
+											</Form.Select>
+										</Form.Group>
+									) : key === "Price" ? (
+										<Form.Group className="mb-3">
+											<Form.Control
+												type="number"
+												step={0.01}
+												min={0}
+												placeholder={selectedPart[key]}
+												name={key}
+												onChange={handleInputChange}
+											/>
+										</Form.Group>
+									) : (
+										<Form.Group className="mb-3">
+											<Form.Control
+												type="text"
+												placeholder={selectedPart[key]}
+												name={key}
+												onChange={handleInputChange}
+											/>
+										</Form.Group>
+									)}
+							</ul>
+						))}
+						<Button variant="primary" type="submit">
+							Modify part
+						</Button>
+					</Form>
+				</div>
+			);
+		}
+	};
+
+	const renderPartDeletion = () => {
+		if (currentUser && currentUser.RoleID === 4 && selectedPart && currentOperation === "delete") {
+			return (
+				<div id="partform" className="partform d-flex justify-content-center align-items-center">
+					<Form onSubmit={handleSubmit} className="adminForm border rounded shadow p-4 bg-opaque">
+						<div className="d-flex justify-content-end mb-3">
+							<CloseButton onClick={() => closeForm()} />
+						</div>
+						<h4 className=" mb-3">Are you sure you want to delete this part from the inventory?</h4>
+							<ul>
+								<p><b>Part type:</b> {partName.value} </p>
+								<p><b>ID:</b> {selectedPart.PartID} </p>
+								<p><b>Name:</b> {selectedPart.Name} </p>
+								<p><b>Name:</b> {selectedPart.SerialNumber} </p>
+							</ul>
+						<Button variant="primary" type="submit">
+							Yes
+						</Button>						
+						<Button variant="primary" style={{"background-color": "#990000"}} onClick={() => closeForm()}>
+							No
+						</Button>
+					</Form>
+				</div>
+			);
+		}
+	};
+
+	const renderBasedOnPart = () => {
+		if (selectedPart && currentOperation === "view") {
+			return (
+				<div id="partform" className="partform d-flex justify-content-center align-items-center">
+					<Form className="adminForm border rounded shadow p-4 bg-opaque">
+						<div className="d-flex justify-content-end mb-3">
+							<CloseButton onClick={() => closeForm()} />
+						</div>
+						<h4 className=" mb-3">Part details</h4>
+						{Object.keys(selectedPart).map((key, index) => (
+							<ul key={index}>
+								<li>
+									<b>{key}</b>:{" "}
+									{selectedPart[key]}
+								</li>
+							</ul>
+						))}
+						<Button className="user-select-button" onClick={() => handleAddToCart(selectedPart)}>
+							Add to Cart
+						</Button>
+					</Form>
+				</div>
+			);
+		}
+	};
+
+	const renderPartViewAlert = () => {
+		if (!currentOperation || !selectedPart) {
+			return (
+				<div className="userChangePrompt">
+					<Alert>
+						<CiDesktopMouse1 /> Select a part to view or add to cart. {currentUser && currentUser.RoleID === 4 && ("As admin you are able to modify details.")}
+					</Alert>
+				</div>
+			);
+		}
+	}
+
+	const renderAdminButtons = (part) => {
+		if (currentUser && currentUser.RoleID === 4) {
+			return (
+				<>
+					<Button className="user-select-button" onClick={() => handleSelectPart(part, "delete")}>
+						Delete part
 					</Button>
-				</Form.Group>
-				</Form>
-				<br />
-			</div>
-		);
-	};*/
-	
+					<Button className="user-select-button" onClick={() => handleSelectPart(part, "modify")}>
+						Modify part
+					</Button>
+				</>
+			);
+		}
+		
+	};
+
 	const searchButton = () => {
 		return (
 			<>
@@ -513,14 +689,13 @@ const renderAddForm = () => {
 							<td> {part.Price || "N/A"} €</td>
 							<td> {partTypeMapping[part.PartTypeID]  || "Unknown Type"}</td> 
 							<td>
+								{renderAdminButtons(part)}
+								<Button className="user-select-button" onClick={() => handleSelectPart(part, "view")}>
+									View part
+								</Button>
 								<Button className="user-select-button" onClick={() => handleAddToCart(part)}>
 									Add to Cart
 								</Button>
-								{/*
-									<Button className="user-select-button" onClick={() => handleAddToCompletedBuild(part)}>
-										Add to Build
-									</Button>
-								*/}
 							</td>
 						</tr>
 					))}
@@ -534,7 +709,10 @@ const renderAddForm = () => {
     return (
 		<div>
 		<h1>Used Parts</h1>
-		{/*searchParts()*/}
+		{renderPartViewAlert()}
+		{renderBasedOnPart()}
+		{renderPartModification()}
+		{renderPartDeletion()}
 		{renderAddForm()}
 		{searchButton()}
 		{renderSearch()}

@@ -793,12 +793,6 @@ const formFieldsValidator = (schema) => {
 	return (req, res, next) => {
 		let unvalidatedData;
 
-		try {
-			checkItemLength(req.body);
-		} catch (error) {
-			return res.status(400).json({ message: `Invalid data length: ${error}` });
-		}
-
 		if (req.headers["content-type"] && req.headers["content-type"].includes("multipart/form-data")) {
 			unvalidatedData = req.body;
 		} else {
@@ -813,7 +807,7 @@ const formFieldsValidator = (schema) => {
 			}
 
 			if (typeof formFields !== "object") {
-				return res.status(400).json({ message: "Invalid form data format" });
+				return res.status(400).json({ message: "Invalid data format" });
 			}
 			
 			unvalidatedData = Object.fromEntries(
@@ -822,11 +816,17 @@ const formFieldsValidator = (schema) => {
 		}
 
 		try {
+			checkItemLength(unvalidatedData);
+		} catch (error) {
+			return res.status(400).json({ message: `Invalid data length: ${error}` });
+		}
+
+		try {
 			const value = Joi.attempt(unvalidatedData, schema);
 			req.validatedForm = value;
 			next();
 		} catch (error) {
-			return res.status(400).json({ message: error.details[0].message });
+			return res.status(400).json({ message: error.details[0].message || error });
 		}
 	};
 };
@@ -3039,6 +3039,14 @@ const checkItemLength = (item) => {
 	if (Array.isArray(item) && item.length === 0) throw ("Array is empty!");
 	if (typeof item === "object" && Object.keys(item).length === 0) throw ("Object is empty!");
 	if (typeof item === "string" && item.trim().length === 0) throw ("String is empty!");
+	
+	if (item.formFields) {
+		if (item.formFields === "" || item.formFields === null || item.formFields === undefined) throw ("Cannot check length of empty form!");
+
+		if (Array.isArray(item.formFields) && item.formFields.length === 0) throw ("Array is empty!");
+		if (typeof item.formFields === "object" && Object.keys(item.formFields).length === 0) throw ("Object is empty!");
+		if (typeof item.formFields === "string" && item.formFields.trim().length === 0) throw ("String is empty!");
+	}
 
 	return true;
 };
@@ -3973,8 +3981,8 @@ app.delete("/api/part/delete/:part/:id", idValidator, authenticateSession, async
 	
 	const sql = `DELETE FROM ${part} WHERE ID = ?`;
 	try {
-		const [part] = await promisePool.query(sql, [id]);
-		if (!part.length) {
+		const [parts] = await promisePool.query(sql, [id]);
+		if (!parts.length) {
 			return res.status(404).json({ message: "Part not found" });
 		}
 
@@ -4204,9 +4212,8 @@ app.post("/api/inventory/add", authenticateSession, formFieldsValidator(inventor
 	}
 });
 
-app.patch("/api/part/update/:part/:id", authenticateSession, productImgUpload.single("ProductImage"), idValidator, tableValidator(partNameSchema, "partName"), formFieldsValidator(partSchema), async (req, res) => {
-		console.log("API part accessed");
-		const { part } = req.params;
+app.patch("/api/inventory/update/:id", authenticateSession, idValidator, formFieldsValidator(inventorySchema), async (req, res) => {
+		console.log("API inventory update accessed");
 		const id = req.validatedId;
 		const jsonFormFields = req.validatedForm;
 		const ProductImage = req.file; // Product image
@@ -4239,15 +4246,18 @@ app.patch("/api/part/update/:part/:id", authenticateSession, productImgUpload.si
 				updateQuery = updateQuery.slice(0, -2);
 			}
 
-			updateQuery += " WHERE ID = ?";
+			updateQuery += " WHERE PartID = ?";
 			queryParams.push(parseInt(id));
+			console.log(updateQuery)
+			console.log(queryParams)
 
 			const [result] = await promisePool.query(updateQuery, queryParams);
+			console.log(result);
 			if (result.affectedRows === 0) {
 				return res.status(404).json({ message: "Item not found" });
 			}
 
-			return res.status(200).json({ message: "Part updated successfully" });
+			return res.status(200).json({ message: "Inventory part updated successfully" });
 		} catch (error) {
 			const [status, message] = handleServerError(error);
 			return res.status(status).json({ message: message });
@@ -4255,6 +4265,25 @@ app.patch("/api/part/update/:part/:id", authenticateSession, productImgUpload.si
 		}
 	}
 );
+
+app.delete("/api/inventory/delete/:id", idValidator, authenticateSession, async (req, res) => {
+	console.log("API delete inventory part accessed");
+	
+	const id = req.validatedId;
+	
+	const sql = "DELETE FROM part_inventory WHERE PartID = ?";
+	try {
+		const [part] = await promisePool.query(sql, [id]);
+		if (!part.length) {
+			return res.status(404).json({ message: "Part not found" });
+		}
+
+		return res.status(200).json({ message: `${part} deleted succesfully from inventory` });
+	} catch (error) {
+		const [status, message] = handleServerError(error);
+		return res.status(status).json({ message: message });
+	}
+});
 
 app.get("/api/inventory/:id", idValidator, async (req, res) => {
 	console.log("API search parts by id accessed");
