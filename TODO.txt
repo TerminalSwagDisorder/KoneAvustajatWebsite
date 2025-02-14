@@ -11,7 +11,9 @@ stripe trigger payment_intent.payment_failed
 -Check that additional parts work x
 -Add a way to view part details on orders x
 -Part search x
--UsedParts delete & modify
+-UsedParts delete & modify x
 -Receipt download button in profile
 -Admin user page -> add full user details & orders
 -Set up CMS texts
+-Email sending on sign up
+-Forgot password (needs email system)
