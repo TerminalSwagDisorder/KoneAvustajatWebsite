@@ -21,13 +21,18 @@ export const useError = () => useContext(ErrorContext);
 
 export const AuthProvider = ({ children }) => {
 	const [currentUser, setCurrentUser] = useState(null);
+    const { displayError } = useError();
+  	const errorDisplayedRef = useRef(false); // To avoid repeated error messages
+	const currentUserRef = useRef(currentUser);
+	const timeoutRef = useRef(null);
+
 
 	// Check if the user is signed in on page load
 	const fetchUserStatus = async () => {
 		try {
 			// Initialize currentUser with user data
 			const userData = await checkIfSignedIn();
-			if (userData) {
+			if (userData && userData.userData) {
 				// Refresh profile
 				const refreshedUserData = await refreshProfile();
 				setCurrentUser(refreshedUserData);
@@ -39,9 +44,47 @@ export const AuthProvider = ({ children }) => {
 			setCurrentUser(null);
 		}
 	};
+
+	useEffect(() => {
+		currentUserRef.current = currentUser;
+	}, [currentUser]);
+
 	useEffect(() => {
 		fetchUserStatus();
 	}, []);
+
+	useEffect(() => {
+		const checkLoginStatus = async () => {
+			try {
+				const currentLogin = await checkIfSignedIn();
+				let delay = 20000;
+
+				if (currentUserRef.current) {
+					delay = 10000;
+					if (currentLogin.message !== "Authenticated") {
+						if (!errorDisplayedRef.current) {
+							await refreshProfileData();
+							displayError("You have been logged out!");
+							errorDisplayedRef.current = true;
+						}
+					} else {
+						errorDisplayedRef.current = false;
+						delay = 20000;
+					}
+				}
+				timeoutRef.current = setTimeout(checkLoginStatus, delay);
+			} catch (error) {
+				console.error("Error checking login status:", error);
+				timeoutRef.current = setTimeout(checkLoginStatus, 10000);
+			}
+		};
+
+		timeoutRef.current = setTimeout(checkLoginStatus, 3000);
+
+		return () => {
+			clearTimeout(timeoutRef.current);
+		};
+	}, [displayError]);
 
 	const handleUserChange = (event) => {
 		setCurrentUser(event);
@@ -51,6 +94,7 @@ export const AuthProvider = ({ children }) => {
 		const refreshedUserData = await refreshProfile();
 		setCurrentUser(refreshedUserData);
 	};
+
 	return (
 		<AuthContext.Provider value={{ currentUser, handleUserChange, refreshProfileData }}>
 			{children}

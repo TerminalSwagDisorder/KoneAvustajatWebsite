@@ -1,5 +1,5 @@
 import {Routes, Route, BrowserRouter, Link } from "react-router-dom";
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback, useRef } from "react";
 import "./style/style.scss";
 import Home from "./components/Home";
 import Profile from "./components/Profile";
@@ -44,7 +44,7 @@ import {
 	updateContent,
 	fetchSearchData
 } from "./api/api";
-import { ContentProvider, ModalProvider, useAuth, PaymentProvider, ErrorProvider } from "./utils/Contexts";
+import { ContentProvider, ModalProvider, useAuth, useError, PaymentProvider, ErrorProvider } from "./utils/Contexts";
 import { ProtectedRoute } from "./utils/AuthUtils";
 import { useSelector, useDispatch } from "react-redux";
 import { PaymentUtil } from "./utils/PaymentUtil";
@@ -97,13 +97,13 @@ function App() {
 
 						<Route path="profile" element={<ProtectedRoute><Profile handleCredentialChange={handleCredentialChange} handleSignout={handleSignout} fetchDynamicData={fetchDynamicData} updateDynamicData={updateDynamicData} postDynamicData={postDynamicData} /></ProtectedRoute>} />
 						<Route path="signup" element={<ProtectedRoute unloggedOnly><Signup handleSignup={handleSignup} /></ProtectedRoute>} />
-						<Route path="Signin" element={<ProtectedRoute unloggedOnly><Signin handleSignin={handleSignin} checkIfSignedIn={checkIfSignedIn}/></ProtectedRoute>} />
+						<Route path="Signin" element={<ProtectedRoute unloggedOnly><Signin handleSignin={handleSignin} /></ProtectedRoute>} />
 						<Route path="computerwizard" element={<ComputerWizard />}>
 							<Route path="browse" element={<ComputerWizardBrowse fetchDynamicData={fetchDynamicData} fetchDataAmount={fetchDataAmount} updateDynamicData={updateDynamicData} deleteDynamicData={deleteDynamicData} fetchSearchData={fetchSearchData} />} />
 							<Route path="wizard" element={<ComputerWizardWizard wizardAlgorithm={wizardAlgorithm} />} />
 							<Route path="build" element={<ComputerWizardBuild />} />
 						</Route>
-						<Route path="usedparts" element={<UsedPartsBrowse fetchDynamicData={fetchDynamicData} fetchDataAmount={fetchDataAmount} postDynamicData={postDynamicData} updateDynamicData={updateDynamicData} fetchSearchData={fetchSearchData} />} />
+						<Route path="usedparts" element={<UsedPartsBrowse fetchDynamicData={fetchDynamicData} fetchDataAmount={fetchDataAmount} postDynamicData={postDynamicData} updateDynamicData={updateDynamicData} fetchSearchData={fetchSearchData} deleteDynamicData={deleteDynamicData} />} />
 							{shoppingCart && totalCartItems && totalCartItems > 0 && (
 									<Route path="shoppingcart" element={<ShoppingCart postDynamicData={postDynamicData} updateDynamicData={updateDynamicData} />} />
 							)}

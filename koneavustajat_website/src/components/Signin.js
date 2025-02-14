@@ -8,7 +8,7 @@ import { useAuth, useError } from "../utils/Contexts";
 
 
 // Function for signin in, take onSubmit and setting the current user as props
-export const Signin = ({ handleSignin, checkIfSignedIn }) => {
+export const Signin = ({ handleSignin }) => {
     const { displayError } = useError();
 	const { handleUserChange, currentUser } = useAuth();
 	const navigate = useNavigate();

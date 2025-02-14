@@ -16,11 +16,11 @@ root.render(
 			<PersistGate loading={null} persistor={persistor}>
 			  <ThemeProvider>
 				  <LanguageProvider>
-						<AuthProvider>
-							<ErrorProvider>
+						<ErrorProvider>
+							<AuthProvider>
 								<App />
-							</ErrorProvider>
-						</AuthProvider>
+							</AuthProvider>
+						</ErrorProvider>
 					</LanguageProvider>
 				</ThemeProvider>
 			</PersistGate>
