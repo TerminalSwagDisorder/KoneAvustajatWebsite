@@ -14,6 +14,8 @@ stripe trigger payment_intent.payment_failed
 -UsedParts delete & modify x
 -Receipt download button in profile
 -Admin user page -> add full user details & orders
+-Admin users can add more admins
 -Set up CMS texts
 -Email sending on sign up
 -Forgot password (needs email system)
+-Signup needs to add the signed up user to the customer table
