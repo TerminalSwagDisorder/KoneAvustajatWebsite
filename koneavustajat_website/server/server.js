@@ -928,13 +928,14 @@ const checkRegex = (req, res, next) => {
 };
 
 const handleServerError = (error) => {
+	console.log(error);
 	let errorMessage = `${error}`;
 
 	if (typeof error === "object") {
-		if (error.response && error.response.data) {
-			errorMessage = error.response.data;
-		} else if (error.message) {
+		if (error.message) {
 			errorMessage = error.message;
+		} else if (error.response && error.response.data) {
+			errorMessage = error.response.data;
 		} else {
 			try {
 				errorMessage = JSON.stringify(error, null, 2);
@@ -2990,7 +2991,7 @@ const createPaymentIntent = async (amount, currency, customer) => {
 		return null;
 	}
 	
-	const userSql = "SELECT c.CustomerID, c.UserID, a.AddressID, a.AddressTypeID, a.Street, a.City, a.PostalCode FROM customers c LEFT JOIN addresses a ON c.CustomerID = a.CustomerID WHERE c.UserID = ?";
+	const userSql = "SELECT * FROM addresses WHERE CustomerID = ? AND AddressTypeID = 1";
 	
 	const customerSql = "SELECT c.CustomerID, c.UserID, u.Name, u.Email, a.AddressID, a.AddressTypeID, a.Street, a.City, a.State, a.PostalCode, a.Country FROM customers c LEFT JOIN users u ON c.UserID = u.UserID LEFT JOIN addresses a ON c.CustomerID = a.CustomerID WHERE a.AddressTypeID = 1 AND c.UserID = ?";
 
@@ -2999,13 +3000,9 @@ const createPaymentIntent = async (amount, currency, customer) => {
 	const newTotal = originalTotal + taxPrice;
 
 	try {
-		const [addressCheck] = await promisePool.query(userSql, [customer.UserID]);
+		const [addressCheck] = await promisePool.query(userSql, [customer.CustomerID]);
 		if (!addressCheck.length) {
-			throw new Error("Customer not found");
-		}
-
-		if (!addressCheck[0].Street || !addressCheck[0].PostalCode || !addressCheck[0].City) {
-			throw new Error("Missing required billing address data (Street, Postal Code or City)!\nPlease change your address in the profile page.");
+			throw new Error("Missing required billing address data (Street, Postal Code or City)!\nPlease change your address in the profile page");
 		}
 
 		const [user] = await promisePool.query(customerSql, [customer.UserID]);
@@ -3029,7 +3026,7 @@ const createPaymentIntent = async (amount, currency, customer) => {
 		console.log(paymentIntent);
 		return paymentIntent;
 	} catch (error) {
-		throw new Error(`Error while trying to pay: ${error}`);
+		throw new Error(`Error while trying to pay: ${error.message ? error.message : error}`);
 	}
 };
 
