@@ -25,8 +25,8 @@ export const wizardAlgorithm = async (formFields) => {
 		//alert("Build fetched.");
 		return data;
 	} catch (error) {
-		console.error(error); 
-		throw error; 
+		console.error(error);
+		throw new Error(error); 
 	}
 };
 
@@ -52,7 +52,7 @@ export const fetchUsers = async (page) => {
 		return data;
 	} catch (error) {
 		console.error(error);
-		throw error;
+		throw new Error(error);
 		
 	}
 };
@@ -91,7 +91,7 @@ export const fetchDynamicData = async (page, tableName, partName = "") => {
 		return sanitizedData;
 	} catch (error) {
 		console.error(error);
-		throw error;
+		throw new Error(error);
 	}
 };
 
@@ -131,7 +131,7 @@ export const updateDynamicData = async (formFields, tableName, partName = null, 
 		return data;
 	} catch (error) {
 		console.error(error);
-		throw error;
+		throw new Error(error);
 		
 
 	}
@@ -171,7 +171,7 @@ export const postDynamicData = async (formFields, tableName, partName) => {
 		return data;
 	} catch (error) {
 		console.error(error);
-		throw error;
+		throw new Error(error);
 		
 
 	}
@@ -203,7 +203,7 @@ export const deleteDynamicData = async (tableName, partName = null, id = null) =
 		return true;
 	} catch (error) {
 		console.error(error);
-		throw error;
+		throw new Error(error);
 		
 
 	}
@@ -235,7 +235,7 @@ export const fetchSearchData = async (searchTerms, tableName) => {
 		return sanitizedData;
 	} catch (error) {
 		console.error(error);
-		throw error;
+		throw new Error(error);
 	}
 };
 
@@ -268,7 +268,7 @@ export const fetchSearchIdData = async (id, tableName, partName) => {
 		return sanitizedData;
 	} catch (error) {
 		console.error(error);
-		throw error;
+		throw new Error(error);
 	}
 };
 
@@ -292,7 +292,7 @@ export const fetchDataAmount = async (tableName) => {
 		return data;
 	} catch (error) {
 		console.error(error);
-		throw error;
+		throw new Error(error);
 	}
     
 };
@@ -311,7 +311,7 @@ export const fetchServerRoutes = async () => {
 		return data;
 	} catch (error) {
 		console.error(error);
-		throw error;
+		throw new Error(error);
 	}
     
 };
@@ -321,24 +321,24 @@ export const fetchContent = async (identifiers) => {
 		await checkAllowedTableNames(["getroutes"], "text-content");
 
 		if (!identifiers) {
-			throw ("No identifiers defined!");
+			throw new Error("No identifiers defined!");
 		}
 		
 		if (typeof identifiers !== "object") {
-			throw ("Identifiers must be an object!");
+			throw new Error("Identifiers must be an object!");
 		}
 
 		const identifierKeys = Object.keys(identifiers);
 		const validKeys = ["page", "section", "specific"];
 		if (identifierKeys.length > 3 || identifierKeys.length < 1) {
-			throw ("Identifier amount is not allowed");
+			throw new Error("Identifier amount is not allowed");
 		}
 		if (identifierKeys.some((item) => !validKeys.includes(item))) {
-			throw ("Found invalid key in indentifiers");
+			throw new Error("Found invalid key in indentifiers");
 		}
 		const validIdentifiers = await validateIdentifiers(identifiers);
 		if (!validIdentifiers) {
-			throw("Identifier hierarchy is incorrect");
+			throw new Error("Identifier hierarchy is incorrect");
 		}
 		
 		const identifierValues = validKeys
@@ -380,7 +380,7 @@ export const fetchContent = async (identifiers) => {
 		return sanitizedData;
 	} catch (error) {
 		console.error(error);
-		throw error;
+		throw new Error(error);
 	}
 };
 
@@ -389,24 +389,24 @@ export const fetchWholeContent = async (identifiers) => {
 		await checkAllowedTableNames(["getroutes"], "text-content");
 
 		if (!identifiers) {
-			throw ("No identifiers defined!");
+			throw new Error("No identifiers defined!");
 		}
 		
 		if (typeof identifiers !== "object") {
-			throw ("Identifiers must be an object!");
+			throw new Error("Identifiers must be an object!");
 		}
 
 		const identifierKeys = Object.keys(identifiers);
 		const validKeys = ["page", "section", "specific"];
 		if (identifierKeys.length > 3 || identifierKeys.length < 1) {
-			throw ("Identifier amount is not allowed");
+			throw new Error("Identifier amount is not allowed");
 		}
 		if (identifierKeys.some((item) => !validKeys.includes(item))) {
-			throw ("Found invalid key in indentifiers");
+			throw new Error("Found invalid key in indentifiers");
 		}
 		const validIdentifiers = await validateIdentifiers(identifiers);
 		if (!validIdentifiers) {
-			throw ("Identifier hierarchy is incorrect");
+			throw new Error("Identifier hierarchy is incorrect");
 		}
 		
 		const identifierValues = validKeys
@@ -446,7 +446,7 @@ export const fetchWholeContent = async (identifiers) => {
 		return sanitizedData;
 	} catch (error) {
 		console.error(error);
-		throw error;
+		throw new Error(error);
 	}
 };
 
@@ -468,7 +468,7 @@ export const fetchContentIdentifiers = async () => {
 		return data;
 	} catch (error) {
 		console.error(error);
-		throw error;
+		throw new Error(error);
 	}
 };
 
@@ -508,7 +508,7 @@ export const addContent = async (formFields) => {
 		return data;
 	} catch (error) {
 		console.error(error);
-		throw error;
+		throw new Error(error);
 	}
 };
 
@@ -524,7 +524,7 @@ export const updateContent = async (formFields) => {
 			Status: formFields.Status	
 		};
 		console.log("Submitting form:", formFields);
-		if (formFields.Site_Identifier === "" || formFields.Language === "") throw ("Identifier fields not populated!");
+		if (formFields.Site_Identifier === "" || formFields.Language === "") throw new Error("Identifier fields not populated!");
 		await checkAllowedTableNames(["patchroutes"], "text-content/update");
 
 		if (formFields && typeof formFields === "object" && !Array.isArray(formFields)) formFields = JSON.stringify(formFields);
@@ -545,7 +545,7 @@ export const updateContent = async (formFields) => {
 		return data;
 	} catch (error) {
 		console.error(error);
-		throw error;
+		throw new Error(error);
 		
 
 	}
@@ -582,7 +582,7 @@ export const handleSignin = async (event, formFields, handleUserChange) => {
 			}
 	} catch (error) {
 		console.error(error);
-		throw error;
+		throw new Error(error);
 	}
 };
 
@@ -609,7 +609,7 @@ export const handleSignup = async (event, formFields) => {
 		return true;
 	} catch (error) {
 		console.error(error);
-		throw error;
+		throw new Error(error);
 		
 
 	}
@@ -662,7 +662,7 @@ export const checkIfSignedIn = async () => {
 		}
 	} catch (error) {
 		console.error(error);
-		throw error;
+		throw new Error(error);
 	}
 };
 
@@ -690,7 +690,7 @@ export const refreshProfile = async () => {
 		}
 	} catch (error) {
 		console.error(error);
-		throw error;
+		throw new Error(error);
 	}
 };
 
@@ -723,14 +723,14 @@ export const handleCredentialChange = async (event, formFields) => {
 		} else {
 			if (data.message ? data.message : response.message) {
 				//alert(`HTTP error ${response.status}: ${data.message ? data.message : response.message}`);
-				throw (data.error);
+				throw new Error(data.error);
 			} else {
 				//alert("Failed change credentials. Please try again.");
-				throw (data.error);
+				throw new Error(data.error);
 			}
 		}
     } catch (error) {
 		console.error(error);
-		throw error;
+		throw new Error(error);
     }
 };

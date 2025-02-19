@@ -140,7 +140,7 @@ const UsedPartsBrowse = ({ fetchDynamicData, fetchDataAmount, postDynamicData, u
 			setParts(data);
 			//console.log(data);
 		} catch (error) {
-			displayError(`${error}`);
+			displayError(error);
 			console.error(error);
 		}
 	};
@@ -212,7 +212,7 @@ const UsedPartsBrowse = ({ fetchDynamicData, fetchDataAmount, postDynamicData, u
 			//setSearchActive(false);
 			await fetchData();
 		} catch (error) {
-			displayError(`Error while fetching data: ${error}`);
+			displayError(error);
 		}
 	};
 
@@ -256,7 +256,7 @@ const UsedPartsBrowse = ({ fetchDynamicData, fetchDataAmount, postDynamicData, u
 				displayError("Item added successfully!", "success");
 			}
 		} catch (error) {
-			displayError(`${error}`);
+			displayError(error);
 			console.error(error);
 		}
 	};
@@ -286,7 +286,7 @@ const UsedPartsBrowse = ({ fetchDynamicData, fetchDataAmount, postDynamicData, u
 				displayError(`Item ${operationMessages[currentOperation] || "invalid operation"} successfully!`, "success");
 			}
 		} catch (error) {
-			displayError(`${error}`);
+			displayError(error);
 			console.error(error);
 		}
 	};

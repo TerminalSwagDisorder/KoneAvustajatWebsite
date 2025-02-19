@@ -66,14 +66,14 @@ function App() {
   	const totalCompletedBuildItems = completedBuildItems.length;
 
 	//console.log("shoppingCart ", shoppingCart);
-	console.log("cartItems ", cartItems);
+	//console.log("cartItems ", cartItems);
 
 	//console.log("wizard ", wizard);
 	//console.log("wizardItems ", wizardItems);
 
-	console.log("totalCartItems ", totalCartItems);
-	console.log("totalWizardItems ", totalWizardItems);
-	console.log("totalCompletedBuildItems ", totalCompletedBuildItems);
+	//console.log("totalCartItems ", totalCartItems);
+	//console.log("totalWizardItems ", totalWizardItems);
+	//console.log("totalCompletedBuildItems ", totalCompletedBuildItems);
 
   return (
 		<BrowserRouter>

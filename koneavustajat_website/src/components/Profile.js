@@ -113,7 +113,7 @@ const Profile = ({ handleCredentialChange, handleSignout, fetchDynamicData, upda
 				setCurrentAddressType(data[0].AddressTypeID || 1);
 			}
 		} catch (error) {
-			displayError(`${error}`);
+			displayError(error);
 			console.error(error);
 		}
 	};
@@ -127,7 +127,7 @@ const Profile = ({ handleCredentialChange, handleSignout, fetchDynamicData, upda
 				if (currentOrderData) setCurrentOrder(currentOrderData);
 			} 
 		} catch (error) {
-			displayError(`${error}`);
+			displayError(error);
 			console.error(error);
 		}
 	};
@@ -142,7 +142,7 @@ const Profile = ({ handleCredentialChange, handleSignout, fetchDynamicData, upda
 			const currentOrderData = await fetchDynamicData(null, `orders/${orderID}`, null);
 			if (currentOrderData) setCurrentOrder(currentOrderData);
 		} catch (error) {
-			displayError(`${error}`);
+			displayError(error);
 			console.error(error);
 
 		}
@@ -623,7 +623,7 @@ const Profile = ({ handleCredentialChange, handleSignout, fetchDynamicData, upda
 					closeForm();
 				}
 			} catch (error) {
-				displayError(`${error}`);
+				displayError(error);
 				console.error(error);
 			}
 		} else if (currentOperation === "address") {
@@ -658,7 +658,7 @@ const Profile = ({ handleCredentialChange, handleSignout, fetchDynamicData, upda
 					closeForm();
 				}
 			} catch (error) {
-				displayError(`${error}`);
+				displayError(error);
 				console.error(error);
 			}
 		} else if (currentOperation === "orders" && currentOrder[0]) {
@@ -671,7 +671,7 @@ const Profile = ({ handleCredentialChange, handleSignout, fetchDynamicData, upda
 					throw new Error("Could not initiate payment. No client secret received!");
 				}
 			} catch (error) {
-				displayError(`${error}`);
+				displayError(error);
 				console.error(error);
 			}
 		}

@@ -5,6 +5,7 @@ import { useError } from "../utils/Contexts";
 
 const ErrorModule = () => {
 	const { errorContent, type, displayError, clearError } = useError();
+	let contentDisplay;
 
 	const alertVariants = useMemo(() => ({
 		error: "danger",
@@ -15,10 +16,24 @@ const ErrorModule = () => {
 	
 	if (!errorContent) return null;
 
+	if (typeof errorContent === "object") {
+		if (errorContent.message) {
+			contentDisplay = errorContent.message;
+		} else {
+			try {
+				contentDisplay = JSON.stringify(errorContent, null, 2);
+			} catch (error) {
+				contentDisplay = `${errorContent}`;
+			}
+		}
+	} else {
+		contentDisplay = errorContent;
+	}
+
 	return (
 		<div className="error-module">
 			<Alert variant={alertVariants[type] || "danger"} onClose={clearError} dismissible>
-				{errorContent}
+				{contentDisplay}
 			</Alert>
 		</div>
 	);

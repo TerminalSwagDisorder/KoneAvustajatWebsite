@@ -52,7 +52,7 @@ const NavBar = ({ handleSignout }) => {
 			handleUserChange(null);
 			displayError("Successfully logged out!", "success")
 		} catch (error) {
-			displayError(`${error}`);
+			displayError(error);
 			console.log(error.message || error);
 		}
 	};

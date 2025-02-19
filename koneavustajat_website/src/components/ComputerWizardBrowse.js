@@ -128,7 +128,7 @@ const ComputerWizardBrowse = ({ fetchDynamicData, fetchDataAmount, updateDynamic
 			setParts(data);
 			//console.log(data);
 		} catch (error) {
-			displayError(`${error}`);
+			displayError(error);
 			console.error(error);
 		}
 	};
@@ -150,7 +150,7 @@ const ComputerWizardBrowse = ({ fetchDynamicData, fetchDataAmount, updateDynamic
 				closeForm();
 			}
 		} catch (error) {
-			displayError(`${error}`);
+			displayError(error);
 			console.error(error);
 		}
 	};
@@ -233,7 +233,7 @@ const ComputerWizardBrowse = ({ fetchDynamicData, fetchDataAmount, updateDynamic
 			//setSearchActive(false);
 			await fetchData();
 		} catch (error) {
-			displayError(`Error while fetching data: ${error}`);
+			displayError(error);
 		}
 	};
 

@@ -175,7 +175,7 @@ const ComputerWizardWizard = ({ wizardAlgorithm }) => {
 			}
 			//console.log(formFields);
 		} catch (error) {
-			displayError(`${error}`);
+			displayError(error);
 			console.error(error);
 		}
 	};

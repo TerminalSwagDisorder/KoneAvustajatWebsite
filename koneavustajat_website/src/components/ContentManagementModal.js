@@ -210,7 +210,7 @@ const ContentManagementModal = ({ fetchWholeContent, fetchContentIdentifiers, ad
 			
 		} catch (error) {
 			console.error(error);
-			displayError(`${error}`);
+			displayError(error);
 		}
 	};
 

@@ -18,7 +18,7 @@ const PartsDisplay = ({ fetchDynamicData }) => {
 			const data = await fetchDynamicData(page, "part", partName);
 			setParts(data);
 		} catch (error) {
-			displayError(`${error}`);
+			displayError(error);
 			console.error(error);
 		} finally {
 			setLoading(false);
@@ -46,7 +46,7 @@ const PartsDisplay = ({ fetchDynamicData }) => {
 				return;
 			}
 		} catch (error) {
-			displayError(`${error}`);
+			displayError(error);
 			console.error(error);
 		}
 	};

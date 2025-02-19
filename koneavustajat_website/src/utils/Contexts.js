@@ -234,7 +234,7 @@ export const ErrorProvider = ({ children }) => {
 	const timerRef = useRef(null);
 
 	const displayError = useCallback((content, errorType = "error") => {
-		setErrorContent(content);
+		setErrorContent(content.message ? content.message : content);
 		setType(errorType);
 
 		if (timerRef.current) clearTimeout(timerRef.current);

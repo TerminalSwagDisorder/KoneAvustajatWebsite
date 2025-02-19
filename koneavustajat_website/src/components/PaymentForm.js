@@ -37,7 +37,7 @@ const PaymentForm = ({ onPaymentSuccess }) => {
 			}
 
 		} catch (error) {
-			displayError(`${error}`);
+			displayError(error);
 		} finally {
 			setProcessing(false);
 		}
