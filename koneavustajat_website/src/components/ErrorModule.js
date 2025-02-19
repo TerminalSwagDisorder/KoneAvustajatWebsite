@@ -27,7 +27,7 @@ const ErrorModule = () => {
 			}
 		}
 	} else {
-		contentDisplay = errorContent;
+		contentDisplay = `${errorContent}`;
 	}
 
 	return (

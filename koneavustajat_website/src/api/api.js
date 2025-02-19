@@ -26,7 +26,7 @@ export const wizardAlgorithm = async (formFields) => {
 		return data;
 	} catch (error) {
 		console.error(error);
-		throw new Error(error); 
+		throw new Error(error.message || error); 
 	}
 };
 
@@ -52,7 +52,7 @@ export const fetchUsers = async (page) => {
 		return data;
 	} catch (error) {
 		console.error(error);
-		throw new Error(error);
+		throw new Error(error.message || error);
 		
 	}
 };
@@ -91,7 +91,7 @@ export const fetchDynamicData = async (page, tableName, partName = "") => {
 		return sanitizedData;
 	} catch (error) {
 		console.error(error);
-		throw new Error(error);
+		throw new Error(error.message || error);
 	}
 };
 
@@ -131,7 +131,7 @@ export const updateDynamicData = async (formFields, tableName, partName = null, 
 		return data;
 	} catch (error) {
 		console.error(error);
-		throw new Error(error);
+		throw new Error(error.message || error);
 		
 
 	}
@@ -171,7 +171,7 @@ export const postDynamicData = async (formFields, tableName, partName) => {
 		return data;
 	} catch (error) {
 		console.error(error);
-		throw new Error(error);
+		throw new Error(error.message || error);
 		
 
 	}
@@ -203,9 +203,37 @@ export const deleteDynamicData = async (tableName, partName = null, id = null) =
 		return true;
 	} catch (error) {
 		console.error(error);
-		throw new Error(error);
+		throw new Error(error.message || error);
 		
 
+	}
+};
+
+export const downloadFile = async (tableName, fileName = "downloaded_file.txt") => {
+	try {
+		await checkAllowedTableNames(["getroutes"], tableName);
+		
+		const response = await fetch(`http://localhost:4000/api/${tableName}`, {
+			method: "GET",
+			credentials: "include", // Important, because we're using cookies
+		});
+
+        await checkRes(response, null, "Failed to download file!");
+		const file = await response.blob();
+		
+		const url = window.URL.createObjectURL(file);
+		const link = document.createElement("a");
+		link.href = url;
+		link.download = fileName;
+		document.body.appendChild(link);
+		link.click();
+		link.remove();
+		window.URL.revokeObjectURL(url);
+		
+		return true;
+	} catch (error) {
+		console.error(error);
+		throw new Error(error.message || error);
 	}
 };
 
@@ -235,7 +263,7 @@ export const fetchSearchData = async (searchTerms, tableName) => {
 		return sanitizedData;
 	} catch (error) {
 		console.error(error);
-		throw new Error(error);
+		throw new Error(error.message || error);
 	}
 };
 
@@ -268,7 +296,7 @@ export const fetchSearchIdData = async (id, tableName, partName) => {
 		return sanitizedData;
 	} catch (error) {
 		console.error(error);
-		throw new Error(error);
+		throw new Error(error.message || error);
 	}
 };
 
@@ -292,7 +320,7 @@ export const fetchDataAmount = async (tableName) => {
 		return data;
 	} catch (error) {
 		console.error(error);
-		throw new Error(error);
+		throw new Error(error.message || error);
 	}
     
 };
@@ -311,7 +339,7 @@ export const fetchServerRoutes = async () => {
 		return data;
 	} catch (error) {
 		console.error(error);
-		throw new Error(error);
+		throw new Error(error.message || error);
 	}
     
 };
@@ -380,7 +408,7 @@ export const fetchContent = async (identifiers) => {
 		return sanitizedData;
 	} catch (error) {
 		console.error(error);
-		throw new Error(error);
+		throw new Error(error.message || error);
 	}
 };
 
@@ -446,7 +474,7 @@ export const fetchWholeContent = async (identifiers) => {
 		return sanitizedData;
 	} catch (error) {
 		console.error(error);
-		throw new Error(error);
+		throw new Error(error.message || error);
 	}
 };
 
@@ -468,7 +496,7 @@ export const fetchContentIdentifiers = async () => {
 		return data;
 	} catch (error) {
 		console.error(error);
-		throw new Error(error);
+		throw new Error(error.message || error);
 	}
 };
 
@@ -508,7 +536,7 @@ export const addContent = async (formFields) => {
 		return data;
 	} catch (error) {
 		console.error(error);
-		throw new Error(error);
+		throw new Error(error.message || error);
 	}
 };
 
@@ -545,7 +573,7 @@ export const updateContent = async (formFields) => {
 		return data;
 	} catch (error) {
 		console.error(error);
-		throw new Error(error);
+		throw new Error(error.message || error);
 		
 
 	}
@@ -582,7 +610,7 @@ export const handleSignin = async (event, formFields, handleUserChange) => {
 			}
 	} catch (error) {
 		console.error(error);
-		throw new Error(error);
+		throw new Error(error.message || error);
 	}
 };
 
@@ -609,7 +637,7 @@ export const handleSignup = async (event, formFields) => {
 		return true;
 	} catch (error) {
 		console.error(error);
-		throw new Error(error);
+		throw new Error(error.message || error);
 		
 
 	}
@@ -662,7 +690,7 @@ export const checkIfSignedIn = async () => {
 		}
 	} catch (error) {
 		console.error(error);
-		throw new Error(error);
+		throw new Error(error.message || error);
 	}
 };
 
@@ -690,7 +718,7 @@ export const refreshProfile = async () => {
 		}
 	} catch (error) {
 		console.error(error);
-		throw new Error(error);
+		throw new Error(error.message || error);
 	}
 };
 
@@ -731,6 +759,6 @@ export const handleCredentialChange = async (event, formFields) => {
 		}
     } catch (error) {
 		console.error(error);
-		throw new Error(error);
+		throw new Error(error.message || error);
     }
 };

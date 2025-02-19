@@ -915,11 +915,24 @@ const checkRegex = (req, res, next) => {
 };
 
 const handleServerError = (error) => {
-	console.error(error);
+	let errorMessage = `${error}`;
+
+	if (typeof error === "object") {
+		if (error.response && error.response.data) {
+			errorMessage = error.response.data;
+		} else if (error.message) {
+			errorMessage = error.message;
+		} else {
+			try {
+				errorMessage = JSON.stringify(error, null, 2);
+			} catch (error) {
+				errorMessage = `${error}`;
+			}
+		}
+	}
 	// If there is a status message or data then use that, otherwise the defaults
-	const message = error.response ? error.response.data : `${error}`;
 	const status = error.response ? error.response.status : 500;
-	return [status, message];
+	return [status, errorMessage];
 };
 
 const getAllRoutes = (app) => {
@@ -1182,7 +1195,7 @@ const insertToPartIndex = async (items = 250) => {
 				if (response.body.errors) {
 					const failedItems = response.body.items.filter(item => item.index && item.index.error);
 					console.error(`Errors occurred during bulk indexing for ${part}`, failedItems[0].index.error);
-					throw(`This error has caused problems: ${failedItems[0].index.error}`);
+					throw new Error(`This error has caused problems: ${failedItems[0].index.error}`);
 				} else {
 					console.log(`Data successfully indexed to the ${part} index`);
 				}
@@ -1200,7 +1213,7 @@ const insertSingleToPartIndex = async (part, data) => {
 	try {
 		const partTypes = ["chassis", "cpu", "cpu_cooler", "gpu", "memory", "motherboard", "psu", "storage", "part_inventory"];
 		if (!partTypes.includes(part.toLowerCase())) {
-			throw (`${part} is not a valid part name!`);
+			throw new Error(`${part} is not a valid part name!`);
 		}
 
 		const normalizedRow = {};
@@ -1221,7 +1234,7 @@ const insertSingleToPartIndex = async (part, data) => {
 const purgePartIndices = async (confirmation) => {
 	try {
 		if (String(confirmation).toLowerCase() !== "true") {
-			throw ('Confirmation required: You must provide the value "true" to purge all part indices!');
+			throw new Error('Confirmation required: You must provide the value "true" to purge all part indices!');
 		}
 		
 		const partTypes = ["chassis", "cpu", "cpu_cooler", "gpu", "memory", "motherboard", "psu", "storage", "part_inventory"];
@@ -1245,7 +1258,7 @@ const deleteAllFromPartIndex = async (part) => {
 	try {
 		const partTypes = ["chassis", "cpu", "cpu_cooler", "gpu", "memory", "motherboard", "psu", "storage", "part_inventory"];
 		if (!partTypes.includes(part.toLowerCase())) {
-			throw (`${part} is not a valid part name!`);
+			throw new Error(`${part} is not a valid part name!`);
 		}
 
 		// Delete all data from index without deleting the index
@@ -1268,7 +1281,7 @@ const deleteSingleFromPartIndex = async (part, dataId) => {
 	try {
 		const partTypes = ["chassis", "cpu", "cpu_cooler", "gpu", "memory", "motherboard", "psu", "storage", "part_inventory"];
 		if (!partTypes.includes(part.toLowerCase())) {
-			throw (`${part} is not a valid part name!`);
+			throw new Error(`${part} is not a valid part name!`);
 		}
 
 		const response = await client.delete({
@@ -2721,7 +2734,7 @@ const generateReceiptId = (customerID) => {
 };
 
 
-const generateReceipt = async (result, customer, Items, calculatedPrice, paymentIntent) => {
+const generateReceipt = async (result, customer, items, calculatedPrice, paymentIntent) => {
 	const fonts = {
 		Roboto: {
 			normal: path.resolve(__dirname, "../fonts/Roboto/Roboto-Regular.ttf"), // Point to the actual TTF file
@@ -2747,7 +2760,7 @@ const generateReceipt = async (result, customer, Items, calculatedPrice, payment
 		]
 	];
 
-	for (const item of Items) {
+	for (const item of items) {
 		let price;
 		let name;
 		let manufacturer;
@@ -2973,11 +2986,11 @@ const createPaymentIntent = async (amount, currency, customer) => {
 	try {
 		const [user] = await promisePool.query(customerSql, [customer.UserID]);
 		if (!user.length) {
-			throw ("Customer not found");
+			throw new Error("Customer not found");
 		}
 
 		if (!user[0].Street || !user[0].PostalCode || !user[0].City) {
-			throw ("Missing required billing address data (Street, Postal Code or City)!\nPlease change your address in the profile page.");
+			throw new Error("Missing required billing address data (Street, Postal Code or City)!\nPlease change your address in the profile page.");
 		}
 
 		const stripeCustomer = await generateStripeCustomer(user[0]);
@@ -2995,7 +3008,7 @@ const createPaymentIntent = async (amount, currency, customer) => {
 		console.log(paymentIntent);
 		return paymentIntent;
 	} catch (error) {
-		throw (`Error while trying to pay: ${error}`);
+		throw new Error(`Error while trying to pay: ${error}`);
 	}
 };
 
@@ -3029,23 +3042,23 @@ const storeTaxTransaction = async (paymentIntentId, taxAmount) => {
 		});
 		console.log(`Stored tax transaction for PaymentIntent ${paymentIntentId}`);
 	} catch (error) {
-		throw(`Error storing tax transaction: ${error}`);
+		throw new Error(`Error storing tax transaction: ${error}`);
 	}
 };
 
 const checkItemLength = (item) => {
-	if (item === "" || item === null || item === undefined) throw ("Cannot check length of empty item!");
+	if (item === "" || item === null || item === undefined) throw new Error("Cannot check length of empty item!");
 
-	if (Array.isArray(item) && item.length === 0) throw ("Array is empty!");
-	if (typeof item === "object" && Object.keys(item).length === 0) throw ("Object is empty!");
-	if (typeof item === "string" && item.trim().length === 0) throw ("String is empty!");
+	if (Array.isArray(item) && item.length === 0) throw new Error("Array is empty!");
+	if (typeof item === "object" && Object.keys(item).length === 0) throw new Error("Object is empty!");
+	if (typeof item === "string" && item.trim().length === 0) throw new Error("String is empty!");
 	
 	if (item.formFields) {
-		if (item.formFields === "" || item.formFields === null || item.formFields === undefined) throw ("Cannot check length of empty form!");
+		if (item.formFields === "" || item.formFields === null || item.formFields === undefined) throw new Error("Cannot check length of empty form!");
 
-		if (Array.isArray(item.formFields) && item.formFields.length === 0) throw ("Array is empty!");
-		if (typeof item.formFields === "object" && Object.keys(item.formFields).length === 0) throw ("Object is empty!");
-		if (typeof item.formFields === "string" && item.formFields.trim().length === 0) throw ("String is empty!");
+		if (Array.isArray(item.formFields) && item.formFields.length === 0) throw new Error("Array is empty!");
+		if (typeof item.formFields === "object" && Object.keys(item.formFields).length === 0) throw new Error("Object is empty!");
+		if (typeof item.formFields === "string" && item.formFields.trim().length === 0) throw new Error("String is empty!");
 	}
 
 	return true;
@@ -3414,14 +3427,14 @@ app.post("/api/algorithm", routePagination, tableValidator(partNameSchema, "part
 		// Validate form fields
 		for (const key in jsonFormFields) {
 			if (key !== "price" && key !== "otherColor" && !validFormFields[key].includes(jsonFormFields[key])) {
-				//throw new Error(`${jsonFormFields[key]} is not allowed! Valid values are ${validFormFields[key]}.`);
+				//throw new Errornew Error(`${jsonFormFields[key]} is not allowed! Valid values are ${validFormFields[key]}.`);
 				return res.status(400).json({ message: `${jsonFormFields[key]} is not allowed! Valid values are ${validFormFields[key]}.` });
 			} else if (key === "price" && typeof jsonFormFields[key] !== "number") {
-				//throw new Error(`${key} must be a number!`);
+				//throw new Errornew Error(`${key} must be a number!`);
 				//return res.status(400).json({ message: `${key} must be a number!` });
 				jsonFormFields[key] = parseFloat(jsonFormFields[key]);
 			} else if (key === "otherColor" && typeof jsonFormFields[key] !== "string") {
-				//throw new Error(`${key} must be a string!`);
+				//throw new Errornew Error(`${key} must be a string!`);
 				//return res.status(400).json({ message: `${key} must be a string!` });
 				jsonFormFields[key] = String(jsonFormFields[key]);
 			}
@@ -3772,7 +3785,7 @@ app.get("/api/profile/addresses", authenticateSession, async (req, res) => {
 });
 
 app.get("/api/profile/orders", authenticateSession, async (req, res) => {
-	console.log("API search parts by id accessed");
+	console.log("API profile orders accessed");
 
 	const id = req.user.UserID;
 
@@ -3803,7 +3816,7 @@ app.get("/api/profile/orders", authenticateSession, async (req, res) => {
 });
 
 app.get("/api/profile/orders/:id", idValidator, authenticateSession, async (req, res) => {
-	console.log("API search parts by id accessed");
+	console.log("API search profile orders by id accessed");
 
 	const userId = req.user.UserID;
 	const orderId = req.validatedId;

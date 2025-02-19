@@ -42,7 +42,8 @@ import {
 	fetchWholeContent,
 	addContent,
 	updateContent,
-	fetchSearchData
+	fetchSearchData,
+	downloadFile
 } from "./api/api";
 import { ContentProvider, ModalProvider, useAuth, useError, PaymentProvider, ErrorProvider } from "./utils/Contexts";
 import { ProtectedRoute } from "./utils/AuthUtils";
@@ -95,7 +96,7 @@ function App() {
 							<Route path="parts" element={<PartsDisplay fetchDynamicData={fetchDynamicData} />} />
 						</Route>
 
-						<Route path="profile" element={<ProtectedRoute><Profile handleCredentialChange={handleCredentialChange} handleSignout={handleSignout} fetchDynamicData={fetchDynamicData} updateDynamicData={updateDynamicData} postDynamicData={postDynamicData} /></ProtectedRoute>} />
+						<Route path="profile" element={<ProtectedRoute><Profile handleCredentialChange={handleCredentialChange} handleSignout={handleSignout} fetchDynamicData={fetchDynamicData} updateDynamicData={updateDynamicData} postDynamicData={postDynamicData} downloadFile={downloadFile} /></ProtectedRoute>} />
 						<Route path="signup" element={<ProtectedRoute unloggedOnly><Signup handleSignup={handleSignup} /></ProtectedRoute>} />
 						<Route path="Signin" element={<ProtectedRoute unloggedOnly><Signin handleSignin={handleSignin} /></ProtectedRoute>} />
 						<Route path="computerwizard" element={<ComputerWizard />}>
