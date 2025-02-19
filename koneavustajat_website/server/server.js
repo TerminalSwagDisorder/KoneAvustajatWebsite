@@ -292,6 +292,19 @@ const deleteFile = async (filePath) => {
     }
 };
 
+const checkFile = async (filePath, fileName) => {
+	try {
+		await fs.promises.access(filePath, fs.constants.R_OK);
+		return true;
+	} catch (error) {
+		if (error.code === "ENOENT") {
+			console.warn(`File does not exist: ${fileName}`);
+			throw new Error(`File does not exist`);
+		}
+		throw new Error(`Error checking file: ${error}`);
+	}
+};
+
 const paginationSchema = Joi.object({
 	page: Joi.number().min(1).default(1),
 	items: Joi.number().min(1).max(1000).default(100),
@@ -3846,6 +3859,40 @@ app.get("/api/profile/orders/:id", idValidator, authenticateSession, async (req,
 		return res.status(status).json({ message: message });
 	}
 });
+
+app.get("/api/profile/receipt/:id/download", idValidator, authenticateSession, async (req, res) => {
+    console.log("API download receipt accessed");
+
+    const userId = req.user.UserID;
+    const orderId = req.validatedId;
+
+    const customerSql = "SELECT * FROM customers WHERE UserID = ?";
+    const orderSql = "SELECT * FROM orders WHERE CustomerID = ? AND OrderID = ?";
+
+    try {
+        const [customer] = await promisePool.query(customerSql, [userId]);
+        if (!customer.length) {
+            return res.status(401).json({ message: "User is not a customer!" });
+        }
+
+        const [orders] = await promisePool.query(orderSql, [customer[0].CustomerID, orderId]);
+        if (!orders.length) {
+            return res.status(404).json({ message: "Order not found!" });
+        }
+
+		const receiptFileName = `receipt_${orders[0].ReceiptID}.pdf`;
+        const receiptPath = path.join(__dirname, "..", "receipts", receiptFileName);
+
+		await checkFile(receiptPath, receiptFileName);
+		
+		return res.download(receiptPath, receiptFileName);
+
+    } catch (error) {
+        const [status, message] = handleServerError(error);
+        return res.status(status).json({ message: message });
+    }
+});
+
 
 // Update own user credentials
 app.patch("/api/profile", authenticateSession, profileImgUpload.single("ProfileImage"), formFieldsValidator(userUpdateSchema), userFieldsValidator, async (req, res) => {

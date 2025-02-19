@@ -24,7 +24,7 @@ import PaymentForm from "./PaymentForm.js";
 import { usePayment, useError, useAuth } from "../utils/Contexts";
 
 
-const Profile = ({ handleCredentialChange, handleSignout, fetchDynamicData, updateDynamicData, postDynamicData }) => {
+const Profile = ({ handleCredentialChange, handleSignout, fetchDynamicData, updateDynamicData, postDynamicData, downloadFile }) => {
 	const { displayError } = useError();
     const { clientSecret, setClientSecret } = usePayment();
 	const { currentUser, handleUserChange, refreshProfileData } = useAuth();
@@ -450,6 +450,12 @@ const Profile = ({ handleCredentialChange, handleSignout, fetchDynamicData, upda
 								View order details
 							</Button>
 						)}
+
+						{currentOrder[0] && (
+							<Button variant="primary" onClick={downloadReceipt}>
+								Download receipt
+							</Button>
+						)}
 						
 					</Form>
 				</div>
@@ -588,6 +594,18 @@ const Profile = ({ handleCredentialChange, handleSignout, fetchDynamicData, upda
 				{renderOrdersForm()}
 			</>
 		);
+	}
+	
+	const downloadReceipt = async () => {
+		try {
+			if (!currentOrder[0]) throw new Error("Order does not exist");
+			const downloaded = await downloadFile(`profile/receipt/${currentOrder[0].OrderID}/download`, `downloaded_receipt_${currentOrder[0].ReceiptID}.pdf`);
+			if (downloaded) {
+				displayError("File successfully downloaded", "success")
+			}
+		} catch (error) {
+			displayError(error);
+		}
 	}
 
 	// Function for when the user submits the sign in form
