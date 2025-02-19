@@ -106,8 +106,10 @@ const Profile = ({ handleCredentialChange, handleSignout, fetchDynamicData, upda
 	const fetchAddressData = async () => {
 		try {
 			const adressTypeData = await fetchDynamicData(null, "addresstypes", null);
-			const data = await fetchDynamicData(null, "profile/addresses", null);
 			if (adressTypeData) setAddressTypes(adressTypeData);
+
+			const data = await fetchDynamicData(null, "profile/addresses", null);
+			console.log(adressTypeData);
 			if (data) {
 				setCurrentAddress(data);
 				setCurrentAddressType(data[0].AddressTypeID || 1);

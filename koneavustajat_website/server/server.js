@@ -2990,21 +2990,29 @@ const createPaymentIntent = async (amount, currency, customer) => {
 		return null;
 	}
 	
-	const customerSql = `SELECT c.CustomerID, c.UserID, u.Name, u.Email, a.AddressID, a.AddressTypeID, a.Street, a.City, a.State, a.PostalCode, a.Country FROM customers c LEFT JOIN users u ON c.UserID = u.UserID LEFT JOIN addresses a ON c.CustomerID = a.CustomerID WHERE a.AddressTypeID = 1 AND c.UserID = ?`;
+	const userSql = "SELECT c.CustomerID, c.UserID, a.AddressID, a.AddressTypeID, a.Street, a.City, a.PostalCode FROM customers c LEFT JOIN addresses a ON c.CustomerID = a.CustomerID WHERE c.UserID = ?";
+	
+	const customerSql = "SELECT c.CustomerID, c.UserID, u.Name, u.Email, a.AddressID, a.AddressTypeID, a.Street, a.City, a.State, a.PostalCode, a.Country FROM customers c LEFT JOIN users u ON c.UserID = u.UserID LEFT JOIN addresses a ON c.CustomerID = a.CustomerID WHERE a.AddressTypeID = 1 AND c.UserID = ?";
 
 	const originalTotal = Math.round(amount * 100);
 	const taxPrice = originalTotal * 0.255;
 	const newTotal = originalTotal + taxPrice;
 
 	try {
-		const [user] = await promisePool.query(customerSql, [customer.UserID]);
-		if (!user.length) {
+		const [addressCheck] = await promisePool.query(userSql, [customer.UserID]);
+		if (!addressCheck.length) {
 			throw new Error("Customer not found");
 		}
 
-		if (!user[0].Street || !user[0].PostalCode || !user[0].City) {
+		if (!addressCheck[0].Street || !addressCheck[0].PostalCode || !addressCheck[0].City) {
 			throw new Error("Missing required billing address data (Street, Postal Code or City)!\nPlease change your address in the profile page.");
 		}
+
+		const [user] = await promisePool.query(customerSql, [customer.UserID]);
+		if (!user.length) {
+			throw new Error("Customer user account not found");
+		}
+
 
 		const stripeCustomer = await generateStripeCustomer(user[0]);
 		console.log(stripeCustomer);
