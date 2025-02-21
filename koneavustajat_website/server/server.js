@@ -16,6 +16,7 @@ const multer = require("multer");
 const axios = require("axios");
 const Joi = require("joi");
 const PdfPrinter = require("pdfmake");
+const nodemailer = require("nodemailer");
 const { Client } = require('@opensearch-project/opensearch');
 
 // User authentication exports
@@ -36,30 +37,33 @@ const opensearch = process.env.OPENSEARCH_URL;
 const stripeSecret = process.env.STRIPE_SK;
 const stripePublish = process.env.STRIPE_PK;
 const stripeWebhookSecret = process.env.STRIPE_WEBHOOK_SECRET;
+const companyEmail = process.env.COMPANY_EMAIL;
+const companyEmailPassword = process.env.COMPANY_EMAIL_PASSWORD;
+const companyEmailHostname = process.env.COMPANY_EMAIL_HOSTNAME;
+const testEmail = process.env.TEST_EMAIL;
+const testEmailPassword = process.env.TEST_EMAIL_PASSWORD;
+const testEmailProvider = process.env.TEST_EMAIL_PROVIDER;
 
-if (!sessionSecret) {
-	console.error("Missing SESSION_SECRET environment variable. Exiting...\nHave you run env_generator.js yet?");
-	process.exit(1);
-}
-if (!jwtSecret) {
-	console.error("Missing JWT_SECRET environment variable. Exiting...\nHave you run env_generator.js yet?");
-	process.exit(1);
-}
-if (!opensearch) {
-	console.error("Missing OPENSEARCH_URL environment variable. Exiting...\nHave you run env_generator.js yet?");
-	process.exit(1);
-}
-if (!stripeSecret) {
-	console.error("Missing STRIPE_SK environment variable. Exiting...");
-	process.exit(1);
-}
-if (!stripePublish) {
-	console.error("Missing STRIPE_PK environment variable. Exiting...");
-	process.exit(1);
-}
-if (!stripeWebhookSecret) {
-	console.error("Missing STRIPE_WEBHOOK_SECRET environment variable. Exiting...");
-	process.exit(1);
+const generatedEnvVars = { SESSION_SECRET: sessionSecret, JWT_SECRET: jwtSecret, OPENSEARCH_URL: opensearch };
+const otherEnvVars = {
+	STRIPE_SK: stripeSecret,
+	STRIPE_PK: stripePublish,
+	STRIPE_WEBHOOK_SECRET: stripeWebhookSecret,
+	COMPANY_EMAIL: companyEmail,
+	COMPANY_EMAIL_PASSWORD: companyEmailPassword,
+	COMPANY_EMAIL_PROVIDER: companyEmailHostname,
+	TEST_EMAIL: testEmail,
+	TEST_EMAIL_PASSWORD: testEmailPassword,
+	TEST_EMAIL_PROVIDER: testEmailProvider
+};
+
+for (const vars of [generatedEnvVars, otherEnvVars]) {
+	for (const [key, val] of Object.entries(vars)) {
+		if (!val) {
+			console.error(`Missing ${key} environment variable. Exiting...${vars === generatedEnvVars ? "\nHave you run env_generator.js yet?" : ""}`);
+			process.exit(1);
+		}
+	}
 }
 
 const stripe = require("stripe")(stripeSecret);
@@ -110,6 +114,30 @@ const client = new Client({
 });
 
 const PARTS_INDEX = 'computer_parts';
+
+const transporter = nodemailer.createTransport({
+	host: companyEmailHostname,
+	port: 465,
+	secure: true,
+	auth: {
+		user: companyEmail,
+		pass: companyEmailPassword // Use app password or OAuth2 for Gmail
+	},
+  // Optional: add tls options if needed (e.g. for self-signed certificates)
+  // tls: {
+  //   rejectUnauthorized: false,
+  // },
+});
+
+transporter.verify((error, success) => {
+	//console.log(error ? "Error: " + error : "Success: " + success);
+	if (error) {
+		console.error("SMTP configuration error:", error);
+	} else {
+		console.log("SMTP is configured correctly, and is ready to take messages");
+	}
+});
+
 ////////////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////
@@ -3082,6 +3110,24 @@ const checkItemLength = (item) => {
 	return true;
 };
 
+const sendEmail = async (from, to, subject, text, html = "") => {
+		const mailOptions = {
+		from: `"KoneAvustajat <${from}>"`,
+		to: to,
+		subject: subject,
+		text: text,
+		html: html
+	};
+
+	try {
+		const info = await transporter.sendMail(mailOptions);
+		console.log(`Email sent: ${info.messageId}`);
+		return info;
+	} catch (error) {
+		console.error(`Error sending email: ${error}`);
+		throw new Error(error);
+	}
+};
 
 ////////////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////
@@ -3674,6 +3720,17 @@ app.post("/api/users/signup", formFieldsValidator(userSchema), userFieldsValidat
 		const [result] = await promisePool.query(insertSql, [Name, Email, hashedPassword, 2]); // 2 = Customer
 		const insertCustomer = "INSERT INTO customers (UserID) VALUES (?)";
 		const [customer] = await promisePool.query(insertCustomer, result.insertId);
+		
+		const emailSuccess = await sendEmail(companyEmail, Email, "Signup test", "This is a test for signing up!", `<h2>Hello <strong>${Name}</strong>!</h2><br></br><p>You have test signed up to our website using the email <strong>${Email}</strong><br></br>Click <a href='www.google.com'>here</a> to finish signing up!`);
+		//await sendEmail(from, to, subject, text, html);
+		
+		// Only for testing
+		if (emailSuccess) {
+			console.log("Successfully sent email!");
+		} else {
+			console.log("Something went wrong when sending email!");
+		}
+		
 		return res.status(200).json({ message: "User registered successfully", id: result.insertId });
 	} catch (error) {
 		const [status, message] = handleServerError(error);
