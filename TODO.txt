@@ -18,6 +18,11 @@ stripe trigger payment_intent.payment_failed
 -Admin user page -> add full user details & orders
 -Admin users can add more admins
 -Set up CMS texts
--Email sending on sign up
+-Email sending on sign up (nodemailer)
 -Forgot password (needs email system)
+-Add account activation checks
 -Add a way to dismiss payment form
+-Clean up react warnings
+
+
+Condensed: Finish admin pages, add email system, finish up cms, qol & bug fixes
