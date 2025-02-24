@@ -15,14 +15,16 @@ stripe trigger payment_intent.payment_failed
 -Receipt download button in profile x
 -Signup needs to add the signed up user to the customer table x
 -Payment button in profile might be broken x
+-Add account activation checks x
+
+-Email sending on sign up (nodemailer)
+-Forgot password (needs email system)
 -Admin user page -> add full user details & orders
 -Admin users can add more admins
 -Set up CMS texts
--Email sending on sign up (nodemailer)
--Forgot password (needs email system)
--Add account activation checks
 -Add a way to dismiss payment form
 -Clean up react warnings
+-Separate server functions from server routes (optional)
 
 
 Condensed: Finish admin pages, add email system, finish up cms, qol & bug fixes
