@@ -3,8 +3,6 @@ import { fetchDynamicData } from "../api/api";
 import { Button, Container, Table, Form } from "react-bootstrap";
 import { useError } from "../utils/Contexts";
 
-
-
 const PartsDisplay = ({ fetchDynamicData }) => {
 	const { displayError } = useError();
 	const [parts, setParts] = useState([]);
