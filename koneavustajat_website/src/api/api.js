@@ -734,7 +734,7 @@ export const handleCredentialChange = async (event, formFields) => {
 		}
 		
 		if (formFields.currentPassword === "" || formFields.currentPassword === undefined) throw new Error("Current password is required when submitting new profile info!");
-		
+
 		const response = await fetch("http://localhost:4000/api/profile", {
 				method: "PATCH",
 				credentials: "include", // Important, because we're using cookies
@@ -743,20 +743,10 @@ export const handleCredentialChange = async (event, formFields) => {
 
 		const data = await response.json();
 
-		// Handle update
-		if (response.ok) {
-			console.log("User updated successfully:", data);
-			//alert("Successfully changed credentials!");
-			return true;
-		} else {
-			if (data.message ? data.message : response.message) {
-				//alert(`HTTP error ${response.status}: ${data.message ? data.message : response.message}`);
-				throw new Error(data.error);
-			} else {
-				//alert("Failed change credentials. Please try again.");
-				throw new Error(data.error);
-			}
-		}
+		await checkRes(response, data);
+		
+		console.log("User updated successfully:", data);
+		return true;
     } catch (error) {
 		console.error(error);
 		throw new Error(error.message || error);

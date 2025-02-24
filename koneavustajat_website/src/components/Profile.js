@@ -210,7 +210,7 @@ const Profile = ({ handleCredentialChange, handleSignout, fetchDynamicData, upda
 						<h4 className=" mb-3">Edit profile</h4>
 						<Form.Group className="mb-3">
 							<Form.Label htmlFor="ProfileImage"><FaCameraRetro /> Change profile picture</Form.Label>
-							<Form.Control type="file" name="ProfileImage" value={formFields.ProfileImage} accept="image/png, image/jpeg, image/gif" onChange={handleInputChange} />
+							<Form.Control type="file" name="ProfileImage" accept="image/png, image/jpeg, image/gif" onChange={handleInputChange} />
 						</Form.Group>
 						<Form.Group className="mb-3">
 								<Form.Control

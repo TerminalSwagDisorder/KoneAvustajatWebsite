@@ -207,6 +207,11 @@ app.use(
 const authenticateSession = (req, res, next) => {
 	//console.log(req.session)
 	if (req.session.user) {
+		if (req.session.user.Activated !== 1) {
+			return res.status(401).json({
+				message: "Not activated"
+			});
+		}
 		req.user = req.session.user;
 		next();
 	} else {
@@ -835,9 +840,9 @@ const formFieldsValidator = (schema) => {
 		let unvalidatedData;
 
 		if (req.headers["content-type"] && req.headers["content-type"].includes("multipart/form-data")) {
-			unvalidatedData = req.body;
+			unvalidatedData = { ...req.body };
 		} else {
-			let { formFields } = req.body;
+			let { formFields } = { ...req.body };
 
 			if (typeof formFields === "string") {
 				try {
@@ -3751,6 +3756,10 @@ app.post("/api/users/login", formFieldsValidator(loginSchema), userFieldsValidat
 		if (!user) {
 			return res.status(404).json({ message: "Email or password is incorrect" });
 		}
+		
+		if (user.Activated !== 1) {
+			return res.status(401).json({ message: "Account is not activated" });
+		}
 
 		// If the email is not an exact match
 		if (user.Email !== Email) {
@@ -3758,26 +3767,27 @@ app.post("/api/users/login", formFieldsValidator(loginSchema), userFieldsValidat
 		}
 
 		const match = await bcrypt.compare(Password, user.Password);
-		if (match) {
-			const isAdmin = user.RoleID === 4;
-			req.session.user = { ...user, isAdmin };
 
-			/*
-			// Provide an accessToken cookie
-			const accessToken = jwt.sign({ user, userType }, jwtSecret, {
-				expiresIn: "1h",
-			});
-			res.cookie("accessToken", accessToken, {
-				httpOnly: true,
-				sameSite: "lax",
-				maxAge: 3600000
-			});
-            */
-
-			return res.status(200).json({ message: "Logged in successfully", user: req.session.user });
-		} else {
+		if (!match) {
 			return res.status(401).json({ message: "Email or password is incorrect" });
 		}
+
+		const isAdmin = user.RoleID === 4;
+		req.session.user = { ...user, isAdmin };
+
+		/*
+		// Provide an accessToken cookie
+		const accessToken = jwt.sign({ user, userType }, jwtSecret, {
+			expiresIn: "1h",
+		});
+		res.cookie("accessToken", accessToken, {
+			httpOnly: true,
+			sameSite: "lax",
+			maxAge: 3600000
+		});
+		*/
+
+		return res.status(200).json({ message: "Logged in successfully", user: req.session.user });
 	} catch (error) {
 		const [status, message] = handleServerError(error);
 		return res.status(status).json({ message: message });
@@ -3958,79 +3968,78 @@ app.get("/api/profile/receipt/:id/download", idValidator, authenticateSession, a
 
 // Update own user credentials
 app.patch("/api/profile", authenticateSession, profileImgUpload.single("ProfileImage"), formFieldsValidator(userUpdateSchema), userFieldsValidator, async (req, res) => {
-		console.log("API update own credentials accessed");
-		const userId = req.user.UserID;
-		const oldProfileImage = req.user.ProfileImage;
-		const jsonFormFields = req.validatedForm;
-		const ProfileImage = req.file; // Profile image
+	console.log("API update own credentials accessed");
+	const userId = req.user.UserID;
+	const oldProfileImage = req.user.ProfileImage;
+	const jsonFormFields = req.validatedForm;
+	const ProfileImage = req.file; // Profile image
 
-		try {
-			const match = await bcrypt.compare(jsonFormFields.currentPassword, req.user.Password);
-			if (!match) {
-				return res.status(403).json({ message: "Current password is incorrect" });
+	try {
+		const match = await bcrypt.compare(jsonFormFields.currentPassword, req.user.Password);
+		if (!match) {
+			return res.status(403).json({ message: "Current password is incorrect" });
+		}
+
+		let hashedPassword = null;
+		const allowedFields = ["Name", "Email", "Password", "Gender", "ProfileImage"];
+
+		if (ProfileImage) {
+			if (oldProfileImage && oldProfileImage !== null && oldProfileImage !== "default-profile.png") {
+				const imagePath = path.join(__dirname, "..", "public", "profile_images", oldProfileImage);
+				await deleteFile(imagePath);
 			}
+		}
 
-			let hashedPassword = null;
-			const allowedFields = ["Name", "Email", "Password", "Gender", "ProfileImage"];
+		// SQL query to update user data
+		// updateQuery allows for multiple fields to be updated simultaneously
+		let updateQuery = "UPDATE users SET ";
+		let queryParams = [];
 
-			if (ProfileImage) {
-				if (oldProfileImage && oldProfileImage !== null && oldProfileImage !== "default-profile.png") {
-					const imagePath = path.join(__dirname, "..", "public", "profile_images", oldProfileImage);
-					await deleteFile(imagePath);
-				}
-			}
-
-			// SQL query to update user data
-			// updateQuery allows for multiple fields to be updated simultaneously
-			let updateQuery = "UPDATE users SET ";
-			let queryParams = [];
-
-			// More dynamic way of updating users
-			for (const key in jsonFormFields) {
-				console.log(key);
-				if (allowedFields.includes(key)) {
-					if (jsonFormFields.hasOwnProperty(key)) {
-						if (jsonFormFields[key] !== "") {
-							updateQuery += key.charAt(0).toUpperCase() + key.slice(1) + " = ?, "; // Since the first letters are capitalized in the db
-							if (key === "Password") {
-								// Hash the new password before storing it
-								hashedPassword = await bcrypt.hash(jsonFormFields[key], 10);
-								queryParams.push(hashedPassword);
-							} else {
-								queryParams.push(jsonFormFields[key]);
-							}
+		// More dynamic way of updating users
+		for (const key in jsonFormFields) {
+			console.log(key);
+			if (allowedFields.includes(key)) {
+				if (jsonFormFields.hasOwnProperty(key)) {
+					if (jsonFormFields[key] !== "") {
+						updateQuery += key.charAt(0).toUpperCase() + key.slice(1) + " = ?, "; // Since the first letters are capitalized in the db
+						if (key === "Password") {
+							// Hash the new password before storing it
+							hashedPassword = await bcrypt.hash(jsonFormFields[key], 10);
+							queryParams.push(hashedPassword);
+						} else {
+							queryParams.push(jsonFormFields[key]);
 						}
 					}
 				}
 			}
-
-			if (ProfileImage) {
-				const ProfileImage_name = ProfileImage.filename;
-				updateQuery += "ProfileImage = ?, ";
-				queryParams.push(ProfileImage_name);
-			}
-
-			// Remove trailing comma and space
-			if (queryParams.length > 0) {
-				updateQuery = updateQuery.slice(0, -2);
-			}
-
-			updateQuery += " WHERE UserID = ?";
-			queryParams.push(userId);
-
-			const [result] = await promisePool.query(updateQuery, queryParams);
-			if (result.affectedRows === 0) {
-				return res.status(404).json({ message: "Item not found" });
-			}
-
-			return res.status(200).json({ message: "User updated successfully" });
-		} catch (error) {
-			const [status, message] = handleServerError(error);
-			return res.status(status).json({ message: message });
-
 		}
+
+		if (ProfileImage) {
+			const ProfileImage_name = ProfileImage.filename;
+			updateQuery += "ProfileImage = ?, ";
+			queryParams.push(ProfileImage_name);
+		}
+
+		// Remove trailing comma and space
+		if (queryParams.length > 0) {
+			updateQuery = updateQuery.slice(0, -2);
+		}
+
+		updateQuery += " WHERE UserID = ?";
+		queryParams.push(userId);
+
+		const [result] = await promisePool.query(updateQuery, queryParams);
+		if (result.affectedRows === 0) {
+			return res.status(404).json({ message: "Item not found" });
+		}
+
+		return res.status(200).json({ message: "User updated successfully" });
+	} catch (error) {
+		const [status, message] = handleServerError(error);
+		return res.status(status).json({ message: message });
+
 	}
-);
+});
 
 // Route for viewing parts
 app.get("/api/part", routePagination, tableValidator(partNameSchema, "partName"), tableSearch(), async (req, res) => {
