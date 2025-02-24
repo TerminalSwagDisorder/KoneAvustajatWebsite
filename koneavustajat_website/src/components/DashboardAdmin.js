@@ -22,6 +22,12 @@ const DashboardAdmin = () => {
 					<FaMagnifyingGlass />
 				</Button>
 			</Link>
+			<Link to="/usedparts">
+				<Button className="adminDashboardButton" style={{ width: "100%" }}>
+					Modify used parts &nbsp;
+					<FaMagnifyingGlass />
+				</Button>
+			</Link>
 			<Outlet />
 		</div>
 	);
