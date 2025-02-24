@@ -17,6 +17,7 @@ stripe trigger payment_intent.payment_failed
 -Payment button in profile might be broken x
 -Add account activation checks x
 
+-Usedat in tokens ain't working
 -Email sending on sign up (nodemailer)
 -Forgot password (needs email system)
 -Admin user page -> add full user details & orders
