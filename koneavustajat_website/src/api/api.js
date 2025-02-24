@@ -752,3 +752,33 @@ export const handleCredentialChange = async (event, formFields) => {
 		throw new Error(error.message || error);
     }
 };
+
+export const activateAccount = async (activationToken) => {
+	try {
+		const tableName = "users/activate";
+
+		await checkAllowedTableNames(["getroutes"], tableName);
+
+		const query = await buildQuery(activationToken, true);
+		
+		const response = await fetch(`http://localhost:4000/api/${tableName}?${query}`, {
+			method: "GET",
+			credentials: "include", // Important, because we're using cookies
+		});
+		const data = await response.json();
+
+        await checkRes(response, data);
+		
+		const sanitizedData = sanitizeData(data);
+		
+		// If data is not correct format
+		if (!Array.isArray(sanitizedData)) {
+		  return Object.values(sanitizedData);
+		}
+		
+		return sanitizedData;
+	} catch (error) {
+		console.error(error);
+		throw new Error(error.message || error);
+	}
+};

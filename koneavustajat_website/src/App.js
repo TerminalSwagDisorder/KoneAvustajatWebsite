@@ -2,6 +2,7 @@ import {Routes, Route, BrowserRouter, Link } from "react-router-dom";
 import React, { useState, useEffect, useCallback, useRef } from "react";
 import "./style/style.scss";
 import Home from "./components/Home";
+import Activate from "./components/Activate";
 import Profile from "./components/Profile";
 import NavBar from "./components/Nav";
 import Signin from "./components/Signin";
@@ -43,7 +44,8 @@ import {
 	addContent,
 	updateContent,
 	fetchSearchData,
-	downloadFile
+	downloadFile,
+	activateAccount
 } from "./api/api";
 import { ContentProvider, ModalProvider, useAuth, useError, PaymentProvider, ErrorProvider } from "./utils/Contexts";
 import { ProtectedRoute } from "./utils/AuthUtils";
@@ -88,26 +90,27 @@ function App() {
 						<ContentManagementModal fetchWholeContent={fetchWholeContent} fetchContentIdentifiers={fetchContentIdentifiers} addContent={addContent} updateContent={updateContent} />
 						<Routes>
 							<Route path="/" element={<Home />} />
-						{/*{currentUser && currentUser.role === "admin" && (*/}
+							<Route path="/activate" element={<Activate activateAccount={activateAccount} />} />
+							{/*{currentUser && currentUser.role === "admin" && (*/}
 
-						<Route path="admin" element={<ProtectedRoute adminOnly><Admin /></ProtectedRoute>}>
-							<Route path="dashboard" element={<DashboardAdmin />} />
-							<Route path="users" element={<UsersAdmin fetchDynamicData={fetchDynamicData} fetchDataAmount={fetchDataAmount} />} />
-							<Route path="parts" element={<PartsDisplay fetchDynamicData={fetchDynamicData} />} />
-						</Route>
+							<Route path="admin" element={<ProtectedRoute adminOnly><Admin /></ProtectedRoute>}>
+								<Route path="dashboard" element={<DashboardAdmin />} />
+								<Route path="users" element={<UsersAdmin fetchDynamicData={fetchDynamicData} fetchDataAmount={fetchDataAmount} />} />
+								<Route path="parts" element={<PartsDisplay fetchDynamicData={fetchDynamicData} />} />
+							</Route>
 
-						<Route path="profile" element={<ProtectedRoute><Profile handleCredentialChange={handleCredentialChange} handleSignout={handleSignout} fetchDynamicData={fetchDynamicData} updateDynamicData={updateDynamicData} postDynamicData={postDynamicData} downloadFile={downloadFile} /></ProtectedRoute>} />
-						<Route path="signup" element={<ProtectedRoute unloggedOnly><Signup handleSignup={handleSignup} /></ProtectedRoute>} />
-						<Route path="Signin" element={<ProtectedRoute unloggedOnly><Signin handleSignin={handleSignin} /></ProtectedRoute>} />
-						<Route path="computerwizard" element={<ComputerWizard />}>
-							<Route path="browse" element={<ComputerWizardBrowse fetchDynamicData={fetchDynamicData} fetchDataAmount={fetchDataAmount} updateDynamicData={updateDynamicData} deleteDynamicData={deleteDynamicData} fetchSearchData={fetchSearchData} />} />
-							<Route path="wizard" element={<ComputerWizardWizard wizardAlgorithm={wizardAlgorithm} />} />
-							<Route path="build" element={<ComputerWizardBuild />} />
-						</Route>
-						<Route path="usedparts" element={<UsedPartsBrowse fetchDynamicData={fetchDynamicData} fetchDataAmount={fetchDataAmount} postDynamicData={postDynamicData} updateDynamicData={updateDynamicData} fetchSearchData={fetchSearchData} deleteDynamicData={deleteDynamicData} />} />
-							{shoppingCart && totalCartItems && totalCartItems > 0 && (
-									<Route path="shoppingcart" element={<ShoppingCart postDynamicData={postDynamicData} updateDynamicData={updateDynamicData} />} />
-							)}
+							<Route path="profile" element={<ProtectedRoute><Profile handleCredentialChange={handleCredentialChange} handleSignout={handleSignout} fetchDynamicData={fetchDynamicData} updateDynamicData={updateDynamicData} postDynamicData={postDynamicData} downloadFile={downloadFile} /></ProtectedRoute>} />
+							<Route path="signup" element={<ProtectedRoute unloggedOnly><Signup handleSignup={handleSignup} /></ProtectedRoute>} />
+							<Route path="Signin" element={<ProtectedRoute unloggedOnly><Signin handleSignin={handleSignin} /></ProtectedRoute>} />
+							<Route path="computerwizard" element={<ComputerWizard />}>
+								<Route path="browse" element={<ComputerWizardBrowse fetchDynamicData={fetchDynamicData} fetchDataAmount={fetchDataAmount} updateDynamicData={updateDynamicData} deleteDynamicData={deleteDynamicData} fetchSearchData={fetchSearchData} />} />
+								<Route path="wizard" element={<ComputerWizardWizard wizardAlgorithm={wizardAlgorithm} />} />
+								<Route path="build" element={<ComputerWizardBuild />} />
+							</Route>
+							<Route path="usedparts" element={<UsedPartsBrowse fetchDynamicData={fetchDynamicData} fetchDataAmount={fetchDataAmount} postDynamicData={postDynamicData} updateDynamicData={updateDynamicData} fetchSearchData={fetchSearchData} deleteDynamicData={deleteDynamicData} />} />
+								{shoppingCart && totalCartItems && totalCartItems > 0 && (
+										<Route path="shoppingcart" element={<ShoppingCart postDynamicData={postDynamicData} updateDynamicData={updateDynamicData} />} />
+								)}
 						</Routes>
 						</div>
 					</PaymentProvider>

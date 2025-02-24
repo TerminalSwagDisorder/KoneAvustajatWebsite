@@ -43,6 +43,8 @@ const companyEmailHostname = process.env.COMPANY_EMAIL_HOSTNAME;
 const testEmail = process.env.TEST_EMAIL;
 const testEmailPassword = process.env.TEST_EMAIL_PASSWORD;
 const testEmailProvider = process.env.TEST_EMAIL_PROVIDER;
+const frontendUrl = process.env.FRONTEND_URL;
+const backendUrl = process.env.BACKEND_URL;
 
 const generatedEnvVars = { SESSION_SECRET: sessionSecret, JWT_SECRET: jwtSecret, OPENSEARCH_URL: opensearch };
 const otherEnvVars = {
@@ -54,7 +56,9 @@ const otherEnvVars = {
 	COMPANY_EMAIL_PROVIDER: companyEmailHostname,
 	TEST_EMAIL: testEmail,
 	TEST_EMAIL_PASSWORD: testEmailPassword,
-	TEST_EMAIL_PROVIDER: testEmailProvider
+	TEST_EMAIL_PROVIDER: testEmailProvider,
+	FRONTEND_URL: frontendUrl,
+	BACKEND_URL: backendUrl
 };
 
 for (const vars of [generatedEnvVars, otherEnvVars]) {
@@ -3134,6 +3138,11 @@ const sendEmail = async (from, to, subject, text, html = "") => {
 	}
 };
 
+const generateToken = (length = 32) => {
+	const token = crypto.randomBytes(length).toString('hex');
+	return token;
+};
+
 ////////////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////
@@ -3710,6 +3719,7 @@ app.post("/api/users/signup", formFieldsValidator(userSchema), userFieldsValidat
 	console.log("API user signup accessed");
 
 	const { Name, Email, Password } = req.validatedForm;
+	const randomToken = generateToken(); // Please hash before usage!
 
 	try {
 		// Check if email exists
@@ -3726,9 +3736,15 @@ app.post("/api/users/signup", formFieldsValidator(userSchema), userFieldsValidat
 		const insertCustomer = "INSERT INTO customers (UserID) VALUES (?)";
 		const [customer] = await promisePool.query(insertCustomer, result.insertId);
 		
-		const emailSuccess = await sendEmail(companyEmail, Email, "Signup test", "This is a test for signing up!", `<h2>Hello <strong>${Name}</strong>!</h2><br></br><p>You have test signed up to our website using the email <strong>${Email}</strong><br></br>Click <a href='www.google.com'>here</a> to finish signing up!`);
-		//await sendEmail(from, to, subject, text, html);
+		const insertToken = "INSERT INTO tokens (UserID, TokenTypeID, Token, ExpriesAt) VALUES (?, ?, ?, NOW() + INTERVAL 1 HOUR)";
+		const tokenParams = [result.insertId, 1, randomToken];
+		const [token] = await promisePool.query(insertToken, tokenParams);
 		
+		const activationLink = `${frontendUrl}/activate?activationToken=${randomToken}`;
+		
+		const emailSuccess = await sendEmail(companyEmail, Email, "Signup test", "This is a test for signing up!", `<h2>Hello <strong>${Name}</strong>!</h2><br></br><p>You have test signed up to our website using the email <strong>${Email}</strong><br></br>Click <a href='${activationLink}'>here</a> to finish signing up!`);
+		//await sendEmail(from, to, subject, text, html);
+		//http://localhost:3000/activate?activationToken=dc923820862064e0fa73a4dd123365f4112ae1fffe8773a376d340ba813e6694
 		// Only for testing
 		if (emailSuccess) {
 			console.log("Successfully sent email!");
@@ -3737,6 +3753,48 @@ app.post("/api/users/signup", formFieldsValidator(userSchema), userFieldsValidat
 		}
 		
 		return res.status(200).json({ message: "User registered successfully", id: result.insertId });
+	} catch (error) {
+		const [status, message] = handleServerError(error);
+		return res.status(status).json({ message: message });
+	}
+});
+
+app.get("/api/users/activate", async (req, res) => {
+	console.log("API user activation accessed");
+
+	const { activationToken } = req.query;
+
+	try {
+		if (!activationToken) {
+			return res.status(400).json({ message: "Activation token is missing" });
+		}
+		// Look up the token in the tokens table
+		// Assume token type 1 is for account verification
+		const tokenSql = "SELECT * FROM tokens WHERE Token = ? AND TokenTypeID = 1";
+		const [[token]] = await promisePool.query(tokenSql, [activationToken]);
+		if (!token) {
+			return res.status(400).json({ message: "Invalid activation token" });
+		}
+		
+		if (token.UsedAt !== null) {
+			return res.status(400).json({ message: "The token has already been used" });
+		}
+
+		// Check if the token has expired
+		const now = new Date();
+		const expiresAt = new Date(token.ExpiresAt);
+		if (now > expiresAt) {
+			return res.status(400).json({ message: "Activation token has expired" });
+		}
+
+		// Update the user's record to mark as activated
+		const updateUserSql = "UPDATE users SET activated = ? WHERE UserID = ?";
+		await promisePool.query(updateUserSql, [true, token.UserID]);
+
+		const usedToken = "UPDATE tokens SET UsedAt = NOW() WHERE TokenID = ?";
+		await promisePool.query(usedToken, [token.TokenID]);
+
+		return res.status(200).json({ message: "Account activated successfully" });
 	} catch (error) {
 		const [status, message] = handleServerError(error);
 		return res.status(status).json({ message: message });
