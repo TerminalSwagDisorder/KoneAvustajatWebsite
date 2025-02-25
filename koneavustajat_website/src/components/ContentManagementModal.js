@@ -43,9 +43,13 @@ const ContentManagementModal = ({ fetchWholeContent, fetchContentIdentifiers, ad
 	}, [languageOverride, wholeContent, language]);
 
 	const fetchIdentifiers = async () => {
-		const identifiers = await fetchContentIdentifiers();
-		setAvailableIdentifiers(identifiers[0]);
-		setAvailableLanguages(identifiers[1]);
+		try {
+			const identifiers = await fetchContentIdentifiers();
+			setAvailableIdentifiers(identifiers[0]);
+			setAvailableLanguages(identifiers[1]);
+		} catch {
+			console.error("Failed to fetch identifiers");
+		}
 	};
 
 	const addMode = async () => {
