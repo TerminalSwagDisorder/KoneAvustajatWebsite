@@ -173,7 +173,10 @@ export const validateIdentifiers = async (identifiers) => {
     return true;
 };
 
-export const checkRes = async (response, data, customMessage = "Failed") => {	
+export const checkRes = async (response, customMessage = "Failed") => {
+	if (!response) {
+		throw new Error("Could not connect to the server!");
+	}
 	if (!response.ok) {
 		let errorRes;
 		const contentType = response.headers.get("content-type");
@@ -187,9 +190,8 @@ export const checkRes = async (response, data, customMessage = "Failed") => {
 		}
 
 		let errorMessage = customMessage;
-		if (data && data.message) errorMessage = data.message;
+		if (errorRes && errorRes.message) errorMessage = errorRes.message;
 		else if (response.message) errorMessage = response.message;
-		else if (errorRes && errorRes.message) errorMessage = errorRes.message;
 		else if (response.statusText) errorMessage = response.statusText;
 		throw new Error(`HTTP error ${response.status}: ${errorMessage}`);
 	}
@@ -210,4 +212,10 @@ export const sanitizeData = (data) => {
 	}
 
 	return data;
+};
+
+export const handleError = (error) => {
+	if (!error) throw new Error("Failed to catch error gracefully!");
+	console.error(error);
+	throw new Error(error.message || error); 
 };

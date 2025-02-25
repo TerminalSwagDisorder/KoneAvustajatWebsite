@@ -2,8 +2,7 @@
 // Auth: Terminal Swag Disorder
 // Desc: File containing code for api functionality
 
-import React from "react";
-import { checkAllowedTableNames, checkAllowedPartNames, checkSearchTerms, buildQuery, validateIdentifiers, checkRes, sanitizeData } from "./helpers";
+import { checkAllowedTableNames, checkAllowedPartNames, checkSearchTerms, buildQuery, validateIdentifiers, checkRes, sanitizeData, handleError } from "./helpers";
 import "../style/style.scss";
 
 export const wizardAlgorithm = async (formFields) => {
@@ -18,15 +17,14 @@ export const wizardAlgorithm = async (formFields) => {
 			credentials: "include", // For all fetch requests, do this!
 			body: JSON.stringify({ formFields })
 		});
-		const data = await response.json();
+        await checkRes(response);
 
-        await checkRes(response, data);
+		const data = await response.json();
 
 		//alert("Build fetched.");
 		return data;
 	} catch (error) {
-		console.error(error);
-		throw new Error(error.message || error); 
+		handleError(error);
 	}
 };
 
@@ -40,9 +38,9 @@ export const fetchUsers = async (page) => {
 			credentials: "include", // Important, because we're using cookies
 		});
 
-		const data = await response.json();
+		await checkRes(response);
 
-		await checkRes(response, data);
+		const data = await response.json();
 
 		// If data is not correct format
 		if (!Array.isArray(data)) {
@@ -51,8 +49,7 @@ export const fetchUsers = async (page) => {
 		
 		return data;
 	} catch (error) {
-		console.error(error);
-		throw new Error(error.message || error);
+		handleError(error);
 		
 	}
 };
@@ -77,10 +74,11 @@ export const fetchDynamicData = async (page, tableName, partName = "") => {
 			method: "GET",
 			credentials: "include", // Important, because we're using cookies
 		});
+
+        await checkRes(response);
+		
 		const data = await response.json();
 
-        await checkRes(response, data);
-		
 		const sanitizedData = sanitizeData(data);
 		
 		// If data is not correct format
@@ -90,8 +88,7 @@ export const fetchDynamicData = async (page, tableName, partName = "") => {
 		
 		return sanitizedData;
 	} catch (error) {
-		console.error(error);
-		throw new Error(error.message || error);
+		handleError(error);
 	}
 };
 
@@ -122,18 +119,15 @@ export const updateDynamicData = async (formFields, tableName, partName = null, 
 			body: JSON.stringify({ formFields })
 		});
 
-		const data = await response.json();
+		await checkRes(response);
 
-		await checkRes(response, data);
+		const data = await response.json();
 		
 		//alert(`Successfully updated ${partName} with id ${id} from ${tableName}`);
 
 		return data;
 	} catch (error) {
-		console.error(error);
-		throw new Error(error.message || error);
-		
-
+		handleError(error);
 	}
 };
 
@@ -162,18 +156,15 @@ export const postDynamicData = async (formFields, tableName, partName) => {
 			body: JSON.stringify({ formFields })
 		});
 
-		const data = await response.json();
+        await checkRes(response);
 
-        await checkRes(response, data);
+		const data = await response.json();
 		
 		//alert(`Successfully added ${partName} to ${tableName}`);
 
 		return data;
 	} catch (error) {
-		console.error(error);
-		throw new Error(error.message || error);
-		
-
+		handleError(error);
 	}
 };
 
@@ -196,16 +187,13 @@ export const deleteDynamicData = async (tableName, partName = null, id = null) =
 			credentials: "include", // Important, because we're using cookies
 		});
 
-		const data = await response.json();
+        await checkRes(response);
 
-        await checkRes(response, data);
+		const data = await response.json();
 		
 		return true;
 	} catch (error) {
-		console.error(error);
-		throw new Error(error.message || error);
-		
-
+		handleError(error);
 	}
 };
 
@@ -218,7 +206,7 @@ export const downloadFile = async (tableName, fileName = "downloaded_file.txt") 
 			credentials: "include", // Important, because we're using cookies
 		});
 
-        await checkRes(response, null, "Failed to download file!");
+        await checkRes(response, "Failed to download file!");
 		const file = await response.blob();
 		
 		const url = window.URL.createObjectURL(file);
@@ -232,8 +220,7 @@ export const downloadFile = async (tableName, fileName = "downloaded_file.txt") 
 		
 		return true;
 	} catch (error) {
-		console.error(error);
-		throw new Error(error.message || error);
+		handleError(error);
 	}
 };
 
@@ -249,9 +236,10 @@ export const fetchSearchData = async (searchTerms, tableName) => {
 			method: "GET",
 			credentials: "include", // Important, because we're using cookies
 		});
-		const data = await response.json();
 
-        await checkRes(response, data);
+        await checkRes(response);
+
+		const data = await response.json();
 
 		const sanitizedData = sanitizeData(data);
 		
@@ -262,8 +250,7 @@ export const fetchSearchData = async (searchTerms, tableName) => {
 		
 		return sanitizedData;
 	} catch (error) {
-		console.error(error);
-		throw new Error(error.message || error);
+		handleError(error);
 	}
 };
 
@@ -281,9 +268,10 @@ export const fetchSearchIdData = async (id, tableName, partName) => {
 			method: "GET",
 			credentials: "include", // Important, because we're using cookies
 		});
-		const data = await response.json(); // Note for some reason this is a different format from email search
 
-        await checkRes(response, data);
+        await checkRes(response);
+
+		const data = await response.json();
 
 		const sanitizedData = sanitizeData(data);
 
@@ -295,8 +283,7 @@ export const fetchSearchIdData = async (id, tableName, partName) => {
 		
 		return sanitizedData;
 	} catch (error) {
-		console.error(error);
-		throw new Error(error.message || error);
+		handleError(error);
 	}
 };
 
@@ -313,14 +300,13 @@ export const fetchDataAmount = async (tableName) => {
 			credentials: "include", // Important, because we're using cookies
 		});
 		
-		const data = await response.json();
+        await checkRes(response);
 		
-        await checkRes(response, data);
+		const data = await response.json();
 
 		return data;
 	} catch (error) {
-		console.error(error);
-		throw new Error(error.message || error);
+		handleError(error);
 	}
     
 };
@@ -332,14 +318,13 @@ export const fetchServerRoutes = async () => {
 			credentials: "include", // Important, because we're using cookies
 		});
 
-		const data = await response.json();
+        await checkRes(response);
 
-        await checkRes(response, data);
+		const data = await response.json();
 
 		return data;
 	} catch (error) {
-		console.error(error);
-		throw new Error(error.message || error);
+		handleError(error);
 	}
     
 };
@@ -382,9 +367,9 @@ export const fetchContent = async (identifiers) => {
 			method: "GET",
 			credentials: "include", // Important, because we're using cookies
 		});
-		const data = await response.json();
+        await checkRes(response);
 
-        await checkRes(response, data);
+		const data = await response.json();
 
 		const checkPublish = data.content.some((item) => item.Status !== "published");
 
@@ -407,8 +392,7 @@ export const fetchContent = async (identifiers) => {
 		
 		return sanitizedData;
 	} catch (error) {
-		console.error(error);
-		throw new Error(error.message || error);
+		handleError(error);
 	}
 };
 
@@ -450,9 +434,9 @@ export const fetchWholeContent = async (identifiers) => {
 			method: "GET",
 			credentials: "include", // Important, because we're using cookies
 		});
-		const data = await response.json();
+        await checkRes(response);
 
-        await checkRes(response, data);
+		const data = await response.json();
 
 		if (data.contentMap && data.content) {
 			data.content.forEach((item) => {
@@ -473,8 +457,7 @@ export const fetchWholeContent = async (identifiers) => {
 		
 		return sanitizedData;
 	} catch (error) {
-		console.error(error);
-		throw new Error(error.message || error);
+		handleError(error);
 	}
 };
 
@@ -485,9 +468,9 @@ export const fetchContentIdentifiers = async () => {
 			credentials: "include", // Important, because we're using cookies
 		});
 		
-		const data = await response.json();
+        await checkRes(response);
 
-        await checkRes(response, data);
+		const data = await response.json();
 
 		if (typeof data === "object") {
 			return Object.values(data);
@@ -495,8 +478,7 @@ export const fetchContentIdentifiers = async () => {
 		
 		return data;
 	} catch (error) {
-		console.error(error);
-		throw new Error(error.message || error);
+		handleError(error);
 	}
 };
 
@@ -529,14 +511,13 @@ export const addContent = async (formFields) => {
 			credentials: "include", // For all fetch requests, do this!
 			body: JSON.stringify({ formFields })
 		});
-		const data = await response.json();
+        await checkRes(response);
 
-        await checkRes(response, data);
+		const data = await response.json();
 
 		return data;
 	} catch (error) {
-		console.error(error);
-		throw new Error(error.message || error);
+		handleError(error);
 	}
 };
 
@@ -566,14 +547,13 @@ export const updateContent = async (formFields) => {
 			body: JSON.stringify({ formFields })
 		});
 
-		const data = await response.json();
+        await checkRes(response);
 
-        await checkRes(response, data);
+		const data = await response.json();
 
 		return data;
 	} catch (error) {
-		console.error(error);
-		throw new Error(error.message || error);
+		handleError(error);
 		
 
 	}
@@ -598,10 +578,10 @@ export const handleSignin = async (event, formFields, handleUserChange) => {
 				credentials: "include", // For all fetch requests, do this!
 				body: JSON.stringify({ formFields })
 			});
+			await checkRes(response);
+
 			const data = await response.json();
 			console.log(data.user);
-
-			await checkRes(response, data);
 
 			//alert("Successfully signed in!");
 			handleUserChange(data.user);
@@ -609,8 +589,7 @@ export const handleSignin = async (event, formFields, handleUserChange) => {
 
 			}
 	} catch (error) {
-		console.error(error);
-		throw new Error(error.message || error);
+		handleError(error);
 	}
 };
 
@@ -628,41 +607,40 @@ export const handleSignup = async (event, formFields) => {
 			body: JSON.stringify({ formFields })
 		});
 
-		const data = await response.json();
+        await checkRes(response);
 
-        await checkRes(response, data);
+		const data = await response.json();
 
 		//alert("Signed up successfully");
 
 		return true;
 	} catch (error) {
-		console.error(error);
-		throw new Error(error.message || error);
-		
-
+		handleError(error);
 	}
 };
 
 // Signout
 export const handleSignout = async (handleUserChange) => {
-	
-	// api call to log out the user
-	const response = await fetch("http://localhost:4000/api/logout", {
-		method: "POST",
-		credentials: "include",  // Important, because we're using cookies
-	});
+	try {
+		// api call to log out the user
+		const response = await fetch("http://localhost:4000/api/logout", {
+			method: "POST",
+			credentials: "include",  // Important, because we're using cookies
+		});
 
-	const data = await response.json();
-	
-	// If successful, reload the current window
-	if (response.ok) {
+		await checkRes(response);
+
+		const data = await response.json();
+
+		// If successful, reload the current window
 		localStorage.removeItem("accessToken");
 		sessionStorage.removeItem("accessToken");
-		
+
 		window.location.reload();
 		return "Logged out successfully";
-	} else {
-		console.error(data.error);
+		
+	} catch (error) {
+		handleError(error);
 	}
 };
 
@@ -677,20 +655,14 @@ export const checkIfSignedIn = async () => {
 			credentials: "include", // Important, because we're using cookies
 		});
 
+		await checkRes(response);
+		
 		const data = await response.json();
 		console.log(data);
 
-		// If the user is authenticated, return user data
-		if (response.ok) {
-			return data;
-		} else {
-			// If authentication fails
-			// User is not signed in (invalid token or other error)
-			return data.message;
-		}
+		return data;
 	} catch (error) {
-		console.error(error);
-		throw new Error(error.message || error);
+		handleError(error);
 	}
 };
 
@@ -705,20 +677,13 @@ export const refreshProfile = async () => {
 			credentials: "include", // Important, because we're using cookies
 		});
 
+		await checkRes(response);
+		
 		const data = await response.json();
-
-		// If the user is authenticated, return user data
-		if (response.ok) {
-			//handleUserChange(data.userData)
-			return data.userData;
-		} else {
-			// If authentication fails
-			// User is not signed in (invalid token or other error)
-			return null;
-		}
+		
+		return data.userData;
 	} catch (error) {
-		console.error(error);
-		throw new Error(error.message || error);
+		handleError(error);
 	}
 };
 
@@ -741,15 +706,14 @@ export const handleCredentialChange = async (event, formFields) => {
 				body: formData,
 			});
 
-		const data = await response.json();
+		await checkRes(response);
 
-		await checkRes(response, data);
+		const data = await response.json();
 		
 		console.log("User updated successfully:", data);
 		return true;
     } catch (error) {
-		console.error(error);
-		throw new Error(error.message || error);
+		handleError(error);
     }
 };
 
@@ -759,15 +723,15 @@ export const activateAccount = async (activationToken) => {
 
 		await checkAllowedTableNames(["getroutes"], tableName);
 
-		const query = await buildQuery(activationToken, true);
+		const query = await buildQuery(activationToken, false);
 		
 		const response = await fetch(`http://localhost:4000/api/${tableName}?${query}`, {
 			method: "GET",
 			credentials: "include", // Important, because we're using cookies
 		});
-		const data = await response.json();
+        await checkRes(response);
 
-        await checkRes(response, data);
+		const data = await response.json();
 		
 		const sanitizedData = sanitizeData(data);
 		
@@ -778,7 +742,6 @@ export const activateAccount = async (activationToken) => {
 		
 		return sanitizedData;
 	} catch (error) {
-		console.error(error);
-		throw new Error(error.message || error);
+		handleError(error);
 	}
 };
