@@ -23,6 +23,8 @@ import UsedPartsModify from './components/UsedPartsModify';
 import ShoppingCart from './components/ShoppingCart';
 import ContentManagementModal from './components/ContentManagementModal';
 import ErrorModule from './components/ErrorModule';
+import PasswordReset from './components/PasswordReset';
+import PasswordForgot from './components/PasswordForgot';
 import {
 	fetchUsers,
 	fetchDynamicData,
@@ -91,6 +93,8 @@ function App() {
 						<Routes>
 							<Route path="/" element={<Home />} />
 							<Route path="/activate" element={<Activate activateAccount={activateAccount} />} />
+							<Route path="/forgot-password" element={<ProtectedRoute unloggedOnly><PasswordForgot postDynamicData={postDynamicData} /></ProtectedRoute>} />
+							<Route path="/reset-password" element={<ProtectedRoute unloggedOnly><PasswordReset postDynamicData={postDynamicData} /></ProtectedRoute>} />
 							{/*{currentUser && currentUser.role === "admin" && (*/}
 
 							<Route path="admin" element={<ProtectedRoute adminOnly><Admin /></ProtectedRoute>}>

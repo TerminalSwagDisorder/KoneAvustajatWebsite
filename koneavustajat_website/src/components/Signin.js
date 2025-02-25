@@ -95,6 +95,9 @@ export const Signin = ({ handleSignin }) => {
 					</Button>
 				</Form>
 				<Button style={{ width: "100%" }} as={Link} to="/signup">Sign up</Button>
+				<Button as={Link} to="/forgot-password" style={{ width: "100%" }}>
+					Forgot password?
+				</Button>
 			</div>
 		</Container>
 	);

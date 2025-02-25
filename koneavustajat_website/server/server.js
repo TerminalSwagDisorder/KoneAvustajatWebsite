@@ -224,6 +224,17 @@ const authenticateSession = (req, res, next) => {
 		});
 	}
 };
+
+const unloggedOnly = (req, res, next) => {
+	//console.log(req.session)
+	if (req.session.user) {
+		return res.status(401).json({
+			message: "You cannot be logged to do this action"
+		});
+	}
+	next();
+};
+
 ////////////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////
@@ -523,6 +534,33 @@ const userSchema = Joi.object({
 			"string.empty": "Email cannot be empty",
 			"any.required": "Email is required"
 		}),
+	Password: Joi.string().trim()
+		.required()
+		.pattern(/^(?=.*[A-Z])(?=.*\d)[\w!@#$%^&*()_\-+=\[\]{}:;"'<>,.?\/]{9,}$/)
+		.messages({
+			"string.pattern.base": "Invalid password format. Password must be at least 9 characters long, include 1 capital letter, and 1 number.",
+			"string.empty": "Password cannot be empty",
+			"any.required": "Password is required"
+		})
+});
+
+const passwordForgotSchema = Joi.object({
+	Email: Joi.string().trim()
+		.required()
+		.email() // Built in regex
+		.messages({
+			"string.email": "Invalid email format. Please enter a valid email address in the format: example@domain.com",
+			"string.empty": "Email cannot be empty",
+			"any.required": "Email is required"
+		})
+});
+
+const passwordResetSchema = Joi.object({
+	passwordResetToken: Joi.string().trim().required().messages({
+		"string.base": "Token must be a string",
+		"string.empty": "Token cannot be empty",
+		"any.required": "Token is required"
+	}),
 	Password: Joi.string().trim()
 		.required()
 		.pattern(/^(?=.*[A-Z])(?=.*\d)[\w!@#$%^&*()_\-+=\[\]{}:;"'<>,.?\/]{9,}$/)
@@ -3119,9 +3157,9 @@ const checkItemLength = (item) => {
 	return true;
 };
 
-const sendEmail = async (from, to, subject, text, html = "") => {
+const sendEmail = async (from, to, subject, text, html = "", toUser = null) => {
 		const mailOptions = {
-		from: `"KoneAvustajat <${from}>"`,
+		from: `"KoneAvustajat ${from}"`,
 		to: to,
 		subject: subject,
 		text: text,
@@ -3129,6 +3167,13 @@ const sendEmail = async (from, to, subject, text, html = "") => {
 	};
 
 	try {
+		const emailQuery = "INSERT INTO email_transactions (EmailTypeID, ToUserID, ToEmail, FromEmail, Subject, Text, Content) VALUES (?, ?, ?, ?, ?, ?, ?)";
+		const emailParams = [1, toUser, to, from, subject, text, html];
+		const [email] = await promisePool.query(emailQuery, emailParams);
+		if (!email.insertId) {
+			console.error("Could not insert email into database!");
+		}
+
 		const info = await transporter.sendMail(mailOptions);
 		console.log(`Email sent: ${info.messageId}`);
 		return info;
@@ -3635,7 +3680,7 @@ app.get("/api/users", routePagination, async (req, res) => {
 	}
 });
 
-app.get("/api/users/id", idValidator, async (req, res) => {
+app.get("/api/users/id/:id", idValidator, async (req, res) => {
 	console.log("API search users by id accessed");
 
 	const id = req.validatedId;
@@ -3687,7 +3732,7 @@ app.get("/api/users", routePagination, async (req, res) => {
 	}
 });
 
-app.get("/api/users/id", idValidator, async (req, res) => {
+app.get("/api/users/id/:id", idValidator, async (req, res) => {
 	console.log("API search users by id accessed");
 
 	const id = req.validatedId;
@@ -3715,7 +3760,7 @@ app.get("/api/users/id", idValidator, async (req, res) => {
 });
 
 // Signing up
-app.post("/api/users/signup", formFieldsValidator(userSchema), userFieldsValidator, async (req, res) => {
+app.post("/api/users/signup", unloggedOnly, formFieldsValidator(userSchema), userFieldsValidator, async (req, res) => {
 	console.log("API user signup accessed");
 
 	const { Name, Email, Password } = req.validatedForm;
@@ -3736,13 +3781,45 @@ app.post("/api/users/signup", formFieldsValidator(userSchema), userFieldsValidat
 		const insertCustomer = "INSERT INTO customers (UserID) VALUES (?)";
 		const [customer] = await promisePool.query(insertCustomer, result.insertId);
 		
-		const insertToken = "INSERT INTO tokens (UserID, TokenTypeID, Token, ExpriesAt) VALUES (?, ?, ?, NOW() + INTERVAL 1 HOUR)";
+		const insertToken = "INSERT INTO tokens (UserID, TokenTypeID, Token, ExpiresAt) VALUES (?, ?, ?, NOW() + INTERVAL 1 HOUR)";
 		const tokenParams = [result.insertId, 1, randomToken];
 		const [token] = await promisePool.query(insertToken, tokenParams);
 		
 		const activationLink = `${frontendUrl}/activate?activationToken=${randomToken}`;
 		
-		const emailSuccess = await sendEmail(companyEmail, Email, "Signup test", "This is a test for signing up!", `<h2>Hello <strong>${Name}</strong>!</h2><br></br><p>You have test signed up to our website using the email <strong>${Email}</strong><br></br>Click <a href='${activationLink}'>here</a> to finish signing up!`);
+		const emailSuccess = await sendEmail(
+			companyEmail,
+			Email,
+			"Signup test",
+			"This is a test for signing up!",
+			`
+			<html>
+			  <body style="font-family: Arial, sans-serif; background-color: #f2f2f2; margin: 0; padding: 20px;">
+				<div style="max-width: 600px; margin: 0 auto; background-color: #ffffff; padding: 30px; border-radius: 8px; box-shadow: 0 2px 5px rgba(0,0,0,0.1);">
+				  <h2 style="color: #333;">Welcome, <strong>${Name}</strong>!</h2>
+				  <p style="color: #555; font-size: 16px;">
+					Thank you for signing up using the email <strong>${Email}</strong>.
+				  </p>
+				  <p style="color: #555; font-size: 16px;">
+					Please click the button below to verify your account and get started.
+				  </p>
+				  <div style="text-align: center; margin: 30px 0;">
+					<a href="${activationLink}" style="background-color: #007BFF; color: #ffffff; padding: 12px 20px; text-decoration: none; border-radius: 5px; font-size: 16px;">
+					  Activate Your Account
+					</a>
+				  </div>
+				  <p style="color: #999; font-size: 14px;">
+					If you did not create an account, please ignore this email.
+				  </p>
+				  <p style="color: #999; font-size: 14px; margin-top: 30px;">
+					Best regards,<br>KoneAvustajat
+				  </p>
+				</div>
+			  </body>
+			</html>
+			`,
+			result.insertId
+		);
 		//await sendEmail(from, to, subject, text, html);
 		//http://localhost:3000/activate?activationToken=dc923820862064e0fa73a4dd123365f4112ae1fffe8773a376d340ba813e6694
 		// Only for testing
@@ -3759,7 +3836,7 @@ app.post("/api/users/signup", formFieldsValidator(userSchema), userFieldsValidat
 	}
 });
 
-app.get("/api/users/activate", async (req, res) => {
+app.get("/api/users/activate", unloggedOnly, async (req, res) => {
 	console.log("API user activation accessed");
 
 	const { activationToken } = req.query;
@@ -3801,7 +3878,159 @@ app.get("/api/users/activate", async (req, res) => {
 	}
 });
 
-app.post("/api/users/login", formFieldsValidator(loginSchema), userFieldsValidator, async (req, res) => {
+app.post("/api/users/forgotpassword", unloggedOnly, formFieldsValidator(passwordForgotSchema), userFieldsValidator, async (req, res) => {
+	console.log("API user forgot password accessed");
+
+	const { Email } = req.validatedForm;
+	const randomToken = generateToken(); // Please hash before usage!
+
+	try {
+		// Check if email exists
+		const emailCheckSql = "SELECT UserID, Email FROM users WHERE Email = ?";
+		const [[user]] = await promisePool.query(emailCheckSql, [Email]);
+		if (!user) {
+			return res.status(200).json({ message: "If an account with that email exists, a reset link has been sent" });
+		}
+		const insertToken = "INSERT INTO tokens (UserID, TokenTypeID, Token, ExpiresAt) VALUES (?, ?, ?, NOW() + INTERVAL 1 HOUR)";
+		const tokenParams = [user.UserID, 2, randomToken];
+		const [token] = await promisePool.query(insertToken, tokenParams);
+		
+		const passwordResetLink = `${frontendUrl}/reset-password?passwordResetToken=${randomToken}`;
+		
+		const emailSuccess = await sendEmail(
+			companyEmail,
+			Email,
+			"Reset password",
+			"Reset your password.",
+			`
+			<html>
+			  <body style="font-family: Arial, sans-serif; background-color: #f2f2f2; margin: 0; padding: 20px;">
+				<div style="max-width: 600px; margin: 0 auto; background-color: #ffffff; padding: 30px; border-radius: 8px; box-shadow: 0 2px 5px rgba(0,0,0,0.1);">
+				  <p style="color: #555; font-size: 16px;">
+					You sent a password reset request using the email <strong>${Email}</strong>.
+				  </p>
+				  <p style="color: #555; font-size: 16px;">
+					Please click the button below to reset your password.
+				  </p>
+				  <div style="text-align: center; margin: 30px 0;">
+					<a href="${passwordResetLink}" style="background-color: #007BFF; color: #ffffff; padding: 12px 20px; text-decoration: none; border-radius: 5px; font-size: 16px;">
+					  Reset password
+					</a>
+				  </div>
+				  <p style="color: #999; font-size: 14px;">
+					If you did not request a password reset, please ignore this email.
+				  </p>
+				  <p style="color: #999; font-size: 14px; margin-top: 30px;">
+					Best regards,<br>KoneAvustajat
+				  </p>
+				</div>
+			  </body>
+			</html>
+			`,
+			user.UserID
+		);
+		//await sendEmail(from, to, subject, text, html);
+		//http://localhost:3000/activate?activationToken=dc923820862064e0fa73a4dd123365f4112ae1fffe8773a376d340ba813e6694
+		// Only for testing
+		if (emailSuccess) {
+			console.log("Successfully sent email!");
+		} else {
+			console.log("Something went wrong when sending email!");
+		}
+		
+		return res.status(200).json({ message: "User registered successfully", id: user.UserID });
+	} catch (error) {
+		const [status, message] = handleServerError(error);
+		return res.status(status).json({ message: message });
+	}
+});
+
+app.post("/api/users/resetpassword", unloggedOnly, formFieldsValidator(passwordResetSchema), async (req, res) => {
+	console.log("API user password reset accessed");
+
+	const { Password, passwordResetToken } = req.validatedForm;
+	console.log(req.validatedForm);
+
+	try {
+		if (!passwordResetToken) {
+			return res.status(400).json({ message: "Password reset token is missing" });
+		}
+		// Look up the token in the tokens table
+		// Assume token type 1 is for account verification
+		const tokenSql = "SELECT * FROM tokens WHERE Token = ? AND TokenTypeID = 2";
+		const [[token]] = await promisePool.query(tokenSql, [passwordResetToken]);
+		if (!token) {
+			return res.status(400).json({ message: "Invalid password reset token" });
+		}
+
+		if (token.UsedAt !== null) {
+			return res.status(400).json({ message: "The token has already been used" });
+		}
+		
+		const emailCheckSql = "SELECT UserID, Email FROM users WHERE UserID = ?";
+		const [[user]] = await promisePool.query(emailCheckSql, [token.UserID]);
+		if (!user) {
+			return res.status(404).json({ message: "User does not exist" });
+		}
+
+		// Check if the token has expired
+		const now = new Date();
+		const expiresAt = new Date(token.ExpiresAt);
+		if (now > expiresAt) {
+			return res.status(400).json({ message: "Activation token has expired" });
+		}
+
+		const hashedPassword = await bcrypt.hash(Password, 10);
+		// Update the user's record to mark as activated
+		const updateUserSql = "UPDATE users SET Password = ? WHERE UserID = ?";
+		await promisePool.query(updateUserSql, [hashedPassword, token.UserID]);
+
+		const usedToken = "UPDATE tokens SET UsedAt = NOW() WHERE TokenID = ?";
+		await promisePool.query(usedToken, [token.TokenID]);
+
+		const signinLink = `${frontendUrl}/signin`;
+
+		await sendEmail(
+			companyEmail,
+			user.Email,
+			"Password successfully reset!",
+			"Password successfully reset!",
+			`
+			<html>
+			  <body style="font-family: Arial, sans-serif; background-color: #f2f2f2; margin: 0; padding: 20px;">
+				<div style="max-width: 600px; margin: 0 auto; background-color: #ffffff; padding: 30px; border-radius: 8px; box-shadow: 0 2px 5px rgba(0,0,0,0.1);">
+				  <p style="color: #555; font-size: 16px;">
+					Your password for the account <strong>${user.Email}</strong> has been successfully reset!
+				  </p>
+				  <p style="color: #555; font-size: 16px;">
+					You can now log in using the new password.
+				  </p>
+				  <div style="text-align: center; margin: 30px 0;">
+					<a href="${signinLink}" style="background-color: #007BFF; color: #ffffff; padding: 12px 20px; text-decoration: none; border-radius: 5px; font-size: 16px;">
+					  Sign in
+					</a>
+				  </div>
+				  <p style="color: #999; font-size: 14px;">
+					If you did not request a password reset, please contact support at <strong>${companyEmail}</strong>.
+				  </p>
+				  <p style="color: #999; font-size: 14px; margin-top: 30px;">
+					Best regards,<br>KoneAvustajat
+				  </p>
+				</div>
+			  </body>
+			</html>
+			`,
+			user.UserID
+		);
+
+		return res.status(200).json({ message: "Password changed successfully" });
+	} catch (error) {
+		const [status, message] = handleServerError(error);
+		return res.status(status).json({ message: message });
+	}
+});
+
+app.post("/api/users/login", unloggedOnly, formFieldsValidator(loginSchema), userFieldsValidator, async (req, res) => {
 	console.log("API users login accessed");
 
 	const { Email, Password } = req.validatedForm;
@@ -4437,8 +4666,7 @@ app.patch("/api/inventory/update/:id", authenticateSession, idValidator, formFie
 
 			updateQuery += " WHERE PartID = ?";
 			queryParams.push(parseInt(id));
-			console.log(updateQuery)
-			console.log(queryParams)
+			
 
 			const [result] = await promisePool.query(updateQuery, queryParams);
 			console.log(result);
