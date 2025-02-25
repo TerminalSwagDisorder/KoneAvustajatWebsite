@@ -16,10 +16,12 @@ stripe trigger payment_intent.payment_failed
 -Signup needs to add the signed up user to the customer table x
 -Payment button in profile might be broken x
 -Add account activation checks x
+-Expiresat in tokens ain't working (It is incorrectly written in the database) x
+-Email sending on sign up (nodemailer) x
+-Forgot password (needs email system) x
 
--Usedat in tokens ain't working
--Email sending on sign up (nodemailer)
--Forgot password (needs email system)
+-Add express-rate-limit or similar for rate limiting (eg for forgot password)
+-Hash random token
 -Admin user page -> add full user details & orders
 -Admin users can add more admins
 -Set up CMS texts
