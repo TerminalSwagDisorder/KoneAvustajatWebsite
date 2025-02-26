@@ -17,7 +17,9 @@ const axios = require("axios");
 const Joi = require("joi");
 const PdfPrinter = require("pdfmake");
 const nodemailer = require("nodemailer");
-const { Client } = require('@opensearch-project/opensearch');
+const { RateLimiterRedis } = require("rate-limiter-flexible");
+const Redis = require("ioredis");
+const { Client } = require("@opensearch-project/opensearch");
 
 // User authentication exports
 const jwt = require("jsonwebtoken");
@@ -3889,6 +3891,7 @@ app.post("/api/users/forgotpassword", unloggedOnly, formFieldsValidator(password
 		const emailCheckSql = "SELECT UserID, Email FROM users WHERE Email = ?";
 		const [[user]] = await promisePool.query(emailCheckSql, [Email]);
 		if (!user) {
+			console.warn("Someone tried to password reset without an existing account!");
 			return res.status(200).json({ message: "If an account with that email exists, a reset link has been sent" });
 		}
 		const insertToken = "INSERT INTO tokens (UserID, TokenTypeID, Token, ExpiresAt) VALUES (?, ?, ?, NOW() + INTERVAL 1 HOUR)";
@@ -3938,7 +3941,7 @@ app.post("/api/users/forgotpassword", unloggedOnly, formFieldsValidator(password
 			console.log("Something went wrong when sending email!");
 		}
 		
-		return res.status(200).json({ message: "User registered successfully", id: user.UserID });
+		return res.status(200).json({ message: "If an account with that email exists, a reset link has been sent", id: user.UserID });
 	} catch (error) {
 		const [status, message] = handleServerError(error);
 		return res.status(status).json({ message: message });
