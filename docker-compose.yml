@@ -1,0 +1,92 @@
+version: "3.8"
+
+services:
+    opensearch:
+        image: opensearchproject/opensearch:latest
+        container_name: opensearch_container
+        environment:
+            - discovery.type=single-node
+            - OPENSEARCH_INITIAL_ADMIN_PASSWORD=Mhavurt123
+        ports:
+            - "9200:9200"
+            - "9600:9600"
+        restart: unless-stopped
+        ulimits:
+            memlock:
+                soft: -1
+                hard: -1
+        volumes:
+            - opensearch-data:/usr/share/opensearch/data
+        networks:
+            - app-network
+
+    redis:
+        image: redis:latest
+        container_name: redis_container
+        ports:
+            - "6379:6379"
+        restart: unless-stopped
+        networks:
+            - app-network
+
+    server:
+        build: ./koneavustajat_website/server
+        container_name: koneavustajat-server
+        ports:
+            - "4000:4000"
+        environment:
+            - NODE_ENV=development
+            - PORT=4000
+        depends_on:
+            - opensearch
+            - redis
+        networks:
+            - app-network
+
+    frontend:
+        build: ./koneavustajat_website
+        container_name: koneavustajat-frontend
+        ports:
+            - "3000:3000"
+        environment:
+            - NODE_ENV=development
+        depends_on:
+            - server
+        networks:
+            - app-network
+
+    db:
+        image: mariadb:10.4.32
+        container_name: mysql
+        restart: always
+        environment:
+            MYSQL_ROOT_PASSWORD: MARIADB_ALLOW_EMPTY_ROOT_PASSWORD
+        ports:
+            - "3306:3306"
+        volumes:
+            - db_data:/var/lib/mysql
+            - "./backup_db.sql:/docker-entrypoint-initdb.d/koneavustajat_db_docker.sql"
+        networks:
+            - app-network
+
+    phpmyadmin:
+        image: phpmyadmin/phpmyadmin
+        container_name: phpmyadmin
+        environment:
+            - PMA_HOST=db
+            - PMA_USER=root
+            - PMA_PASSWORD=MARIADB_ALLOW_EMPTY_ROOT_PASSWORD
+        ports:
+            - "8080:80"
+        networks:
+            - app-network
+        depends_on:
+            - db
+
+networks:
+    app-network:
+        driver: bridge
+
+volumes:
+    opensearch-data:
+    db_data:
