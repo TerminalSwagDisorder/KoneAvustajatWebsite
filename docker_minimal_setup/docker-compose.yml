@@ -1,0 +1,31 @@
+version: "3.8"
+
+services:
+    opensearch:
+        image: opensearchproject/opensearch:latest
+        container_name: opensearch_container_min
+        environment:
+            - discovery.type=single-node
+            - OPENSEARCH_INITIAL_ADMIN_PASSWORD=Mhavurt123
+        ports:
+            - "9200:9200"
+            - "9600:9600"
+        restart: unless-stopped
+        ulimits:
+            memlock:
+                soft: -1
+                hard: -1
+        volumes:
+            - opensearch-data:/usr/share/opensearch/data
+            - ./opensearch_dev.yml:/usr/share/opensearch/config/opensearch.yml
+
+    redis:
+        image: redis:latest
+        container_name: redis_container_min
+        ports:
+            - "6379:6379"
+        restart: unless-stopped
+
+volumes:
+    opensearch-data:
+    opensearch_dev: 
