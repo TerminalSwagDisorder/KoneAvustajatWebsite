@@ -1,16 +1,15 @@
-FROM node:20.17.0 AS build
+FROM node:20.7.0
 
 WORKDIR /app
 
-COPY package*.json ./
+COPY ../package*.json ./
+
+RUN npm install -g nodemon
+
 RUN npm install
 
 COPY . .
-RUN nodemon server.js
-
-FROM nginx:alpine
-COPY --from=build /app/build /usr/share/nginx/html
 
 EXPOSE 4000
 
-CMD ["nginx", "-g", "daemon off;"]
+CMD ["npm", "run", "server"]

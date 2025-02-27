@@ -5,11 +5,13 @@
 import { checkAllowedTableNames, checkAllowedPartNames, checkSearchTerms, buildQuery, validateIdentifiers, checkRes, sanitizeData, handleError } from "./helpers";
 import "../style/style.scss";
 
+const apiUrl = process.env.REACT_APP_API_URL;
+
 export const wizardAlgorithm = async (formFields) => {
 	try {
 		if (formFields && typeof formFields === "object" && !Array.isArray(formFields)) formFields = JSON.stringify(formFields);
 
-		const response = await fetch("http://localhost:4000/api/algorithm", {
+		const response = await fetch(`${apiUrl}/api/algorithm`, {
 			method: "POST",
 			headers: {
 				"Content-Type": "application/json"
@@ -33,7 +35,7 @@ export const wizardAlgorithm = async (formFields) => {
 // Fetch users using pagination
 export const fetchUsers = async (page) => {
 	try {
-		const response = await fetch(`http://localhost:4000/api/users?page=${page}&items=50`, {
+		const response = await fetch(`${apiUrl}/api/users?page=${page}&items=50`, {
 			method: "GET",
 			credentials: "include", // Important, because we're using cookies
 		});
@@ -70,7 +72,7 @@ export const fetchDynamicData = async (page, tableName, partName = "") => {
 
 		const query = await buildQuery(correctSearchTerms, true);
 		
-		const response = await fetch(`http://localhost:4000/api/${tableName}?${query}`, {
+		const response = await fetch(`${apiUrl}/api/${tableName}?${query}`, {
 			method: "GET",
 			credentials: "include", // Important, because we're using cookies
 		});
@@ -94,7 +96,7 @@ export const fetchDynamicData = async (page, tableName, partName = "") => {
 
 export const updateDynamicData = async (formFields, tableName, partName = null, id = null) => {
 	try {
-		console.log(`http://localhost:4000/api/${tableName}/update/${partName}/${id}`);
+		console.log(`${apiUrl}/api/${tableName}/update/${partName}/${id}`);
 		console.log(formFields);
 		await checkAllowedTableNames(["patchroutes"], `${tableName}${partName ? "/" + partName : ""}${id ? "/" + id : ""}`);
 		
@@ -110,7 +112,7 @@ export const updateDynamicData = async (formFields, tableName, partName = null, 
 
 		if (formFields && typeof formFields === "object" && !Array.isArray(formFields)) formFields = JSON.stringify(formFields);
 		// api call to register a new user
-		const response = await fetch(`http://localhost:4000/api/${tableName}${tableName.includes("/update") ? "" : "/update"}${partName ? "/" + partName : ""}${id ? "/" + id : ""}`, {
+		const response = await fetch(`${apiUrl}/api/${tableName}${tableName.includes("/update") ? "" : "/update"}${partName ? "/" + partName : ""}${id ? "/" + id : ""}`, {
 			method: "PATCH",
 			headers: {
 				"Content-Type": "application/json"
@@ -147,7 +149,7 @@ export const postDynamicData = async (formFields, tableName, partName) => {
 
 		if (formFields && typeof formFields === "object" && !Array.isArray(formFields)) formFields = JSON.stringify(formFields);
 		// api call to register a new user
-		const response = await fetch(`http://localhost:4000/api/${tableName}${partName ? "/" + partName : ""}`, {
+		const response = await fetch(`${apiUrl}/api/${tableName}${partName ? "/" + partName : ""}`, {
 			method: "POST",
 			headers: {
 				"Content-Type": "application/json"
@@ -179,7 +181,7 @@ export const deleteDynamicData = async (tableName, partName = null, id = null) =
 		}
 
 		// api call to register a new user
-		const response = await fetch(`http://localhost:4000/api/${tableName}${tableName.includes("/delete") ? "" : "/delete"}/${partName ? "/" + partName : ""}${id ? "/" + id : ""}`, {
+		const response = await fetch(`${apiUrl}/api/${tableName}${tableName.includes("/delete") ? "" : "/delete"}/${partName ? "/" + partName : ""}${id ? "/" + id : ""}`, {
 			method: "DELETE",
 			headers: {
 				"Content-Type": "application/json"
@@ -201,7 +203,7 @@ export const downloadFile = async (tableName, fileName = "downloaded_file.txt") 
 	try {
 		await checkAllowedTableNames(["getroutes"], tableName);
 		
-		const response = await fetch(`http://localhost:4000/api/${tableName}`, {
+		const response = await fetch(`${apiUrl}/api/${tableName}`, {
 			method: "GET",
 			credentials: "include", // Important, because we're using cookies
 		});
@@ -232,7 +234,7 @@ export const fetchSearchData = async (searchTerms, tableName) => {
 		
 		const query = await buildQuery(correctSearchTerms, false);
 
-		const response = await fetch(`http://localhost:4000/api/${tableName}?${query}`, {
+		const response = await fetch(`${apiUrl}/api/${tableName}?${query}`, {
 			method: "GET",
 			credentials: "include", // Important, because we're using cookies
 		});
@@ -264,7 +266,7 @@ export const fetchSearchIdData = async (id, tableName, partName) => {
 		const correctSearchTerms = await checkSearchTerms([partName, id]);
 		const query = await buildQuery(correctSearchTerms, true);
 		
-		const response = await fetch(`http://localhost:4000/api/${tableName}?${query}`, {
+		const response = await fetch(`${apiUrl}/api/${tableName}?${query}`, {
 			method: "GET",
 			credentials: "include", // Important, because we're using cookies
 		});
@@ -295,7 +297,7 @@ export const fetchDataAmount = async (tableName) => {
 		const correctSearchTerms = await checkSearchTerms(tableName);
 		const query = await buildQuery(correctSearchTerms, true);
 
-		const response = await fetch(`http://localhost:4000/api/count?${query}`, {
+		const response = await fetch(`${apiUrl}/api/count?${query}`, {
 			method: "GET",
 			credentials: "include", // Important, because we're using cookies
 		});
@@ -313,7 +315,7 @@ export const fetchDataAmount = async (tableName) => {
 
 export const fetchServerRoutes = async () => {
 	try {	
-		const response = await fetch("http://localhost:4000/api/routes", {
+		const response = await fetch(`${apiUrl}/api/routes`, {
 			method: "GET",
 			credentials: "include", // Important, because we're using cookies
 		});
@@ -363,7 +365,7 @@ export const fetchContent = async (identifiers) => {
 
 		const query = await buildQuery(correctSearchTerms, true);
 
-		const response = await fetch(`http://localhost:4000/api/text-content?${query}`, {
+		const response = await fetch(`${apiUrl}/api/text-content?${query}`, {
 			method: "GET",
 			credentials: "include", // Important, because we're using cookies
 		});
@@ -430,7 +432,7 @@ export const fetchWholeContent = async (identifiers) => {
 
 		const query = await buildQuery(correctSearchTerms, true);
 		
-		const response = await fetch(`http://localhost:4000/api/text-content?${query}`, {
+		const response = await fetch(`${apiUrl}/api/text-content?${query}`, {
 			method: "GET",
 			credentials: "include", // Important, because we're using cookies
 		});
@@ -463,7 +465,7 @@ export const fetchWholeContent = async (identifiers) => {
 
 export const fetchContentIdentifiers = async () => {
 	try {	
-		const response = await fetch("http://localhost:4000/api/text-content/identifiers", {
+		const response = await fetch(`${apiUrl}/api/text-content/identifiers`, {
 			method: "GET",
 			credentials: "include", // Important, because we're using cookies
 		});
@@ -503,7 +505,7 @@ export const addContent = async (formFields) => {
 
 		if (formFields && typeof formFields === "object" && !Array.isArray(formFields)) formFields = JSON.stringify(formFields);
 
-		const response = await fetch("http://localhost:4000/api/text-content/add", {
+		const response = await fetch(`${apiUrl}/api/text-content/add`, {
 			method: "POST",
 			headers: {
 				"Content-Type": "application/json"
@@ -538,7 +540,7 @@ export const updateContent = async (formFields) => {
 
 		if (formFields && typeof formFields === "object" && !Array.isArray(formFields)) formFields = JSON.stringify(formFields);
 		// api call to register a new user
-		const response = await fetch("http://localhost:4000/api/text-content/update", {
+		const response = await fetch(`${apiUrl}/api/text-content/update`, {
 			method: "PATCH",
 			headers: {
 				"Content-Type": "application/json"
@@ -570,7 +572,7 @@ export const handleSignin = async (event, formFields, handleUserChange) => {
 		if (email && password) {
 			if (formFields && typeof formFields === "object" && Array.isArray(formFields)) formFields = JSON.stringify(formFields);
 
-			const response = await fetch("http://localhost:4000/api/users/login", {
+			const response = await fetch(`${apiUrl}/api/users/login`, {
 				method: "POST",
 				headers: {
 					"Content-Type": "application/json"
@@ -598,7 +600,7 @@ export const handleSignup = async (event, formFields) => {
 	try {
 		if (formFields && typeof formFields === "object" && Array.isArray(formFields)) formFields = JSON.stringify(formFields);
 		// api call to register a new user
-		const response = await fetch("http://localhost:4000/api/users/signup", {
+		const response = await fetch(`${apiUrl}/api/users/signup`, {
 			method: "POST",
 			headers: {
 				"Content-Type": "application/json"
@@ -623,7 +625,7 @@ export const handleSignup = async (event, formFields) => {
 export const handleSignout = async (handleUserChange) => {
 	try {
 		// api call to log out the user
-		const response = await fetch("http://localhost:4000/api/logout", {
+		const response = await fetch(`${apiUrl}/api/logout`, {
 			method: "POST",
 			credentials: "include",  // Important, because we're using cookies
 		});
@@ -650,7 +652,7 @@ export const checkIfSignedIn = async () => {
 
 	// api call to get the user's profile information
 	try {
-		const response = await fetch("http://localhost:4000/api/profile", {
+		const response = await fetch(`${apiUrl}/api/profile`, {
 			method: "GET",
 			credentials: "include", // Important, because we're using cookies
 		});
@@ -672,7 +674,7 @@ export const refreshProfile = async () => {
 
 	// api call to get the user's profile information
 	try {
-		const response = await fetch("http://localhost:4000/api/profile/refresh", {
+		const response = await fetch(`${apiUrl}/api/profile/refresh`, {
 			method: "GET",
 			credentials: "include", // Important, because we're using cookies
 		});
@@ -700,7 +702,7 @@ export const handleCredentialChange = async (event, formFields) => {
 		
 		if (formFields.currentPassword === "" || formFields.currentPassword === undefined) throw new Error("Current password is required when submitting new profile info!");
 
-		const response = await fetch("http://localhost:4000/api/profile", {
+		const response = await fetch(`${apiUrl}/api/profile`, {
 				method: "PATCH",
 				credentials: "include", // Important, because we're using cookies
 				body: formData,
@@ -725,7 +727,7 @@ export const activateAccount = async (activationToken) => {
 
 		const query = await buildQuery(activationToken, false);
 		
-		const response = await fetch(`http://localhost:4000/api/${tableName}?${query}`, {
+		const response = await fetch(`${apiUrl}/api/${tableName}?${query}`, {
 			method: "GET",
 			credentials: "include", // Important, because we're using cookies
 		});

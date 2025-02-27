@@ -47,6 +47,7 @@ const testEmailPassword = process.env.TEST_EMAIL_PASSWORD;
 const testEmailProvider = process.env.TEST_EMAIL_PROVIDER;
 const frontendUrl = process.env.FRONTEND_URL;
 const backendUrl = process.env.BACKEND_URL;
+const corsUrl = process.env.CORS;
 
 const generatedEnvVars = { SESSION_SECRET: sessionSecret, JWT_SECRET: jwtSecret, OPENSEARCH_URL: opensearch };
 const otherEnvVars = {
@@ -60,7 +61,8 @@ const otherEnvVars = {
 	TEST_EMAIL_PASSWORD: testEmailPassword,
 	TEST_EMAIL_PROVIDER: testEmailProvider,
 	FRONTEND_URL: frontendUrl,
-	BACKEND_URL: backendUrl
+	BACKEND_URL: backendUrl,
+	CORS: corsUrl,
 };
 
 for (const vars of [generatedEnvVars, otherEnvVars]) {
@@ -86,7 +88,7 @@ const port = 4000;
 
 // Cors options to allow the use of user cookies
 const corsOptions = {
-	origin: "http://localhost:3000", // replace with your applications origin
+	origin: corsUrl, // replace with your applications origin
 	credentials: true // allows the Access-Control-Allow-Credentials: true header
 };
 
@@ -98,8 +100,8 @@ app.use(
 	helmet({
 		contentSecurityPolicy: {
 			directives: {
-				defaultSrc: ["'self'", "http://localhost:8080", "http://localhost:3000", opensearch],
-				scriptSrc: ["'self'", "'unsafe-inline'", "http://localhost:3000", opensearch]
+				defaultSrc: ["'self'", frontendUrl, corsUrl, opensearch],
+				scriptSrc: ["'self'", frontendUrl, corsUrl, opensearch]
 				// imgSrc: ["'self'", "data:"], // If we need image uploading
 			}
 		},
@@ -3787,7 +3789,7 @@ app.post("/api/users/signup", unloggedOnly, formFieldsValidator(userSchema), use
 		const tokenParams = [result.insertId, 1, randomToken];
 		const [token] = await promisePool.query(insertToken, tokenParams);
 		
-		const activationLink = `${frontendUrl}/activate?activationToken=${randomToken}`;
+		const activationLink = `${corsUrl}/activate?activationToken=${randomToken}`;
 		
 		const emailSuccess = await sendEmail(
 			companyEmail,
@@ -3898,7 +3900,7 @@ app.post("/api/users/forgotpassword", unloggedOnly, formFieldsValidator(password
 		const tokenParams = [user.UserID, 2, randomToken];
 		const [token] = await promisePool.query(insertToken, tokenParams);
 		
-		const passwordResetLink = `${frontendUrl}/reset-password?passwordResetToken=${randomToken}`;
+		const passwordResetLink = `${corsUrl}/reset-password?passwordResetToken=${randomToken}`;
 		
 		const emailSuccess = await sendEmail(
 			companyEmail,
@@ -3991,7 +3993,7 @@ app.post("/api/users/resetpassword", unloggedOnly, formFieldsValidator(passwordR
 		const usedToken = "UPDATE tokens SET UsedAt = NOW() WHERE TokenID = ?";
 		await promisePool.query(usedToken, [token.TokenID]);
 
-		const signinLink = `${frontendUrl}/signin`;
+		const signinLink = `${corsUrl}/signin`;
 
 		await sendEmail(
 			companyEmail,

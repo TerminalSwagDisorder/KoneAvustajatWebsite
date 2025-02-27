@@ -17,6 +17,7 @@ services:
                 hard: -1
         volumes:
             - opensearch-data:/usr/share/opensearch/data
+            - ./opensearch_dev.yml:/usr/share/opensearch/config/opensearch.yml
         networks:
             - app-network
 
@@ -30,13 +31,17 @@ services:
             - app-network
 
     server:
-        build: ./koneavustajat_website/server
+        build:
+            context: ../koneavustajat_website
+            dockerfile: server/Dockerfile
         container_name: koneavustajat-server
         ports:
             - "4000:4000"
         environment:
             - NODE_ENV=development
             - PORT=4000
+        env_file:
+          - ./docker.env
         depends_on:
             - opensearch
             - redis
@@ -44,12 +49,16 @@ services:
             - app-network
 
     frontend:
-        build: ./koneavustajat_website
+        build:
+          context: ../koneavustajat_website
+          dockerfile: frontend.Dockerfile
         container_name: koneavustajat-frontend
         ports:
-            - "3000:3000"
+            - "80:80"
         environment:
             - NODE_ENV=development
+        env_file:
+          - ./docker.env
         depends_on:
             - server
         networks:
@@ -65,7 +74,7 @@ services:
             - "3306:3306"
         volumes:
             - db_data:/var/lib/mysql
-            - "./backup_db.sql:/docker-entrypoint-initdb.d/koneavustajat_db_docker.sql"
+            - "./koneavustajat_db_docker.sql:/docker-entrypoint-initdb.d/koneavustajat_db_docker.sql"
         networks:
             - app-network
 
@@ -90,3 +99,4 @@ networks:
 volumes:
     opensearch-data:
     db_data:
+    opensearch_dev: 
