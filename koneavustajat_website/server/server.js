@@ -3287,8 +3287,12 @@ const sendEmail = async (from, to, subject, text, html = "", toUser = null) => {
 };
 
 const generateToken = (length = 32) => {
-	const token = crypto.randomBytes(length).toString('hex');
+	const token = crypto.randomBytes(length).toString("hex");
 	return token;
+};
+
+const hashToken = (token) => {
+  return crypto.createHash("sha256").update(token).digest("hex");
 };
 
 const rateLimitRoute = (limiter = generalRateLimiter) => {
@@ -3873,7 +3877,8 @@ app.post("/api/users/signup", rateLimitRoute(criticalRateLimiter), unloggedOnly,
 	console.log("API user signup accessed");
 
 	const { Name, Email, Password } = req.validatedForm;
-	const randomToken = generateToken(); // Please hash before usage!
+	const randomToken = generateToken();
+	const hashedToken = hashToken(randomToken);
 
 	try {
 		// Check if email exists
@@ -3891,7 +3896,7 @@ app.post("/api/users/signup", rateLimitRoute(criticalRateLimiter), unloggedOnly,
 		const [customer] = await promisePool.query(insertCustomer, result.insertId);
 		
 		const insertToken = "INSERT INTO tokens (UserID, TokenTypeID, Token, ExpiresAt) VALUES (?, ?, ?, NOW() + INTERVAL 1 HOUR)";
-		const tokenParams = [result.insertId, 1, randomToken];
+		const tokenParams = [result.insertId, 1, hashedToken];
 		const [token] = await promisePool.query(insertToken, tokenParams);
 		
 		const activationLink = `${corsUrl}/activate?activationToken=${randomToken}`;
@@ -3954,12 +3959,13 @@ app.get("/api/users/activate", unloggedOnly, async (req, res) => {
 		if (!activationToken) {
 			return res.status(400).json({ message: "Activation token is missing" });
 		}
-		// Look up the token in the tokens table
-		// Assume token type 1 is for account verification
-		const tokenSql = "SELECT * FROM tokens WHERE Token = ? AND TokenTypeID = 1";
-		const [[token]] = await promisePool.query(tokenSql, [activationToken]);
+
+		const hashedToken = hashToken(activationToken);
+		
+		const tokenSql = "SELECT * FROM tokens WHERE Token = ? AND TokenTypeID = ?";
+		const [[token]] = await promisePool.query(tokenSql, [hashedToken, 1]);
 		if (!token) {
-			return res.status(400).json({ message: "Invalid activation token" });
+			return res.status(400).json({ message: "Invalid or expired activation token" });
 		}
 		
 		if (token.UsedAt !== null) {
@@ -3991,7 +3997,8 @@ app.post("/api/users/forgotpassword", rateLimitRoute(criticalRateLimiter), unlog
 	console.log("API user forgot password accessed");
 
 	const { Email } = req.validatedForm;
-	const randomToken = generateToken(); // Please hash before usage!
+	const randomToken = generateToken();
+	const hashedToken = hashToken(randomToken);
 
 	try {
 		// Check if email exists
@@ -4002,7 +4009,7 @@ app.post("/api/users/forgotpassword", rateLimitRoute(criticalRateLimiter), unlog
 			return res.status(200).json({ message: "If an account with that email exists, a reset link has been sent" });
 		}
 		const insertToken = "INSERT INTO tokens (UserID, TokenTypeID, Token, ExpiresAt) VALUES (?, ?, ?, NOW() + INTERVAL 1 HOUR)";
-		const tokenParams = [user.UserID, 2, randomToken];
+		const tokenParams = [user.UserID, 2, hashedToken];
 		const [token] = await promisePool.query(insertToken, tokenParams);
 		
 		const passwordResetLink = `${corsUrl}/reset-password?passwordResetToken=${randomToken}`;
@@ -4059,16 +4066,16 @@ app.post("/api/users/resetpassword", rateLimitRoute(criticalRateLimiter), unlogg
 	console.log("API user password reset accessed");
 
 	const { Password, passwordResetToken } = req.validatedForm;
-	console.log(req.validatedForm);
 
 	try {
 		if (!passwordResetToken) {
 			return res.status(400).json({ message: "Password reset token is missing" });
 		}
-		// Look up the token in the tokens table
-		// Assume token type 1 is for account verification
-		const tokenSql = "SELECT * FROM tokens WHERE Token = ? AND TokenTypeID = 2";
-		const [[token]] = await promisePool.query(tokenSql, [passwordResetToken]);
+		
+		const hashedToken = hashToken(passwordResetToken);
+		
+		const tokenSql = "SELECT * FROM tokens WHERE Token = ? AND TokenTypeID = ?";
+		const [[token]] = await promisePool.query(tokenSql, [hashedToken, 2]);
 		if (!token) {
 			return res.status(400).json({ message: "Invalid password reset token" });
 		}
