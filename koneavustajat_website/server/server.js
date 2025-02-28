@@ -602,6 +602,9 @@ const tableNameSchema = Joi.string()
 const userFieldsSchema = Joi.string()
 	.valid("Name", "Email", "Password", "currentPassword", "Gender", "ProfileImage");
 
+const adminUserFieldsSchema = Joi.string()
+	.valid("Name", "Email", "Password", "currentPassword", "Gender", "ProfileImage", "RoleID");
+
 const loginSchema = Joi.object({
 	Email: Joi.string().trim()
 		.required()
@@ -645,6 +648,39 @@ const userSchema = Joi.object({
 			"string.empty": "Password cannot be empty",
 			"any.required": "Password is required"
 		})
+});
+
+const adminUserSchema = Joi.object({
+	Name: Joi.string().trim().min(3).max(50).required().messages({
+		"string.base": "Name must be a string",
+		"string.empty": "Name cannot be empty",
+		"string.min": "Name must be at least 3 characters long",
+		"string.max": "Name cannot exceed 50 characters",
+		"any.required": "Name is required"
+	}),
+	Email: Joi.string().trim()
+		.required()
+		.email() // Built in regex
+		.messages({
+			"string.email": "Invalid email format. Please enter a valid email address in the format: example@domain.com",
+			"string.empty": "Email cannot be empty",
+			"any.required": "Email is required"
+		}),
+	Password: Joi.string().trim()
+		.required()
+		.pattern(/^(?=.*[A-Z])(?=.*\d)[\w!@#$%^&*()_\-+=\[\]{}:;"'<>,.?\/]{9,}$/)
+		.messages({
+			"string.pattern.base": "Invalid password format. Password must be at least 9 characters long, include 1 capital letter, and 1 number.",
+			"string.empty": "Password cannot be empty",
+			"any.required": "Password is required"
+		}),
+	RoleID: Joi.number().min(1).max(1).required().messages({
+		"number.base": "RoleID must be a number",
+		"number.empty": "RoleID cannot be empty",
+		"number.min": "RoleID must be at least 1 character and cannot exceed 1 characters",
+		"number.max": "RoleID must be at least 1 character and cannot exceed 1 characters",
+		"any.required": "RoleID is required"
+	})
 });
 
 const passwordForgotSchema = Joi.object({
@@ -712,6 +748,58 @@ const userUpdateSchema = Joi.object({
 		.messages({
 			"string.base": "Profile image must be a valid filename",
 		})
+});
+
+const adminUserUpdateSchema = Joi.object({
+	Name: Joi.string().trim().min(3).max(50).optional().messages({
+		"string.base": "Name must be a string",
+		"string.empty": "Name cannot be empty",
+		"string.min": "Name must be at least 3 characters long",
+		"string.max": "Name cannot exceed 50 characters"
+	}),
+	Email: Joi.string().trim()
+		.email()
+		.optional()
+		.messages({
+			"string.email": "Invalid email format. Please enter a valid email address in the format: example@domain.com",
+			"string.empty": "Email cannot be empty"
+		}),
+	Password: Joi.string().trim()
+		.pattern(/^(?=.*[A-Z])(?=.*\d)[\w!@#$%^&*()_\-+=\[\]{}:;"'<>,.?\/]{9,}$/)
+		.optional()
+		.messages({
+			"string.pattern.base": "Invalid password format. Password must be at least 9 characters long, include 1 capital letter, and 1 number.",
+			"string.empty": "Password cannot be empty"
+		}),
+	currentPassword: Joi.string().trim()
+		.pattern(/^(?=.*[A-Z])(?=.*\d)[\w!@#$%^&*()_\-+=\[\]{}:;"'<>,.?\/]{9,}$/)
+		.required()
+		.messages({
+			"string.pattern.base": "Invalid password format for current password.",
+			"string.empty": "Current password cannot be empty",
+			"any.required": "Current password is required"
+		}),
+	Gender: Joi.string().trim().valid("male", "female").optional().messages({
+		"string.base": "Gender must be a string",
+		"any.only": "Gender must be one of either 'male' or 'female'"
+	}),
+	ProfileImage: Joi.string().trim()
+		.optional()
+		.messages({
+			"string.base": "Profile image must be a valid filename",
+		}),
+	RoleID: Joi.number().min(1).max(1).optional().messages({
+		"number.base": "RoleID must be a number",
+		"number.empty": "RoleID cannot be empty",
+		"number.min": "RoleID must be at least 1 character and cannot exceed 1 characters",
+		"number.max": "RoleID must be at least 1 character and cannot exceed 1 characters",
+	}),
+	UserID: Joi.number().min(1).max(1).optional().messages({
+		"number.base": "UserID must be a number",
+		"number.empty": "UserID cannot be empty",
+		"number.min": "UserID must be at least 1 character and cannot exceed 1 characters",
+		"number.max": "UserID must be at least 1 character and cannot exceed 1 characters",
+	})
 });
 
 const inventorySchema = Joi.object({
@@ -1041,6 +1129,32 @@ const userFieldsValidator = (req, res, next) => {
 	try {
 		for (const item in formFields) {
 			Joi.attempt(item, userFieldsSchema);
+		}
+		next();
+	} catch (error) {
+		return res.status(400).json({ message: `User field '${error._original}' is not allowed!` });
+	}
+};
+
+const adminUserFieldsValidator = (req, res, next) => {
+	let formFields = req.validatedForm;
+
+
+	if (typeof formFields === "string") {
+		try {
+			formFields = JSON.parse(formFields);
+		} catch (err) {
+			return res.status(400).json({ message: "Unable to parse data" });		
+		}
+	}
+
+	if (typeof formFields !== "object") {
+		return res.status(400).json({ message: "Invalid form data format" });
+	}
+
+	try {
+		for (const item in formFields) {
+			Joi.attempt(item, adminUserFieldsSchema);
 		}
 		next();
 	} catch (error) {
@@ -3171,7 +3285,8 @@ const createPaymentIntent = async (amount, currency, customer) => {
 	
 	const userSql = "SELECT * FROM addresses WHERE CustomerID = ? AND AddressTypeID = 1";
 	
-	const customerSql = "SELECT c.CustomerID, c.UserID, u.Name, u.Email, a.AddressID, a.AddressTypeID, a.Street, a.City, a.State, a.PostalCode, a.Country FROM customers c LEFT JOIN users u ON c.UserID = u.UserID LEFT JOIN addresses a ON c.CustomerID = a.CustomerID WHERE a.AddressTypeID = 1 AND c.UserID = ?";
+	const customerSql = `SELECT c.CustomerID, c.UserID, u.Name, u.Email, a.AddressID, a.AddressTypeID, a.Street, a.City, a.State, a.PostalCode, a.Country 
+	FROM customers c LEFT JOIN users u ON c.UserID = u.UserID LEFT JOIN addresses a ON c.CustomerID = a.CustomerID WHERE a.AddressTypeID = 1 AND c.UserID = ?`;
 
 	const originalTotal = Math.round(amount * 100);
 	const taxPrice = originalTotal * 0.255;
@@ -3474,9 +3589,9 @@ app.get("/api/count", routePagination, tableValidator(tableNameSchema, "tableNam
 		console.log("Total pages calculated:", pages);
 		return res.status(200).json({ index: pages });
 	} catch (error) {
-		
 		const [status, message] = handleServerError(error);
-		return res.status(status).json({ message: message });	}
+		return res.status(status).json({ message: message });	
+	}
 });
 
 app.get("/api/routes", async (req, res) => {
@@ -3904,8 +4019,8 @@ app.post("/api/users/signup", rateLimitRoute(criticalRateLimiter), unloggedOnly,
 		const emailSuccess = await sendEmail(
 			companyEmail,
 			Email,
-			"Signup test",
-			"This is a test for signing up!",
+			"Account registration for KoneAvustajat",
+			"Account registration for KoneAvustajat!",
 			`
 			<html>
 			  <body style="font-family: Arial, sans-serif; background-color: #f2f2f2; margin: 0; padding: 20px;">
@@ -5018,7 +5133,8 @@ app.patch("/api/orders/update/:id/verify", authenticateSession, idValidator, for
     const userId = req.user.UserID;
     const orderId = req.validatedId;
 
-	const customerSql = `SELECT c.CustomerID, c.UserID, u.Name, u.Email, a.AddressID, a.AddressTypeID, a.Street, a.City, a.State, a.PostalCode, a.Country FROM customers c LEFT JOIN users u ON c.UserID = u.UserID LEFT JOIN addresses a ON c.CustomerID = a.CustomerID WHERE a.AddressTypeID = 1 AND c.UserID = ?`;	
+	const customerSql = `SELECT c.CustomerID, c.UserID, u.Name, u.Email, a.AddressID, a.AddressTypeID, a.Street, a.City, a.State, a.PostalCode, a.Country 
+	FROM customers c LEFT JOIN users u ON c.UserID = u.UserID LEFT JOIN addresses a ON c.CustomerID = a.CustomerID WHERE a.AddressTypeID = 1 AND c.UserID = ?`;	
 	
     const currentOrderSql = "SELECT * FROM orders WHERE OrderID = ?";
 
@@ -5084,7 +5200,8 @@ app.get("/api/users/customers", authenticateAdmin, routePagination, async (req, 
 	console.log("API inventory accessed");
 
 	const { items, offset } = req.pagination;
-	const sql = `SELECT c.CustomerID AS CustomerID, c.*, u.*, a.AddressID, a.AddressTypeID, a.Street, a.City, a.State, a.PostalCode, a.Country, o.OrderID, o.OrderTypeID, o.ReceiptID ,o.OrderDate, o.Status, o.TotalPrice, o.Items, o.PaymentMethod, o.PaymentStatus FROM customers c LEFT JOIN users u ON c.UserID = u.UserID LEFT JOIN addresses a ON c.CustomerID = a.CustomerID LEFT JOIN orders o ON c.CustomerID = o.CustomerID LIMIT ? OFFSET ?`;	
+	const sql = `SELECT c.CustomerID AS CustomerID, c.*, u.*, a.AddressID, a.AddressTypeID, a.Street, a.City, a.State, a.PostalCode, a.Country, o.OrderID, o.OrderTypeID, o.ReceiptID ,o.OrderDate, o.Status, o.TotalPrice, o.Items, o.PaymentMethod, o.PaymentStatus 
+	FROM customers c LEFT JOIN users u ON c.UserID = u.UserID LEFT JOIN addresses a ON c.CustomerID = a.CustomerID LEFT JOIN orders o ON c.CustomerID = o.CustomerID LIMIT ? OFFSET ?`;	
 	//const sql = `SELECT c.*, u.*, a.* FROM customers c LEFT JOIN users u ON c.UserID = u.UserID LEFT JOIN addresses a ON c.CustomerID = a.CustomerID LIMIT ? OFFSET ?`;
 
 	try {
@@ -5151,7 +5268,8 @@ app.get("/api/users/customers/:id", authenticateAdmin, idValidator, async (req, 
 	console.log("API search parts by id accessed");
 
 	const id = req.validatedId;
-	const sql = `SELECT c.CustomerID AS CustomerID, c.*, u.*, a.AddressID, a.AddressTypeID, a.Street, a.City, a.State, a.PostalCode, a.Country, o.OrderID, o.OrderTypeID, o.ReceiptID ,o.OrderDate, o.Status, o.TotalPrice, o.Items, o.PaymentMethod, o.PaymentStatus FROM customers c LEFT JOIN users u ON c.UserID = u.UserID LEFT JOIN addresses a ON c.CustomerID = a.CustomerID LEFT JOIN orders o ON c.CustomerID = o.CustomerID LIMIT ? OFFSET ? WHERE c.CustomerID = ?`;
+	const sql = `SELECT c.CustomerID AS CustomerID, c.*, u.*, a.AddressID, a.AddressTypeID, a.Street, a.City, a.State, a.PostalCode, a.Country, o.OrderID, o.OrderTypeID, o.ReceiptID ,o.OrderDate, o.Status, o.TotalPrice, o.Items, o.PaymentMethod, o.PaymentStatus 
+	FROM customers c LEFT JOIN users u ON c.UserID = u.UserID LEFT JOIN addresses a ON c.CustomerID = a.CustomerID LEFT JOIN orders o ON c.CustomerID = o.CustomerID LIMIT ? OFFSET ? WHERE c.CustomerID = ?`;
 	//const sql = `SELECT c.*, u.*, a.* FROM customers c LEFT JOIN users u ON c.UserID = u.UserID LEFT JOIN addresses a ON c.CustomerID = a.CustomerID WHERE c.CustomerID = ? `;
 
 	try {
@@ -5602,6 +5720,171 @@ app.post("/api/text-content/add", formFieldsValidator(contentSchema), authentica
 	} catch (error) {
 		const [status, message] = handleServerError(error);
 		return res.status(status).json({ message: message });
+	}
+});
+
+app.get("/api/admin/count", authenticateAdmin, async (req, res) => {
+	console.log("API admin dashboard counts accessed");
+
+	const tables = ["users", "customers", "admins", "part_inventory", "chassis", "cpu", "cpu_cooler", "gpu", "motherboard", "memory", "storage", "psu"];
+	const parts = ["chassis", "cpu", "cpu_cooler", "gpu", "motherboard", "memory", "storage", "psu"];
+
+	try {
+		const tableSql = tables.map(item => ` (SELECT COUNT(*) FROM ${item}) AS total_${item}`).join(", ");
+		const partSql = parts.map(item => `(SELECT COUNT(*) FROM ${item})`).join(" + ");
+		const sql = `
+		SELECT
+			${tableSql},
+			(${partSql} + 0) as total_parts
+		`;
+		const [[result]] = await promisePool.query(sql);
+
+		return res.status(200).json({ counts: result });
+	} catch (error) {
+		const [status, message] = handleServerError(error);
+		return res.status(status).json({ message: message });
+	}
+});
+
+app.post("/api/admin/users/add", rateLimitRoute(adminDataManipulationRateLimiter), authenticateAdmin, formFieldsValidator(adminUserSchema), adminUserFieldsValidator, async (req, res) => {
+	console.log("API user signup accessed");
+
+	const { Name, Email, Password, RoleID } = req.validatedForm;
+	const randomToken = generateToken();
+	const hashedToken = hashToken(randomToken);
+
+	try {
+		const emailCheckSql = "SELECT Email FROM users WHERE Email = ?";
+		const [user] = await promisePool.query(emailCheckSql, [Email]);
+		if (user.length > 0) {
+			return res.status(409).json({ message: "One or more fields already in use" });
+		}
+
+		const hashedPassword = await bcrypt.hash(Password, 10);
+		const insertSql = "INSERT INTO users (Name, Email, Password, RoleID) VALUES (?, ?, ?, ?)";
+		const [result] = await promisePool.query(insertSql, [Name, Email, hashedPassword, RoleID]); // 2 = Customer
+		const insertCustomer = "INSERT INTO customers (UserID) VALUES (?)";
+		const [customer] = await promisePool.query(insertCustomer, result.insertId);
+		
+		const insertToken = "INSERT INTO tokens (UserID, TokenTypeID, Token, ExpiresAt) VALUES (?, ?, ?, NOW() + INTERVAL 1 HOUR)";
+		const tokenParams = [result.insertId, 1, hashedToken];
+		const [token] = await promisePool.query(insertToken, tokenParams);
+		
+		const activationLink = `${corsUrl}/activate?activationToken=${randomToken}`;
+		
+		const emailSuccess = await sendEmail(
+			companyEmail,
+			Email,
+			"Account registration by an admin for KoneAvustajat",
+			"Account registration by an admin for KoneAvustajat!",
+			`
+			<html>
+			  <body style="font-family: Arial, sans-serif; background-color: #f2f2f2; margin: 0; padding: 20px;">
+				<div style="max-width: 600px; margin: 0 auto; background-color: #ffffff; padding: 30px; border-radius: 8px; box-shadow: 0 2px 5px rgba(0,0,0,0.1);">
+				  <h2 style="color: #333;">Welcome, <strong>${Name}</strong>!</h2>
+				  <p style="color: #555; font-size: 16px;">
+					An admin has registered you using this email <strong>${Email}</strong>.
+				  </p>
+				  <p style="color: #555; font-size: 16px;">
+					Please click the button below to verify your account and get started.
+				  </p>
+				  <div style="text-align: center; margin: 30px 0;">
+					<a href="${activationLink}" style="background-color: #007BFF; color: #ffffff; padding: 12px 20px; text-decoration: none; border-radius: 5px; font-size: 16px;">
+					  Activate Your Account
+					</a>
+				  </div>
+				  <p style="color: #999; font-size: 14px;">
+					If you did not ask for an account to be created, please ignore this email.
+				  </p>
+				  <p style="color: #999; font-size: 14px; margin-top: 30px;">
+					Best regards,<br>KoneAvustajat
+				  </p>
+				</div>
+			  </body>
+			</html>
+			`,
+			result.insertId
+		);
+		
+		return res.status(200).json({ message: "User registered successfully", id: result.insertId });
+	} catch (error) {
+		const [status, message] = handleServerError(error);
+		return res.status(status).json({ message: message });
+	}
+});
+
+app.patch("/api/admin/users/update", rateLimitRoute(adminDataManipulationRateLimiter), authenticateAdmin, profileImgUpload.single("ProfileImage"), formFieldsValidator(adminUserUpdateSchema), userFieldsValidator, async (req, res) => {
+	console.log("API update own credentials accessed");
+	const jsonFormFields = req.validatedForm;
+	const userId = jsonFormFields.UserID;
+	const ProfileImage = req.file; // Profile image
+
+	try {
+		const userSql = "SELECT * FROM users WHERE UserID = ?";
+		const [[oldUser]] = await promisePool.query(userSql, [userId]);
+		if (!oldUser) {
+			return res.status(404).json({ message: "User does not exist" });
+		}
+		const oldProfileImage = oldUser.ProfileImage;
+		
+		let hashedPassword = null;
+		const allowedFields = ["Name", "Email", "Password", "Gender", "ProfileImage", "RoleID"]; 
+
+		if (ProfileImage) {
+			if (oldProfileImage && oldProfileImage !== null && oldProfileImage !== "default-profile.png") {
+				const imagePath = path.join(__dirname, "..", "public", "profile_images", oldProfileImage);
+				await deleteFile(imagePath);
+			}
+		}
+
+		// SQL query to update user data
+		// updateQuery allows for multiple fields to be updated simultaneously
+		let updateQuery = "UPDATE users SET ";
+		let queryParams = [];
+
+		// More dynamic way of updating users
+		for (const key in jsonFormFields) {
+			console.log(key);
+			if (allowedFields.includes(key)) {
+				if (jsonFormFields.hasOwnProperty(key)) {
+					if (jsonFormFields[key] !== "") {
+						updateQuery += key.charAt(0).toUpperCase() + key.slice(1) + " = ?, "; // Since the first letters are capitalized in the db
+						if (key === "Password") {
+							// Hash the new password before storing it
+							hashedPassword = await bcrypt.hash(jsonFormFields[key], 10);
+							queryParams.push(hashedPassword);
+						} else {
+							queryParams.push(jsonFormFields[key]);
+						}
+					}
+				}
+			}
+		}
+
+		if (ProfileImage) {
+			const ProfileImage_name = ProfileImage.filename;
+			updateQuery += "ProfileImage = ?, ";
+			queryParams.push(ProfileImage_name);
+		}
+
+		// Remove trailing comma and space
+		if (queryParams.length > 0) {
+			updateQuery = updateQuery.slice(0, -2);
+		}
+
+		updateQuery += " WHERE UserID = ?";
+		queryParams.push(userId);
+
+		const [result] = await promisePool.query(updateQuery, queryParams);
+		if (result.affectedRows === 0) {
+			return res.status(404).json({ message: "Item not found" });
+		}
+
+		return res.status(200).json({ message: "User updated successfully" });
+	} catch (error) {
+		const [status, message] = handleServerError(error);
+		return res.status(status).json({ message: message });
+
 	}
 });
 
