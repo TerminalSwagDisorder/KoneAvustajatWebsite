@@ -7,7 +7,6 @@ stripe trigger payment_intent.payment_failed
 
 
 -Stripe tax x
-
 -Make custom frontend error module x
 -Check receipt for completed build in profile x	
 -Check that additional parts work x
@@ -36,5 +35,5 @@ stripe trigger payment_intent.payment_failed
 -Redis caching (optional, later)
 
 
-Condensed: Finish admin pages, add email system, finish up cms, qol & bug fixes
+Condensed: Finish admin pages, finish up cms, qol & bug fixes
 
