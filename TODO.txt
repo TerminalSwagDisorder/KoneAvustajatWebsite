@@ -24,6 +24,7 @@ stripe trigger payment_intent.payment_failed
 -Add express-rate-limit or similar for rate limiting (eg for forgot password) x
 -Hash random token x
 
+-In orders (and similarly any other data manipulation that relies on frontend data, instead of using frontend prices, query the db and get new data that way
 -Admin user page -> add full user details & orders
 -Admin users can add more users, incl. admins
 -Admin dash -> add reset of opensearch stuff (/manage routes)
