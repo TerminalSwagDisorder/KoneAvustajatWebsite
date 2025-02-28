@@ -48,6 +48,8 @@ const testEmailProvider = process.env.TEST_EMAIL_PROVIDER;
 const frontendUrl = process.env.FRONTEND_URL;
 const backendUrl = process.env.BACKEND_URL;
 const corsUrl = process.env.CORS;
+const redisHost = process.env.REDIS_HOST;
+const redisPort = process.env.REDIS_PORT;
 
 const generatedEnvVars = { SESSION_SECRET: sessionSecret, JWT_SECRET: jwtSecret, OPENSEARCH_URL: opensearch };
 const otherEnvVars = {
@@ -63,6 +65,8 @@ const otherEnvVars = {
 	FRONTEND_URL: frontendUrl,
 	BACKEND_URL: backendUrl,
 	CORS: corsUrl,
+	REDIS_HOST: redisHost,
+	REDIS_PORT: redisPort,
 };
 
 for (const vars of [generatedEnvVars, otherEnvVars]) {
@@ -145,6 +149,79 @@ transporter.verify((error, success) => {
 		console.log("SMTP is configured correctly, and is ready to take messages");
 	}
 });
+const redisClient = new Redis({
+	host: redisHost,
+	port: redisPort,
+	enableOfflineQueue: false // for rate limiting
+});
+
+const generalRateLimiter = new RateLimiterRedis({
+	storeClient: redisClient,
+	keyPrefix: "rlflimit-general",
+	points: 200,
+	duration: 10
+});
+
+const algorithmRateLimiter = new RateLimiterRedis({
+	storeClient: redisClient,
+	keyPrefix: "rlflimit-algorithm",
+	points: 10,
+	duration: 1800,
+	blockDuration: 600
+});
+
+const criticalRateLimiter = new RateLimiterRedis({
+	storeClient: redisClient,
+	keyPrefix: "rlflimit-critical",
+	points: 5,
+	duration: 600,
+	blockDuration: 1800
+});
+
+const loginRateLimiter = new RateLimiterRedis({
+	storeClient: redisClient,
+	keyPrefix: "rlflimit-login",
+	points: 20,
+	duration: 600
+});
+
+const loginFailsRateLimiter = new RateLimiterRedis({
+	storeClient: redisClient,
+	keyPrefix: "rlflimit-login-fails",
+	points: 10,
+	duration: 3600,
+	blockDuration: 3600
+});
+
+const opensearchRateLimiter = new RateLimiterRedis({
+	storeClient: redisClient,
+	keyPrefix: "rlflimit-opensearch",
+	points: 10,
+	duration: 600
+});
+
+const dataManipulationRateLimiter = new RateLimiterRedis({
+	storeClient: redisClient,
+	keyPrefix: "rlflimit-data-manipulation",
+	points: 10,
+	duration: 300,
+	blockDuration: 600
+});
+
+const adminDataManipulationRateLimiter = new RateLimiterRedis({
+	storeClient: redisClient,
+	keyPrefix: "rlflimit-admin-data-manipulation",
+	points: 20,
+	duration: 60
+});
+
+const downloadRateLimiter = new RateLimiterRedis({
+	storeClient: redisClient,
+	keyPrefix: "rlflimit-download",
+	points: 5,
+	duration: 900,
+	blockDuration: 1800
+});
 
 ////////////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////
@@ -215,6 +292,28 @@ app.use(
 const authenticateSession = (req, res, next) => {
 	//console.log(req.session)
 	if (req.session.user) {
+		if (req.session.user.Activated !== 1) {
+			return res.status(401).json({
+				message: "Not activated"
+			});
+		}
+		req.user = req.session.user;
+		next();
+	} else {
+		return res.status(401).json({
+			message: "Not authenticated"
+		});
+	}
+};
+
+const authenticateAdmin = (req, res, next) => {
+	//console.log(req.session)
+	if (req.session.user) {
+		if (req.session.user.RoleID !== 4) {
+			return res.status(401).json({
+				message: "Not an admin"
+			});
+		}
 		if (req.session.user.Activated !== 1) {
 			return res.status(401).json({
 				message: "Not activated"
@@ -3192,6 +3291,62 @@ const generateToken = (length = 32) => {
 	return token;
 };
 
+const rateLimitRoute = (limiter = generalRateLimiter) => {
+	return async (req, res, next) => {
+		try {
+			await limiter.consume(req.ip);
+			next();
+		} catch (rejRes) {
+			console.log();
+			res.status(429).json({
+				message: `Too many requests, please try again in ${Math.ceil(rejRes.msBeforeNext / 1000 / 60 )} minutes`,
+				remainingPoints: rejRes.remainingPoints,
+				retryAfter: Math.ceil(rejRes.msBeforeNext / 1000)
+			});
+		}
+	};
+};
+
+const rateLimitAction = async (req, res, limiter = generalRateLimiter, message = "Too many failed actions") => {
+	try {
+		await limiter.consume(req.ip);
+		return true;
+	} catch (rejRes) {
+		res.status(429).json({
+			message: `${message}. Please try again in ${Math.ceil(rejRes.msBeforeNext / 1000 / 60 )} minutes`,
+			remainingPoints: rejRes.remainingPoints,
+			retryAfter: Math.ceil(rejRes.msBeforeNext / 1000)
+		});
+		return false;
+	}
+};
+
+const checkRateLimit = async (req, res, limiter = generalRateLimiter, message = "Too many failed actions") => {
+	try {
+		const failsRecord = await limiter.get(req.ip);
+		if (failsRecord && failsRecord.consumedPoints >= limiter.points) {
+			res.status(429).json({
+				message: `${message}. Please try again in ${Math.ceil(failsRecord.msBeforeNext / 1000 / 60 )} minutes`,
+				remainingPoints: failsRecord.remainingPoints,
+				retryAfter: Math.ceil(failsRecord.msBeforeNext / 1000)
+			});
+			return false;
+		}
+		return true;
+	} catch (error) {
+		throw new Error("An error occurred while checking if IP is rate limited");
+	}
+};
+
+const clearRateLimit = async (req, limiter = generalRateLimiter) => {
+	try {
+		await limiter.delete(req.ip);
+		return true;
+	} catch (error) {
+		throw new Error("An error occurred while clearing rate limit");
+	}
+};
+
 ////////////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////
@@ -3244,6 +3399,8 @@ app.post("/api/stripe/webhook", express.raw({ type: "application/json" }), async
 });
 
 app.use(express.json());
+
+app.use('/api/', rateLimitRoute());
 
 app.get("/", async (req, res) => {
 	console.log("Index accessed");
@@ -3351,7 +3508,7 @@ app.get("/api/routes", async (req, res) => {
 	}
 });
 
-app.get("/api/opensearch/manage", tableSearch("opensearch"), async (req, res) => {
+app.get("/api/opensearch/manage", rateLimitRoute(opensearchRateLimiter), authenticateAdmin, tableSearch("opensearch"), async (req, res) => {
 	console.log("API opensearch accessed");
 
 	try {
@@ -3430,7 +3587,7 @@ app.get("/api/opensearch/manage", tableSearch("opensearch"), async (req, res) =>
 	}
 });
 
-app.get("/api/opensearch/view", async (req, res) => {
+app.get("/api/opensearch/view", authenticateAdmin, async (req, res) => {
 	const viewQuery = req.query.type || "indices";
 	try {
 	// const response2 = await axios.get(`${opensearch}/${viewQuery}`, { timeout: 5000 });
@@ -3443,7 +3600,7 @@ app.get("/api/opensearch/view", async (req, res) => {
 	}
 });
 
-app.get("/api/opensearch/backup", async (req, res) => {
+app.get("/api/opensearch/backup", authenticateAdmin, async (req, res) => {
 	const index = req.query.index || "cpu";
 	let query = req.query.query || "100";
 	try {
@@ -3456,7 +3613,7 @@ app.get("/api/opensearch/backup", async (req, res) => {
 	}
 });
 
-app.post("/api/algorithm", routePagination, tableValidator(partNameSchema, "partName"), tableSearch(), async (req, res) => {
+app.post("/api/algorithm", rateLimitRoute(algorithmRateLimiter), routePagination, tableValidator(partNameSchema, "partName"), tableSearch(), async (req, res) => {
 	console.log("API algorithm accessed");
 	console.log("\n");
 	console.log("\n");
@@ -3711,60 +3868,8 @@ app.get("/api/users/id/:id", idValidator, async (req, res) => {
 	}
 });
 
-
-// Route for viewing regular users
-app.get("/api/users", routePagination, async (req, res) => {
-	console.log("API users accessed");
-
-	const { items, offset } = req.pagination;
-
-	const sql = "SELECT * FROM users LIMIT ? OFFSET ?";
-	try {
-		const [users] = await promisePool.query(sql, [items, offset]);
-		
-		const processedUsers = users.map((user) => {
-			const isAdmin = user.RoleID === 4;
-
-			// Exclude sensitive information like hashed password
-			const { Password, ...userData } = user;
-			return { ...userData, isAdmin };
-		});
-		return res.status(200).json(processedUsers);
-	} catch (error) {
-		const [status, message] = handleServerError(error);
-		return res.status(status).json({ message: message });
-	}
-});
-
-app.get("/api/users/id/:id", idValidator, async (req, res) => {
-	console.log("API search users by id accessed");
-
-	const id = req.validatedId;
-
-	const sql = "SELECT * FROM users WHERE UserID = ?";
-	try {
-		const [users] = await promisePool.query(sql, [id]);
-		if (!users.length) {
-			return res.status(404).json({ message: "User not found" });
-		}
-
-		const processedUsers = users.map((user) => {
-			const isAdmin = user.RoleID === 4;
-
-			// Exclude sensitive information like hashed password
-			const { Password, ...userData } = user;
-			return { ...userData, isAdmin };
-		});
-
-		return res.status(200).json(processedUsers);
-	} catch (error) {
-		const [status, message] = handleServerError(error);
-		return res.status(status).json({ message: message });
-	}
-});
-
 // Signing up
-app.post("/api/users/signup", unloggedOnly, formFieldsValidator(userSchema), userFieldsValidator, async (req, res) => {
+app.post("/api/users/signup", rateLimitRoute(criticalRateLimiter), unloggedOnly, formFieldsValidator(userSchema), userFieldsValidator, async (req, res) => {
 	console.log("API user signup accessed");
 
 	const { Name, Email, Password } = req.validatedForm;
@@ -3882,7 +3987,7 @@ app.get("/api/users/activate", unloggedOnly, async (req, res) => {
 	}
 });
 
-app.post("/api/users/forgotpassword", unloggedOnly, formFieldsValidator(passwordForgotSchema), userFieldsValidator, async (req, res) => {
+app.post("/api/users/forgotpassword", rateLimitRoute(criticalRateLimiter), unloggedOnly, formFieldsValidator(passwordForgotSchema), userFieldsValidator, async (req, res) => {
 	console.log("API user forgot password accessed");
 
 	const { Email } = req.validatedForm;
@@ -3950,7 +4055,7 @@ app.post("/api/users/forgotpassword", unloggedOnly, formFieldsValidator(password
 	}
 });
 
-app.post("/api/users/resetpassword", unloggedOnly, formFieldsValidator(passwordResetSchema), async (req, res) => {
+app.post("/api/users/resetpassword", rateLimitRoute(criticalRateLimiter), unloggedOnly, formFieldsValidator(passwordResetSchema), async (req, res) => {
 	console.log("API user password reset accessed");
 
 	const { Password, passwordResetToken } = req.validatedForm;
@@ -4035,32 +4140,43 @@ app.post("/api/users/resetpassword", unloggedOnly, formFieldsValidator(passwordR
 	}
 });
 
-app.post("/api/users/login", unloggedOnly, formFieldsValidator(loginSchema), userFieldsValidator, async (req, res) => {
+app.post("/api/users/login", rateLimitRoute(loginRateLimiter), unloggedOnly, formFieldsValidator(loginSchema), userFieldsValidator, async (req, res) => {
 	console.log("API users login accessed");
 
 	const { Email, Password } = req.validatedForm;
 	const sql = "SELECT * FROM users WHERE Email = ?";
 
 	try {
+		const rateLimited = await checkRateLimit(req, res, loginFailsRateLimiter, "Too many failed login attempts");
+		if (!rateLimited) return;
+		
 		// [[user]] takes the first user in the array wile [user] returns the whole array and you need to specify user[0] each time otherwise
 		const [[user], fields] = await promisePool.query(sql, [Email]);
 
 		if (!user) {
+			const okRes = await rateLimitAction(req, res, loginFailsRateLimiter, "Too many failed login attempts");
+			if (!okRes) return;
 			return res.status(404).json({ message: "Email or password is incorrect" });
 		}
 		
 		if (user.Activated !== 1) {
+			const okRes = await rateLimitAction(req, res, loginFailsRateLimiter, "Too many failed login attempts");
+			if (!okRes) return;
 			return res.status(401).json({ message: "Account is not activated" });
 		}
 
 		// If the email is not an exact match
 		if (user.Email !== Email) {
+			const okRes = await rateLimitAction(req, res, loginFailsRateLimiter, "Too many failed login attempts");
+			if (!okRes) return;
 			return res.status(404).json({ message: "Email or password is incorrect" });
 		}
 
 		const match = await bcrypt.compare(Password, user.Password);
 
 		if (!match) {
+			const okRes = await rateLimitAction(req, res, loginFailsRateLimiter, "Too many failed login attempts");
+			if (!okRes) return;
 			return res.status(401).json({ message: "Email or password is incorrect" });
 		}
 
@@ -4078,6 +4194,8 @@ app.post("/api/users/login", unloggedOnly, formFieldsValidator(loginSchema), use
 			maxAge: 3600000
 		});
 		*/
+		
+		await clearRateLimit(req, loginFailsRateLimiter);
 
 		return res.status(200).json({ message: "Logged in successfully", user: req.session.user });
 	} catch (error) {
@@ -4224,7 +4342,7 @@ app.get("/api/profile/orders/:id", idValidator, authenticateSession, async (req,
 	}
 });
 
-app.get("/api/profile/receipt/:id/download", idValidator, authenticateSession, async (req, res) => {
+app.get("/api/profile/receipt/:id/download", rateLimitRoute(downloadRateLimiter), idValidator, authenticateSession, async (req, res) => {
     console.log("API download receipt accessed");
 
     const userId = req.user.UserID;
@@ -4259,7 +4377,7 @@ app.get("/api/profile/receipt/:id/download", idValidator, authenticateSession, a
 
 
 // Update own user credentials
-app.patch("/api/profile", authenticateSession, profileImgUpload.single("ProfileImage"), formFieldsValidator(userUpdateSchema), userFieldsValidator, async (req, res) => {
+app.patch("/api/profile", rateLimitRoute(dataManipulationRateLimiter), authenticateSession, profileImgUpload.single("ProfileImage"), formFieldsValidator(userUpdateSchema), userFieldsValidator, async (req, res) => {
 	console.log("API update own credentials accessed");
 	const userId = req.user.UserID;
 	const oldProfileImage = req.user.ProfileImage;
@@ -4396,7 +4514,7 @@ app.get("/api/part", routePagination, tableValidator(partNameSchema, "partName")
 });
 
 // Route for deleting parts
-app.delete("/api/part/delete/:part/:id", idValidator, authenticateSession, async (req, res) => {
+app.delete("/api/part/delete/:part/:id", rateLimitRoute(adminDataManipulationRateLimiter), idValidator, authenticateAdmin, async (req, res) => {
 	console.log("API delete part accessed");
 	
 	const { part } = req.params; 
@@ -4416,7 +4534,7 @@ app.delete("/api/part/delete/:part/:id", idValidator, authenticateSession, async
 	}
 });
 
-app.patch("/api/part/update/:part/:id", authenticateSession, productImgUpload.single("ProductImage"), idValidator, tableValidator(partNameSchema, "partName"), formFieldsValidator(partSchema), async (req, res) => {
+app.patch("/api/part/update/:part/:id", rateLimitRoute(adminDataManipulationRateLimiter), authenticateAdmin, productImgUpload.single("ProductImage"), idValidator, tableValidator(partNameSchema, "partName"), formFieldsValidator(partSchema), async (req, res) => {
 		console.log("API part accessed");
 		const { part } = req.params;
 		const id = req.validatedId;
@@ -4596,7 +4714,7 @@ app.get("/api/inventory", routePagination, tableSearch("inventory"), async (req,
 });
 
 
-app.post("/api/inventory/add", authenticateSession, formFieldsValidator(inventorySchema), async (req, res) => {
+app.post("/api/inventory/add", authenticateAdmin, formFieldsValidator(inventorySchema), async (req, res) => {
 	console.log("API add inventory accessed");
 
 	const userId = req.user.UserID;
@@ -4635,7 +4753,7 @@ app.post("/api/inventory/add", authenticateSession, formFieldsValidator(inventor
 	}
 });
 
-app.patch("/api/inventory/update/:id", authenticateSession, idValidator, formFieldsValidator(inventorySchema), async (req, res) => {
+app.patch("/api/inventory/update/:id", rateLimitRoute(adminDataManipulationRateLimiter), authenticateAdmin, idValidator, formFieldsValidator(inventorySchema), async (req, res) => {
 		console.log("API inventory update accessed");
 		const id = req.validatedId;
 		const jsonFormFields = req.validatedForm;
@@ -4688,7 +4806,7 @@ app.patch("/api/inventory/update/:id", authenticateSession, idValidator, formFie
 	}
 );
 
-app.delete("/api/inventory/delete/:id", idValidator, authenticateSession, async (req, res) => {
+app.delete("/api/inventory/delete/:id", rateLimitRoute(adminDataManipulationRateLimiter), idValidator, authenticateAdmin, async (req, res) => {
 	console.log("API delete inventory part accessed");
 	
 	const id = req.validatedId;
@@ -4780,7 +4898,7 @@ app.get("/api/orders/:id", idValidator, async (req, res) => {
 	}
 });
 
-app.post("/api/orders/add", authenticateSession, formFieldsValidator(orderSchema), async (req, res) => {
+app.post("/api/orders/add", rateLimitRoute(dataManipulationRateLimiter), authenticateSession, formFieldsValidator(orderSchema), async (req, res) => {
 	console.log("API add order accessed");
 
 	const userId = req.user.UserID;
@@ -4841,7 +4959,7 @@ app.post("/api/orders/add", authenticateSession, formFieldsValidator(orderSchema
 	}
 });
 
-app.patch("/api/orders/update/:id", authenticateSession, idValidator, async (req, res) => {
+app.patch("/api/orders/update/:id", rateLimitRoute(dataManipulationRateLimiter), authenticateSession, idValidator, async (req, res) => {
 	console.log("API update order accessed");
 	
 	const userId = req.user.UserID;
@@ -4955,7 +5073,7 @@ app.patch("/api/orders/update/:id/verify", authenticateSession, idValidator, for
 
 
 // Route for viewing customers
-app.get("/api/users/customers", routePagination, async (req, res) => {
+app.get("/api/users/customers", authenticateAdmin, routePagination, async (req, res) => {
 	console.log("API inventory accessed");
 
 	const { items, offset } = req.pagination;
@@ -5022,7 +5140,7 @@ app.get("/api/users/customers", routePagination, async (req, res) => {
 	}
 });
 
-app.get("/api/users/customers/:id", idValidator, async (req, res) => {
+app.get("/api/users/customers/:id", authenticateAdmin, idValidator, async (req, res) => {
 	console.log("API search parts by id accessed");
 
 	const id = req.validatedId;
@@ -5080,7 +5198,7 @@ app.get("/api/addresstypes", routePagination, async (req, res) => {
 });
 
 // Route for viewing addresses
-app.get("/api/users/customers/addresses", routePagination, async (req, res) => {
+app.get("/api/users/customers/addresses", authenticateAdmin, routePagination, async (req, res) => {
 	console.log("API inventory accessed");
 
 	const { items, offset } = req.pagination;
@@ -5168,7 +5286,7 @@ app.post("/api/users/customers/addresses/add", authenticateSession, formFieldsVa
 });
 
 
-app.patch("/api/users/customers/addresses/update", authenticateSession, formFieldsValidator(addressSchema), async (req, res) => {
+app.patch("/api/users/customers/addresses/update", rateLimitRoute(dataManipulationRateLimiter), authenticateSession, formFieldsValidator(addressSchema), async (req, res) => {
 	console.log("API patch customer address accessed");
 
 	const userId = req.user.UserID;
@@ -5298,7 +5416,7 @@ app.get("/api/text-content/identifiers", async (req, res) => {
 	}
 });
 
-app.patch("/api/text-content/delete/:id", idValidator, authenticateSession, async (req, res) => {
+app.patch("/api/text-content/delete/:id", rateLimitRoute(adminDataManipulationRateLimiter), idValidator, authenticateAdmin, async (req, res) => {
 	console.log("API delete content accessed");
 	
 	const id = req.validatedId;
@@ -5316,7 +5434,7 @@ app.patch("/api/text-content/delete/:id", idValidator, authenticateSession, asyn
 	}
 });
 
-app.patch("/api/text-content/update/:id", authenticateSession, idValidator, formFieldsValidator(contentSchema), async (req, res) => {
+app.patch("/api/text-content/update/:id", rateLimitRoute(adminDataManipulationRateLimiter), authenticateAdmin, idValidator, formFieldsValidator(contentSchema), async (req, res) => {
 	console.log("API patch content accessed");
 	const id = req.validatedId;
 	const jsonFormFields = req.validatedForm;
@@ -5368,7 +5486,7 @@ app.patch("/api/text-content/update/:id", authenticateSession, idValidator, form
 	}
 });
 
-app.patch("/api/text-content/update", authenticateSession, formFieldsValidator(contentSchema), async (req, res) => {
+app.patch("/api/text-content/update", rateLimitRoute(adminDataManipulationRateLimiter), authenticateAdmin, formFieldsValidator(contentSchema), async (req, res) => {
 	console.log("API patch content accessed");
 	const jsonFormFields = req.validatedForm;
 	const allowedFieldsSql = `SELECT DISTINCT column_name FROM information_schema.columns WHERE table_name IN ('content') AND table_schema = '${process.env.DB_NAME}';`;
@@ -5433,110 +5551,8 @@ app.patch("/api/text-content/update", authenticateSession, formFieldsValidator(c
 	}
 });
 
-/*
-// Check this updated patch route
-app.patch("/api/text-content/update/:id", authenticateSession, idValidator, formFieldsValidator(contentSchema), async (req, res) => {
-	console.log("API patch content accessed");
-	const id = req.validatedId;
-	const jsonFormFields = req.validatedForm;
-	const allowedFieldsSql = `
-		SELECT DISTINCT column_name 
-		FROM information_schema.columns 
-		WHERE table_name = 'content' 
-		  AND table_schema = ?
-	`;
-
-	try {
-		// Fetch allowed fields from the database schema
-		const [allowedColumns] = await promisePool.query(allowedFieldsSql, [process.env.DB_NAME]);
-		const allowedFields = allowedColumns.map(item => item.column_name);
-
-		// Dynamically construct fields and values for the update query
-		let fieldUpdates = [];
-		let queryParams = [];
-
-		for (const key in jsonFormFields) {
-			if (allowedFields.includes(key) && jsonFormFields[key] !== "") {
-				fieldUpdates.push(`${key.charAt(0).toUpperCase() + key.slice(1)} = ?`);
-				queryParams.push(jsonFormFields[key]);
-			}
-		}
-
-		// Ensure at least one field is being updated
-		if (fieldUpdates.length === 0) {
-			return res.status(400).json({ message: "No valid fields provided for update" });
-		}
-
-		// Add condition to update the specific content by ID
-		const updateQuery = `
-			UPDATE content 
-			SET ${fieldUpdates.join(", ")} 
-			WHERE ContentID = ?
-		`;
-		queryParams.push(parseInt(id));
-
-		// Execute the update query
-		const [result] = await promisePool.query(updateQuery, queryParams);
-		if (result.affectedRows === 0) {
-			return res.status(404).json({ message: "Item not found or no changes made" });
-		}
-
-		return res.status(200).json({ message: "Content updated successfully" });
-	} catch (error) {
-		const [status, message] = handleServerError(error);
-		return res.status(status).json({ message: message });
-	}
-});
-*/
-/*
-app.post("/api/text-content/add", formFieldsValidator(contentSchema), authenticateSession, async (req, res) => {
-	console.log("API add content accessed");
-
-	const userId = req.user.UserID;
-	const jsonFormFields = req.validatedForm;
-	const { Site_Identifier, Main_Tag, Language, Content_Text, Content_Type } = jsonFormFields;	
-	const allowedFields = ["Site_Identifier", "Main_Tag", "Language", "Content_Text", "Content_Type"];
-
-	try {
-		if (!Site_Identifier || !Content_Text) {
-			return res.status(400).json({ message: "All required form fields were not provided" });
-		}
-
-		let fieldKeys = [];
-		let valuePlaceholders = [];
-		let queryParams = [];
-
-		// Dynamically build fields and values for insertion
-		for (const key in jsonFormFields) {
-			if (allowedFields.includes(key) && jsonFormFields[key] !== "") {
-				fieldKeys.push(key.charAt(0).toUpperCase() + key.slice(1)); // Capitalize the first letter if needed
-				valuePlaceholders.push("?");
-				queryParams.push(jsonFormFields[key]);
-			}
-		}
-
-		// Add `Added_By` field
-		fieldKeys.push("Added_By");
-		valuePlaceholders.push("?");
-		queryParams.push(parseInt(userId));
-
-		// Construct final query
-		const insertQuery = `
-			INSERT INTO content (${fieldKeys.join(", ")})
-			VALUES (${valuePlaceholders.join(", ")})
-		`;
-
-		const [result] = await promisePool.query(insertQuery, queryParams);
-		return res.status(200).json({ message: "Added content successfully", id: result.insertId });
-	} catch (error) {
-		const [status, message] = handleServerError(error);
-		return res.status(status).json({ message: message });
-	}
-});
-*/
-
 // Similar way to update, worse than the other way
-app.post("/api/text-content/add", formFieldsValidator(contentSchema), authenticateSession, async (req, res) => {
+app.post("/api/text-content/add", formFieldsValidator(contentSchema), authenticateAdmin, async (req, res) => {
 	console.log("API add content accessed");
 
 	const userId = req.user.UserID;
