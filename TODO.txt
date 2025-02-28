@@ -1,4 +1,6 @@
 stripe listen --forward-to http://localhost:4000/api/stripe/webhook
+docker-compose up -d
+
 
 stripe trigger payment_intent.succeeded
 stripe trigger payment_intent.payment_failed
@@ -19,15 +21,20 @@ stripe trigger payment_intent.payment_failed
 -Expiresat in tokens ain't working (It is incorrectly written in the database) x
 -Email sending on sign up (nodemailer) x
 -Forgot password (needs email system) x
+-Setup docker for project x
+-Add express-rate-limit or similar for rate limiting (eg for forgot password) x
+-Hash random token x
 
--Add express-rate-limit or similar for rate limiting (eg for forgot password)
--Hash random token
 -Admin user page -> add full user details & orders
--Admin users can add more admins
+-Admin users can add more users, incl. admins
+-Admin dash -> add reset of opensearch stuff (/manage routes)
+-Admin dash -> add opensearch info
 -Set up CMS texts
 -Add a way to dismiss payment form
 -Clean up react warnings
 -Separate server functions from server routes (optional)
+-Redis caching (optional, later)
 
 
 Condensed: Finish admin pages, add email system, finish up cms, qol & bug fixes
+
