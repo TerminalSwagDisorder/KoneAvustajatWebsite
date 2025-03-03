@@ -1,6 +1,6 @@
 import React, { useEffect, useState, createContext, useContext, useRef, useCallback } from "react";
 import { useLocation } from "react-router-dom";
-import { checkIfSignedIn, refreshProfile } from '../api/api';
+import { checkIfSignedIn, refreshProfile, handleSignout } from '../api/api';
 
 // Create contexts
 const ThemeContext = createContext();
@@ -63,7 +63,9 @@ export const AuthProvider = ({ children }) => {
 					delay = 10000;
 					if (currentLogin.message !== "Authenticated") {
 						if (!errorDisplayedRef.current) {
-							await refreshProfileData();
+							//await refreshProfileData();
+							await handleSignout();
+							setCurrentUser(null);
 							displayError("You have been logged out!");
 							errorDisplayedRef.current = true;
 						}
@@ -74,7 +76,7 @@ export const AuthProvider = ({ children }) => {
 				}
 				timeoutRef.current = setTimeout(checkLoginStatus, delay);
 			} catch (error) {
-				console.error("Error checking login status:", error);
+				console.error("Error checking login status:", error.message || error);
 				timeoutRef.current = setTimeout(checkLoginStatus, 10000);
 			}
 		};

@@ -26,7 +26,7 @@ export const wizardAlgorithm = async (formFields) => {
 		//alert("Build fetched.");
 		return data;
 	} catch (error) {
-		handleError(error);
+		handleError(error.message || error);
 	}
 };
 
@@ -51,7 +51,7 @@ export const fetchUsers = async (page) => {
 		
 		return data;
 	} catch (error) {
-		handleError(error);
+		handleError(error.message || error);
 		
 	}
 };
@@ -90,7 +90,7 @@ export const fetchDynamicData = async (page, tableName, partName = "") => {
 		
 		return sanitizedData;
 	} catch (error) {
-		handleError(error);
+		handleError(error.message || error);
 	}
 };
 
@@ -129,7 +129,7 @@ export const updateDynamicData = async (formFields, tableName, partName = null, 
 
 		return data;
 	} catch (error) {
-		handleError(error);
+		handleError(error.message || error);
 	}
 };
 
@@ -166,7 +166,7 @@ export const postDynamicData = async (formFields, tableName, partName) => {
 
 		return data;
 	} catch (error) {
-		handleError(error);
+		handleError(error.message || error);
 	}
 };
 
@@ -195,7 +195,7 @@ export const deleteDynamicData = async (tableName, partName = null, id = null) =
 		
 		return true;
 	} catch (error) {
-		handleError(error);
+		handleError(error.message || error);
 	}
 };
 
@@ -222,7 +222,7 @@ export const downloadFile = async (tableName, fileName = "downloaded_file.txt") 
 		
 		return true;
 	} catch (error) {
-		handleError(error);
+		handleError(error.message || error);
 	}
 };
 
@@ -252,7 +252,7 @@ export const fetchSearchData = async (searchTerms, tableName) => {
 		
 		return sanitizedData;
 	} catch (error) {
-		handleError(error);
+		handleError(error.message || error);
 	}
 };
 
@@ -285,7 +285,7 @@ export const fetchSearchIdData = async (id, tableName, partName) => {
 		
 		return sanitizedData;
 	} catch (error) {
-		handleError(error);
+		handleError(error.message || error);
 	}
 };
 
@@ -308,7 +308,7 @@ export const fetchDataAmount = async (tableName) => {
 
 		return data;
 	} catch (error) {
-		handleError(error);
+		handleError(error.message || error);
 	}
     
 };
@@ -326,7 +326,7 @@ export const fetchServerRoutes = async () => {
 
 		return data;
 	} catch (error) {
-		handleError(error);
+		handleError(error.message || error);
 	}
     
 };
@@ -394,7 +394,7 @@ export const fetchContent = async (identifiers) => {
 		
 		return sanitizedData;
 	} catch (error) {
-		handleError(error);
+		handleError(error.message || error);
 	}
 };
 
@@ -459,7 +459,7 @@ export const fetchWholeContent = async (identifiers) => {
 		
 		return sanitizedData;
 	} catch (error) {
-		handleError(error);
+		handleError(error.message || error);
 	}
 };
 
@@ -480,7 +480,7 @@ export const fetchContentIdentifiers = async () => {
 		
 		return data;
 	} catch (error) {
-		handleError(error);
+		handleError(error.message || error);
 	}
 };
 
@@ -519,7 +519,7 @@ export const addContent = async (formFields) => {
 
 		return data;
 	} catch (error) {
-		handleError(error);
+		handleError(error.message || error);
 	}
 };
 
@@ -555,7 +555,7 @@ export const updateContent = async (formFields) => {
 
 		return data;
 	} catch (error) {
-		handleError(error);
+		handleError(error.message || error);
 		
 
 	}
@@ -591,7 +591,7 @@ export const handleSignin = async (event, formFields, handleUserChange) => {
 
 			}
 	} catch (error) {
-		handleError(error);
+		handleError(error.message || error);
 	}
 };
 
@@ -617,7 +617,7 @@ export const handleSignup = async (event, formFields) => {
 
 		return true;
 	} catch (error) {
-		handleError(error);
+		handleError(error.message || error);
 	}
 };
 
@@ -642,7 +642,7 @@ export const handleSignout = async (handleUserChange) => {
 		return "Logged out successfully";
 		
 	} catch (error) {
-		handleError(error);
+		handleError(error.message || error);
 	}
 };
 
@@ -657,14 +657,16 @@ export const checkIfSignedIn = async () => {
 			credentials: "include", // Important, because we're using cookies
 		});
 
-		await checkRes(response);
-		
+
 		const data = await response.json();
-		console.log(data);
+		
+		if (!response.ok) return data;
+
+		await checkRes(response);
 
 		return data;
 	} catch (error) {
-		handleError(error);
+		handleError(error.message || error);
 	}
 };
 
@@ -679,13 +681,15 @@ export const refreshProfile = async () => {
 			credentials: "include", // Important, because we're using cookies
 		});
 
-		await checkRes(response);
-		
 		const data = await response.json();
+		
+		if (!response.ok) return data;
+
+		await checkRes(response);
 		
 		return data.userData;
 	} catch (error) {
-		handleError(error);
+		handleError(error.message || error);
 	}
 };
 
@@ -715,7 +719,7 @@ export const handleCredentialChange = async (event, formFields) => {
 		console.log("User updated successfully:", data);
 		return true;
     } catch (error) {
-		handleError(error);
+		handleError(error.message || error);
     }
 };
 
@@ -744,6 +748,6 @@ export const activateAccount = async (activationToken) => {
 		
 		return sanitizedData;
 	} catch (error) {
-		handleError(error);
+		handleError(error.message || error);
 	}
 };
