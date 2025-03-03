@@ -149,6 +149,7 @@ transporter.verify((error, success) => {
 		console.log("SMTP is configured correctly, and is ready to take messages");
 	}
 });
+
 const redisClient = new Redis({
 	host: redisHost,
 	port: redisPort,
@@ -3305,7 +3306,7 @@ const createPaymentIntent = async (amount, currency, customer) => {
 
 
 		const stripeCustomer = await generateStripeCustomer(user[0]);
-		console.log(stripeCustomer);
+		//console.log(stripeCustomer);
 		
 		const paymentIntent = await stripe.paymentIntents.create({
 			amount: Math.round(newTotal), // Amount in cents
@@ -3316,7 +3317,7 @@ const createPaymentIntent = async (amount, currency, customer) => {
 		
 		await storeTaxTransaction(paymentIntent.id, taxPrice);
 
-		console.log(paymentIntent);
+		//console.log(paymentIntent);
 		return paymentIntent;
 	} catch (error) {
 		throw new Error(`Error while trying to pay: ${error.message ? error.message : error}`);
@@ -3465,6 +3466,28 @@ const clearRateLimit = async (req, limiter = generalRateLimiter) => {
 		throw new Error("An error occurred while clearing rate limit");
 	}
 };
+
+const getPartIds = (items) => {
+	if (typeof items !== "object") {
+		throw new Error("Items are not an object!");
+	}
+	let ids = [];
+
+	for (const item of items) {
+		if (item.table === "completedBuild") {
+			for (const key in item) {
+				if (item[key] && (item[key].ID || item[key].PartID)) {
+					ids.push({ ID: item[key].ID, table: key });
+				}
+			}
+		} else if (item.ID || item.PartID) {
+			ids.push({ ID: item.ID || item.PartID, table: item.table });
+		}
+	}
+	console.log(ids);
+	return ids;
+};
+
 
 ////////////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////
@@ -5025,7 +5048,7 @@ app.post("/api/orders/add", rateLimitRoute(dataManipulationRateLimiter), authent
 
 	const userId = req.user.UserID;
 	const jsonFormFields = req.validatedForm;
-	const { TotalPrice,  Items, } = jsonFormFields;
+	const { TotalPrice,  Items } = jsonFormFields;
 	const currency = "eur";
 	const allowedFields = ["Items"];
 	const customerSql = "SELECT * FROM customers WHERE UserID = ?";
@@ -5040,6 +5063,10 @@ app.post("/api/orders/add", rateLimitRoute(dataManipulationRateLimiter), authent
 			return res.status(401).json({ message: "User is not a customer!" });
 		}
 
+		//console.log(jsonFormFields);
+		//console.log(Items);
+		getPartIds(Items);
+
 		const calculatedPrice = Items.map(item => item)
 			.filter(i => i && i.Price || i.totalPrice)
 			.reduce((acc, i) => acc + (parseFloat(i.Price || i.totalPrice) || 0) * parseInt(i.quantity || 1), 0)
@@ -5052,7 +5079,7 @@ app.post("/api/orders/add", rateLimitRoute(dataManipulationRateLimiter), authent
 
 		// More dynamic way of updating content
 		for (const key in jsonFormFields) {
-			console.log(key);
+			//console.log(key);
 			if (allowedFields.includes(key)) {
 				if (jsonFormFields[key] !== "") {
 					insertQuery += key.charAt(0).toUpperCase() + key.slice(1) + " = ?, ";
