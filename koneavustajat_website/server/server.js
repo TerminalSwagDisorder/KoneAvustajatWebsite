@@ -3471,6 +3471,7 @@ const getPartIds = (items) => {
 	if (typeof items !== "object") {
 		throw new Error("Items are not an object!");
 	}
+
 	let ids = [];
 
 	for (const item of items) {
@@ -3481,11 +3482,51 @@ const getPartIds = (items) => {
 				}
 			}
 		} else if (item.ID || item.PartID) {
-			ids.push({ ID: item.ID || item.PartID, table: item.table });
+			ids.push({ ID: item.ID || item.PartID, table: item.table, quantity: item.quantity });
 		}
 	}
-	console.log(ids);
+
 	return ids;
+};
+
+const processItems = async (items) => {
+	if (typeof items !== "object") {
+		throw new Error("Items are not an object!");
+	}
+	const dbItems = [];
+	const itemIds = getPartIds(items);
+	const partQueries = Object.entries(itemIds).map(([key, value]) => {
+		const sql = `SELECT * FROM ${value.table === "usedParts" ? "part_inventory" : value.table} WHERE ${value.table === "usedParts" ? "PartID" : "ID"} = ?`;
+		return promisePool.query(sql, [value.ID]);
+	});
+	const parts = [];
+	const results = await Promise.allSettled(partQueries);
+
+	for (const result of results) {
+		if (result.status !== "fulfilled") {
+			throw new Error("An item was not found in the db!");
+		}
+		parts.push(result.value[0][0]);
+	}
+	//add quantities
+
+	return parts;
+	/*
+	// Less efficient, but better error handling
+	for (const item of itemIds) {
+		const itemSql = `SELECT * FROM ${item.table === "usedParts" ? "part_inventory" : item.table} WHERE ${item.table === "usedParts" ? "PartID" : "ID"} = ?`;
+		const [[dbItem]] = await promisePool.query(itemSql, [item.ID]);
+		if (!dbItem) {
+			throw new Error("Did not find item in db");
+		}
+		dbItems.push(dbItem);
+	}
+	const calculatedPrice = dbItems
+		.map((item) => item)
+		.filter((i) => (i && i.Price) || i.totalPrice)
+		.reduce((acc, i) => acc + (parseFloat(i.Price || i.totalPrice) || 0) * parseInt(i.quantity || 1), 0)
+		.toFixed(2);
+*/
 };
 
 
@@ -5065,9 +5106,341 @@ app.post("/api/orders/add", rateLimitRoute(dataManipulationRateLimiter), authent
 
 		//console.log(jsonFormFields);
 		//console.log(Items);
-		getPartIds(Items);
+		
+		/*
+ Items: [
+   {
+     PartID: 1,
+     PartTypeID: 2,
+     Name: 'Core i5-10400F',
+     Manufacturer: 'Intel',
+     ModelNumber: 'BX8070110400F',
+     SerialNumber: '',
+     Price: '100.00',
+     Available: 1,
+     DateAdded: '2024-12-13T14:35:53.000Z',
+     AdditionalDetails: '',
+     additionaldetails: '',
+     table: 'usedParts',
+     quantity: 1
+   },
+   {
+     cpu: {
+       ID: 31,
+       Url: 'https://www.jimms.fi/fi/Product/Show/203640/100-100001277wof/amd-ryzen-9-9950x-am5-4-3-ghz-16-core-wof',
+       Price: '734.90',
+       Name: 'Ryzen 9 9950x',
+       Manufacturer: 'AMD',
+       Image: 'CPU_508642-ig800gg.jpg',
+       Image_Url: 'https://ic.jimms.fi/product/4/7/508642-ig800gg.jpg',
+       Core_Count: '16',
+       Thread_Count: null,
+       Base_Clock: '4.3 ghz',
+       Cache: '64 mb',
+       Socket: 'Am5',
+       Cpu_Cooler: null,
+       TDP: '170 w',
+       Integrated_GPU: 'Amd radeon™ graphics'
+     },
+     gpu: {
+       ID: 133,
+       Url: 'https://www.jimms.fi/fi/Product/Show/198826/rtx-4080-super-16g-gamingxslim/msi-geforce-rtx-4080-super-gaming-x-slim-naytonohjain-16gb-gddr6x',
+       Price: '1214.90',
+       Name: 'Geforce rtx 4080 super gaming x slim',
+       Manufacturer: 'MSI',
+       Image: 'GPU_479474-ig800gg.jpg',
+       Image_Url: 'https://ic.jimms.fi/product/7/5/479474-ig800gg.jpg',
+       Cores: '10240',
+       Core_Clock: '2610 mhz (gaming & silent mode)',
+       Memory: '16gb gddr6x',
+       Interface: 'Pci express gen 4',
+       Dimensions: '322 x 136 x 62 mm',
+       TDP: '850 w (väh. 750 w)'
+     },
+     cpu_cooler: {
+       ID: 1,
+       Url: 'https://www.jimms.fi/fi/Product/Show/155091/nh-d15-chromax-black/noctua-nh-d15-chromax-black-prosessorijaahdytin',
+       Price: '119.90',
+       Name: 'Nh-d15 chromax.black',
+       Manufacturer: 'Noctua',
+       Image: 'COOLER_257681-ig800gg.jpg',
+       Image_Url: 'https://ic.jimms.fi/product/8/8/257681-ig800gg.jpg',
+       Compatibility: 'Intel lga2066 / lga2011-0 / lga2011-3 (square ilm) / lga115x / lga1700 / lga1200 amd am4 / am5',
+       Cooling_Potential: 'Katso',
+       Fan_RPM: '1500 rpm',
+       Noise_Level: '2 x low-noise adaptor (l.n.a.): 4-pin pwm y-kaapeli',
+       Dimensions: '160 x 150 x 135 mm'
+     },
+     motherboard: {
+       ID: 95,
+       Url: 'https://www.jimms.fi/fi/Product/Show/185935/b650e-aorus-master/gigabyte-b650e-aorus-master-atx-emolevy',
+       Price: '445.90',
+       Name: 'B650e aorus master',
+       Manufacturer: 'Gigabyte',
+       Image: 'MOBO_406968-ig800gg.jpg',
+       Image_Url: 'https://ic.jimms.fi/product/6/1/406968-ig800gg.jpg',
+       Chipset: 'Amd b650',
+       Cpu_Compatibility: 'Am5',
+       Form_Factor: 'Atx (30,5 x 24,4 cm)',
+       Memory_Compatibility: '4 x ddr5 dimm maks. 128gb'
+     },
+     memory: {
+       ID: 270,
+       Url: 'https://www.jimms.fi/fi/Product/Show/201798/f5-6000r3036g16gq4-zr5nk/g-skill-64gb-4-x-16gb-zeta-r5-neo-ddr5-6000mhz-cl30-1-40v-musta',
+       Price: '580.90',
+       Name: '64gb (4 x 16gb) zeta r5 neo',
+       Manufacturer: 'G.Skill',
+       Image: 'RAM_495574-ig800gg.jpg',
+       Image_Url: 'https://ic.jimms.fi/product/7/5/495574-ig800gg.jpg',
+       Type: 'Ddr5',
+       Amount: '64gb (4 x 16gb)',
+       Speed: '6000 mt/s',
+       Latency: '30-36-36-96'
+     },
+     chassis: {
+       ID: 228,
+       Url: 'https://www.jimms.fi/fi/Product/Show/169633/cc-9011212-ww/corsair-icue-5000x-rgb-ikkunallinen-miditornikotelo-musta',
+       Price: '209.90',
+       Name: 'Icue 5000x rgb',
+       Manufacturer: 'Corsair',
+       Image: 'CHASSIS_322091-ig800gg.jpg',
+       Image_Url: 'https://ic.jimms.fi/product/9/8/322091-ig800gg.jpg',
+       Chassis_type: 'Atx midi- ja mini-tornikotelot',
+       Dimensions: '520 x 245 x 520 mm',
+       Color: null,
+       Compatibility: 'Mini-itx, micro-atx, atx, e-atx (305 x 277 mm)'
+     },
+     psu: {
+       ID: 14,
+       Url: 'https://www.jimms.fi/fi/Product/Show/186334/ps-tpd-1650fnfage-4/thermaltake-1650w-toughpower-gf3-tt-premium-edition-atx-virtalahde-pcie-5-0-80-gold',
+       Price: '361.90',
+       Name: '1650w toughpower gf3-tt premium edition',
+       Manufacturer: 'Thermaltake',
+       Image: 'PSU_409336-ig800gg.jpg',
+       Image_Url: 'https://ic.jimms.fi/product/3/3/409336-ig800gg.jpg',
+       Is_ATX12V: null,
+       Efficiency: 'Täyttää 80 plus gold -vaatimukset @ 115vac sisääntulolla',
+       Modular: null,
+       Dimensions: '150 x 86 x 180 mm'
+     },
+     storage: {
+       ID: 183,
+       Url: 'https://www.jimms.fi/fi/Product/Show/186087/cssd-f4000gbmp600pnh/corsair-4tb-mp600-pro-nh-gen4-pcie-x4-m-2-2280-nvme-ssd-levy-7000-6500-mb-s',
+       Price: '454.90',
+       Name: '4tb mp600 pro nh',
+       Manufacturer: 'Corsair',
+       Image: 'STORAGE_407998-ig800gg.jpg',
+       Image_Url: 'https://ic.jimms.fi/product/9/1/407998-ig800gg.jpg',
+       Capacity: '4000 gb',
+       Form_Factor: 'M.2',
+       Interface: null,
+       Cache: 'Yes',
+       Flash: '3d tlc',
+       TBW: '3000 tbw'
+     },
+     totalPrice: '4123.20',
+     table: 'completedBuild'
+   },
+   {
+     ID: 2,
+     Url: 'https://www.jimms.fi/fi/Product/Show/173333/100-100000252box/amd-ryzen-5-5600g-am4-3-9-ghz-6-core-boxed',
+     Price: '138.90',
+     Name: 'Ryzen 5 5600g',
+     Manufacturer: 'AMD',
+     Image: 'CPU_346349-ig800gg.jpg',
+     Image_Url: 'https://ic.jimms.fi/product/4/0/346349-ig800gg.jpg',
+     Core_Count: '6',
+     Thread_Count: '12',
+     Base_Clock: '3.9 ghz',
+     Cache: 'L2 cache: 3mb',
+     Socket: 'Am4',
+     Cpu_Cooler: 'Wraith stealth',
+     TDP: '65w',
+     Integrated_GPU: 'Radeon vega 7 -sarja',
+     table: 'cpu',
+     quantity: 1
+   },
+   {
+     ID: 1,
+     Url: 'https://www.jimms.fi/fi/Product/Show/162758/tuf-gaming-b550-plus/asus-tuf-gaming-b550-plus-atx-emolevy',
+     Price: '137.90',
+     Name: 'Tuf gaming b550-plus',
+     Manufacturer: 'Asus',
+     Image: 'MOBO_288210-ig800gg.jpg',
+     Image_Url: 'https://ic.jimms.fi/product/1/9/288210-ig800gg.jpg',
+     Chipset: 'Amd b550',
+     Cpu_Compatibility: 'Am4',
+     Form_Factor: 'Atx (30,5 x 24,4 cm)',
+     Memory_Compatibility: '4 x ddr4 dimm maks. 128gb',
+     table: 'motherboard',
+     quantity: 1
+   }
+ ]
+ dbItems: [
+   {
+     PartID: 1,
+     PartTypeID: 2,
+     Name: 'Core i5-10400F',
+     Manufacturer: 'Intel',
+     ModelNumber: 'BX8070110400F',
+     SerialNumber: null,
+     Price: '100.00',
+     Available: 1,
+     DateAdded: 2024-12-13T14:35:53.000Z,
+     AdditionalDetails: null
+   },
+   {
+     ID: 31,
+     Url: 'https://www.jimms.fi/fi/Product/Show/203640/100-100001277wof/amd-ryzen-9-9950x-am5-4-3-ghz-16-core-wof',
+     Price: '734.90',
+     Name: 'Ryzen 9 9950x',
+     Manufacturer: 'AMD',
+     Image: 'CPU_508642-ig800gg.jpg',
+     Image_Url: 'https://ic.jimms.fi/product/4/7/508642-ig800gg.jpg',
+     Core_Count: '16',
+     Thread_Count: null,
+     Base_Clock: '4.3 ghz',
+     Cache: '64 mb',
+     Socket: 'Am5',
+     Cpu_Cooler: null,
+     TDP: '170 w',
+     Integrated_GPU: 'Amd radeon™ graphics'
+   },
+   {
+     ID: 133,
+     Url: 'https://www.jimms.fi/fi/Product/Show/198826/rtx-4080-super-16g-gamingxslim/msi-geforce-rtx-4080-super-gaming-x-slim-naytonohjain-16gb-gddr6x',
+     Price: '1214.90',
+     Name: 'Geforce rtx 4080 super gaming x slim',
+     Manufacturer: 'MSI',
+     Image: 'GPU_479474-ig800gg.jpg',
+     Image_Url: 'https://ic.jimms.fi/product/7/5/479474-ig800gg.jpg',
+     Cores: '10240',
+     Core_Clock: '2610 mhz (gaming & silent mode)',
+     Memory: '16gb gddr6x',
+     Interface: 'Pci express gen 4',
+     Dimensions: '322 x 136 x 62 mm',
+     TDP: '850 w (väh. 750 w)'
+   },
+   {
+     ID: 1,
+     Url: 'https://www.jimms.fi/fi/Product/Show/155091/nh-d15-chromax-black/noctua-nh-d15-chromax-black-prosessorijaahdytin',
+     Price: '119.90',
+     Name: 'Nh-d15 chromax.black',
+     Manufacturer: 'Noctua',
+     Image: 'COOLER_257681-ig800gg.jpg',
+     Image_Url: 'https://ic.jimms.fi/product/8/8/257681-ig800gg.jpg',
+     Compatibility: 'Intel lga2066 / lga2011-0 / lga2011-3 (square ilm) / lga115x / lga1700 / lga1200 amd am4 / am5',
+     Cooling_Potential: 'Katso',
+     Fan_RPM: '1500 rpm',
+     Noise_Level: '2 x low-noise adaptor (l.n.a.): 4-pin pwm y-kaapeli',
+     Dimensions: '160 x 150 x 135 mm'
+   },
+   {
+     ID: 95,
+     Url: 'https://www.jimms.fi/fi/Product/Show/185935/b650e-aorus-master/gigabyte-b650e-aorus-master-atx-emolevy',
+     Price: '445.90',
+     Name: 'B650e aorus master',
+     Manufacturer: 'Gigabyte',
+     Image: 'MOBO_406968-ig800gg.jpg',
+     Image_Url: 'https://ic.jimms.fi/product/6/1/406968-ig800gg.jpg',
+     Chipset: 'Amd b650',
+     Cpu_Compatibility: 'Am5',
+     Form_Factor: 'Atx (30,5 x 24,4 cm)',
+     Memory_Compatibility: '4 x ddr5 dimm maks. 128gb'
+   },
+   {
+     ID: 270,
+     Url: 'https://www.jimms.fi/fi/Product/Show/201798/f5-6000r3036g16gq4-zr5nk/g-skill-64gb-4-x-16gb-zeta-r5-neo-ddr5-6000mhz-cl30-1-40v-musta',
+     Price: '580.90',
+     Name: '64gb (4 x 16gb) zeta r5 neo',
+     Manufacturer: 'G.Skill',
+     Image: 'RAM_495574-ig800gg.jpg',
+     Image_Url: 'https://ic.jimms.fi/product/7/5/495574-ig800gg.jpg',
+     Type: 'Ddr5',
+     Amount: '64gb (4 x 16gb)',
+     Speed: '6000 mt/s',
+     Latency: '30-36-36-96'
+   },
+   {
+     ID: 228,
+     Url: 'https://www.jimms.fi/fi/Product/Show/169633/cc-9011212-ww/corsair-icue-5000x-rgb-ikkunallinen-miditornikotelo-musta',
+     Price: '209.90',
+     Name: 'Icue 5000x rgb',
+     Manufacturer: 'Corsair',
+     Image: 'CHASSIS_322091-ig800gg.jpg',
+     Image_Url: 'https://ic.jimms.fi/product/9/8/322091-ig800gg.jpg',
+     Chassis_type: 'Atx midi- ja mini-tornikotelot',
+     Dimensions: '520 x 245 x 520 mm',
+     Color: null,
+     Compatibility: 'Mini-itx, micro-atx, atx, e-atx (305 x 277 mm)'
+   },
+   {
+     ID: 14,
+     Url: 'https://www.jimms.fi/fi/Product/Show/186334/ps-tpd-1650fnfage-4/thermaltake-1650w-toughpower-gf3-tt-premium-edition-atx-virtalahde-pcie-5-0-80-gold',
+     Price: '361.90',
+     Name: '1650w toughpower gf3-tt premium edition',
+     Manufacturer: 'Thermaltake',
+     Image: 'PSU_409336-ig800gg.jpg',
+     Image_Url: 'https://ic.jimms.fi/product/3/3/409336-ig800gg.jpg',
+     Is_ATX12V: null,
+     Efficiency: 'Täyttää 80 plus gold -vaatimukset @ 115vac sisääntulolla',
+     Modular: null,
+     Dimensions: '150 x 86 x 180 mm'
+   },
+   {
+     ID: 183,
+     Url: 'https://www.jimms.fi/fi/Product/Show/186087/cssd-f4000gbmp600pnh/corsair-4tb-mp600-pro-nh-gen4-pcie-x4-m-2-2280-nvme-ssd-levy-7000-6500-mb-s',
+     Price: '454.90',
+     Name: '4tb mp600 pro nh',
+     Manufacturer: 'Corsair',
+     Image: 'STORAGE_407998-ig800gg.jpg',
+     Image_Url: 'https://ic.jimms.fi/product/9/1/407998-ig800gg.jpg',
+     Capacity: '4000 gb',
+     Form_Factor: 'M.2',
+     Interface: null,
+     Cache: 'Yes',
+     Flash: '3d tlc',
+     TBW: '3000 tbw'
+   },
+   {
+     ID: 2,
+     Url: 'https://www.jimms.fi/fi/Product/Show/173333/100-100000252box/amd-ryzen-5-5600g-am4-3-9-ghz-6-core-boxed',
+     Price: '138.90',
+     Name: 'Ryzen 5 5600g',
+     Manufacturer: 'AMD',
+     Image: 'CPU_346349-ig800gg.jpg',
+     Image_Url: 'https://ic.jimms.fi/product/4/0/346349-ig800gg.jpg',
+     Core_Count: '6',
+     Thread_Count: '12',
+     Base_Clock: '3.9 ghz',
+     Cache: 'L2 cache: 3mb',
+     Socket: 'Am4',
+     Cpu_Cooler: 'Wraith stealth',
+     TDP: '65w',
+     Integrated_GPU: 'Radeon vega 7 -sarja'
+   },
+   {
+     ID: 1,
+     Url: 'https://www.jimms.fi/fi/Product/Show/162758/tuf-gaming-b550-plus/asus-tuf-gaming-b550-plus-atx-emolevy',
+     Price: '137.90',
+     Name: 'Tuf gaming b550-plus',
+     Manufacturer: 'Asus',
+     Image: 'MOBO_288210-ig800gg.jpg',
+     Image_Url: 'https://ic.jimms.fi/product/1/9/288210-ig800gg.jpg',
+     Chipset: 'Amd b550',
+     Cpu_Compatibility: 'Am4',
+     Form_Factor: 'Atx (30,5 x 24,4 cm)',
+     Memory_Compatibility: '4 x ddr4 dimm maks. 128gb'
+   }
+ ]
+*/
+		
+		const dbItems = await processItems(Items);
+		
+		console.log("\nItems:", Items);
+		console.log("\ndbItems:", dbItems);
 
-		const calculatedPrice = Items.map(item => item)
+		const calculatedPrice = dbItems.map(item => item)
 			.filter(i => i && i.Price || i.totalPrice)
 			.reduce((acc, i) => acc + (parseFloat(i.Price || i.totalPrice) || 0) * parseInt(i.quantity || 1), 0)
 		.toFixed(2);
