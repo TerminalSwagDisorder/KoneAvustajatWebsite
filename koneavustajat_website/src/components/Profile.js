@@ -422,7 +422,7 @@ const Profile = ({ handleCredentialChange, handleSignout, fetchDynamicData, upda
 						<div className="d-flex justify-content-end mb-3">
 							<CloseButton onClick={() => closeForm()} />
 						</div>
-						<h4 className=" mb-3">Change address</h4>
+						<h4 className=" mb-3">View orders</h4>
 						<Form.Group className="mb-3">
 							<Form.Select name="OrderID" value={currentOrder[0] ? currentOrder[0].OrderID : null} onChange={fetchCurrentOrder}>
 								{orders && Object.keys(orders).length > 0 ? (
