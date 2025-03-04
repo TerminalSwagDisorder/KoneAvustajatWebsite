@@ -5134,6 +5134,9 @@ app.post("/api/orders/add", rateLimitRoute(dataManipulationRateLimiter), authent
 		//console.log(Items);
 		
 		const dbItems = await processItems(Items);
+		if (!dbItems) {
+			return res.status(400).json({ message: "Something went wrong while processing items!" });
+		}
 		
 		//console.log("\nItems:", Items);
 		//console.log("\ndbItems:", dbItems);
@@ -5143,33 +5146,18 @@ app.post("/api/orders/add", rateLimitRoute(dataManipulationRateLimiter), authent
 			.reduce((acc, i) => acc + (parseFloat(i.Price || i.totalPrice) || 0) * parseInt(i.quantity || 1), 0)
 		.toFixed(2);
 		
+		if (Math.abs(TotalPrice - calculatedPrice) > 1.00) {
+			console.log(`Price was not as expected from user ${userId}`);
+		}
+		
 		const paymentIntent = await createPaymentIntent(calculatedPrice, currency, customer[0]);
-
+		
 		let insertQuery = `INSERT INTO orders SET `;
 		let queryParams = [];
 
-		// More dynamic way of updating content
-		for (const key in jsonFormFields) {
-			//console.log(key);
-			if (allowedFields.includes(key)) {
-				if (jsonFormFields[key] !== "") {
-					insertQuery += key.charAt(0).toUpperCase() + key.slice(1) + " = ?, ";
-					if (typeof jsonFormFields[key] === "object") {
-						queryParams.push(JSON.stringify(jsonFormFields[key]));
-					} else {
-						queryParams.push(jsonFormFields[key]);
-					}
-				}
-			}
-		}
-
-		if (queryParams.length > 0) {
-			insertQuery = insertQuery.slice(0, -2);
-		}
-
 		// OrderID, OrderTypeID, CustomerID, ReceiptID, OrderDate, Status, TotalPrice, Currency, Items, PaymentMethod, PaymentProvider, TransactionID, PaymentStatus, PaymentDate, ModifiedAt
-		insertQuery += ", CustomerID = ?, TotalPrice = ?, OrderTypeID = ?, ReceiptID = ?, Status = ?, Currency = ?, PaymentProvider = ?, TransactionID = ?, PaymentMethod = ?, PaymentStatus = ?";
-		queryParams.push(parseInt(customer[0].CustomerID), paymentIntent.amount / 100, 1, generateReceiptId(customer[0].CustomerID), "verifying", paymentIntent.currency, "stripe", paymentIntent.id, paymentIntent.payment_method_types, "unpaid");		
+		insertQuery += " Items = ?, CustomerID = ?, TotalPrice = ?, OrderTypeID = ?, ReceiptID = ?, Status = ?, Currency = ?, PaymentProvider = ?, TransactionID = ?, PaymentMethod = ?, PaymentStatus = ?";
+		queryParams.push(JSON.stringify(dbItems), parseInt(customer[0].CustomerID), paymentIntent.amount / 100, 1, generateReceiptId(customer[0].CustomerID), "verifying", paymentIntent.currency, "stripe", paymentIntent.id, paymentIntent.payment_method_types, "unpaid");		
 
 		const [result] = await promisePool.query(insertQuery, queryParams);
 		return res.status(200).json({ message: "Added order successfully", id: result.insertId, clientSecret: paymentIntent.client_secret });
