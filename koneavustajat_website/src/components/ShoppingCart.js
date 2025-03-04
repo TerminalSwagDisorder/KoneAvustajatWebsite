@@ -49,9 +49,10 @@ const ShoppingCart = ({ postDynamicData, updateDynamicData }) => {
 
 	const totalPrice = sortedItems.map(item => item[1])
 		.filter(i => i && i.Price || i.totalPrice) // Filter out non-component entries
-		.reduce((acc, i) => acc + (parseFloat(i.Price || i.totalPrice) || 0) * parseInt(i.quantity || 1), 0)
-	.toFixed(2);
+		.reduce((acc, i) => acc + (parseFloat(i.Price || i.totalPrice) || 0) * parseInt(i.quantity || 1), 0);
 
+	const vatPrice = parseFloat(totalPrice * 1.255);
+	const processingFee = parseFloat(totalPrice < 2000 ? totalPrice * 0.1 : 200);
 
 	const handleAddToCart = (item) => {
 		const newItem = {
@@ -180,7 +181,16 @@ const ShoppingCart = ({ postDynamicData, updateDynamicData }) => {
                     <ListGroup.Item>
                         {(totalPrice && totalPrice > 0) ? (
                             <p>
-                                Total price: <b>{totalPrice} + VAT (25.5%)</b> €
+                                Processing fee: <b>{(processingFee).toFixed(2)}</b>€
+                            </p>
+                        ) : (
+                            <p>No price could be calculated!</p>
+                        )}
+                    </ListGroup.Item>
+                    <ListGroup.Item>
+                        {(totalPrice && totalPrice > 0) ? (
+                            <p>
+                                Total price: <b>{(vatPrice+processingFee).toFixed(2)}</b>€ (Incl. VAT 25.5%)
                             </p>
                         ) : (
                             <p>No price could be calculated!</p>
