@@ -50,6 +50,8 @@ const backendUrl = process.env.BACKEND_URL;
 const corsUrl = process.env.CORS;
 const redisHost = process.env.REDIS_HOST;
 const redisPort = process.env.REDIS_PORT;
+const opensearchUser = process.env.OPENSEARCH_USER;
+const opensearchPassword = process.env.OPENSEARCH_PASSWORD;
 
 const generatedEnvVars = { SESSION_SECRET: sessionSecret, JWT_SECRET: jwtSecret, OPENSEARCH_URL: opensearch };
 const otherEnvVars = {
@@ -67,6 +69,8 @@ const otherEnvVars = {
 	CORS: corsUrl,
 	REDIS_HOST: redisHost,
 	REDIS_PORT: redisPort,
+	OPENSEARCH_USER: opensearchUser,
+	OPENSEARCH_PASSWORD: opensearchPassword,
 };
 
 for (const vars of [generatedEnvVars, otherEnvVars]) {
@@ -120,8 +124,8 @@ app.use(
 const client = new Client({
     node: opensearch, 
     auth: {
-        username: "admin",
-        password: "Mhavurt123"
+        username: opensearchUser,
+        password: opensearchPassword
     }
 });
 
@@ -684,6 +688,22 @@ const adminUserSchema = Joi.object({
 	})
 });
 
+const userSearchSchema = Joi.object({
+	UserID: Joi.number().optional(),
+	Name: Joi.string().trim().max(50).optional(),
+	Gender: Joi.string().trim().max(100).optional(),
+	ProfileImage: Joi.string().trim().optional(),
+	RoleID: Joi.number().max(1).optional(),
+	Email: Joi.string().trim().optional(),
+	Password: Joi.string().trim().optional(),
+	Activated: Joi.alternatives().try(
+		Joi.boolean(),
+		Joi.number().valid(0, 1)
+	).optional(),
+	strict: Joi.boolean().optional(),
+	inverted: Joi.boolean().optional()
+});
+
 const passwordForgotSchema = Joi.object({
 	Email: Joi.string().trim()
 		.required()
@@ -907,6 +927,64 @@ const orderSchema = Joi.object({
 	ModifiedAt: Joi.date().optional()
 });
 
+const orderSearchSchema = Joi.object({
+	OrderID: Joi.number().optional(),
+	OrderTypeID: Joi.number().optional(),
+	CustomerID: Joi.number().optional(),
+	ReceiptID: Joi.string().trim().max(30).optional(),
+	OrderDate: Joi.date().optional(),
+	Status: Joi.string().trim().max(255).optional(),
+	TotalPrice: Joi.number().optional(),
+	Currency: Joi.string().trim().max(10).optional(),
+	Items: Joi.array().items(Joi.object().optional()).optional(),
+	PaymentMethod: Joi.string().trim().max(255).optional(),
+	PaymentProvider: Joi.string().trim().max(255).optional(),
+	TransactionID: Joi.string().trim().max(255).optional(),
+	PaymentStatus: Joi.string().trim().max(255).optional(),
+	PaymentDate: Joi.date().optional(),
+	ModifiedAt: Joi.date().optional(),
+	strict: Joi.boolean().optional(),
+	inverted: Joi.boolean().optional()
+});
+
+const adminOrderUpdateSchema = Joi.object({
+	Status: Joi.string().trim().valid("verifying", "processing", "completed", "failed", "canceled").max(20).optional().messages({
+		"string.base": "Status must be a string",
+		"string.empty": "Status cannot be empty",
+		"string.only": 'Status must be one of ["verifying", "processing", "completed", "failed", "canceled"]',
+		"string.max": "Status cannot exceed 20 characters"
+	}),
+	TotalPrice: Joi.number().optional().messages({
+		"number.base": "TotalPrice must be a number",
+		"number.empty": "TotalPrice cannot be empty"
+	}),
+	Currency: Joi.string().trim().optional().messages({
+		"string.base": "Currency must be a string",
+		"string.empty": "Currency cannot be empty",
+	}),
+	Items: Joi.array().items(Joi.object().optional()).optional(),
+	PaymentStatus: Joi.string().trim().valid("verifying", "paid", "unpaid", "failed", "canceled").max(20).optional().messages({
+		"string.base": "PaymentStatus must be a string",
+		"string.empty": "PaymentStatus cannot be empty",
+		"string.only": 'PaymentStatus must be one of ["verifying", "paid", "unpaid", "failed", "canceled"]',
+		"string.max": "PaymentStatus cannot exceed 20 characters"
+	})
+});
+
+const emailTransactionSearchSchema = Joi.object({
+	EmailID: Joi.number().optional(),
+	EmailTypeID: Joi.number().optional(),
+	ToUserID: Joi.number().optional(),
+	ToEmail: Joi.string().trim().optional(),
+	FromEmail: Joi.string().trim().optional(),
+	Subject: Joi.string().trim().optional(),
+	Text: Joi.string().trim().optional(),
+	Content: Joi.string().trim().optional(),
+	CreatedAt: Joi.date().optional(),
+	strict: Joi.boolean().optional(),
+	inverted: Joi.boolean().optional()
+});
+
 // Validators & searches
 const searchSanitization = (key, value, term) => {
 	if (value === undefined || value === null || value === "") {
@@ -1007,8 +1085,45 @@ const searchSanitization = (key, value, term) => {
 			"created_at",
 			"modified_at",
 			"status"
+		],
+		users: [
+			"UserID",
+			"Name",
+			"Gender",
+			"ProfileImage",
+			"RoleID",
+			"Email",
+			"Password",
+			"Activated",
+		],
+		orders: [
+			"OrderID",
+			"OrderTypeID",
+			"CustomerID",
+			"ReceiptID",
+			"OrderDate",
+			"Status",
+			"TotalPrice",
+			"Currency",
+			"Items",
+			"PaymentMethod",
+			"PaymentProvider",
+			"TransactionID",
+			"PaymentStatus",
+			"PaymentDate",
+			"ModifiedAt"
+		],
+		emailtransactions: [
+			"EmailID",
+			"EmailTypeID",
+			"ToUserID",
+			"ToEmail",
+			"FromEmail",
+			"Subject",
+			"Text",
+			"Content",
+			"CreatedAt"
 		]
-
 	};
 
 	const universalPartColumns = ["ID", "Url", "Image", "Image_Url"];
@@ -1046,19 +1161,22 @@ const tableSearch = (searchContext = "cpu") => {
 			}
 		}
 		try {
-			let currentSchema = partSchema;
-			if (partName === "inventory") {
-				currentSchema = inventorySchema;
+			const schemaMapping = {
+				default: partSchema,
+				inventory: inventorySchema,
+				opensearch: opensearchSchema,
+				content: contentSchema,
+				address: addressSchema,
+				users: userSearchSchema,
+				orders: orderSearchSchema,
+				emailtransactions: emailTransactionSearchSchema
+			};
+
+			let currentSchema = schemaMapping.default;
+			if (partName) {
+				currentSchema = schemaMapping[partName];
 			}
-			if (partName === "opensearch") {
-				currentSchema = opensearchSchema;
-			}
-			if (partName === "content") {
-				currentSchema = contentSchema;
-			}
-			if (partName === "address") {
-				currentSchema = addressSchema;
-			}
+
 			const validationResult = Joi.attempt(searchTerms, currentSchema);
 
 			req.searchTerms = validationResult;
@@ -3555,6 +3673,16 @@ const processItems = async (items) => {
 	return parts;
 };
 
+const parseJson = (data) => {
+	if (typeof data !== "object") {
+		try {
+			return JSON.parse(data);
+		} catch {
+			return data;
+		}
+	}
+	return data;
+};
 
 ////////////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////
@@ -4935,10 +5063,6 @@ app.post("/api/inventory/add", authenticateAdmin, formFieldsValidator(inventoryS
 	const allowedFields = ["PartTypeID", "Name", "Manufacturer", "ModelNumber", "SerialNumber", "Price", "Available", "AdditionalDetails"];
 
 	try {
-		if (req.user.RoleID !== 4) {
-			return res.status(401).json({ message: "User is not an admin" });
-		}
-
 		let insertQuery = `INSERT INTO part_inventory SET `;
 		let queryParams = [];
 
@@ -5351,7 +5475,7 @@ app.get("/api/users/customers", authenticateAdmin, routePagination, async (req, 
 });
 
 app.get("/api/users/customers/:id", authenticateAdmin, idValidator, async (req, res) => {
-	console.log("API search parts by id accessed");
+	console.log("API search customer by id accessed");
 
 	const id = req.validatedId;
 	const sql = `SELECT c.CustomerID AS CustomerID, c.*, u.*, a.AddressID, a.AddressTypeID, a.Street, a.City, a.State, a.PostalCode, a.Country, o.OrderID, o.OrderTypeID, o.ReceiptID ,o.OrderDate, o.Status, o.TotalPrice, o.Items, o.PaymentMethod, o.PaymentStatus 
@@ -5652,9 +5776,6 @@ app.patch("/api/text-content/update/:id", rateLimitRoute(adminDataManipulationRa
 	const allowedFieldsSql = `SELECT DISTINCT column_name FROM information_schema.columns WHERE table_name IN ('content') AND table_schema = '${process.env.DB_NAME}';`;
 
 	try {
-		if (req.user.RoleID !== 4) {
-			return res.status(401).json({ message: "User is not an admin" });
-		}
 		const [allowedColumns] = await promisePool.query(allowedFieldsSql);
 		const allowedFields = allowedColumns.map(item => item.column_name);
 
@@ -5704,9 +5825,6 @@ app.patch("/api/text-content/update", rateLimitRoute(adminDataManipulationRateLi
 	const searchKeys = ["Site_Identifier", "Language", "Version"];
 
 	try {
-		if (req.user.RoleID !== 4) {
-			return res.status(401).json({ message: "User is not an admin" });
-		}
 		if (jsonFormFields.Site_Identifier === "" || jsonFormFields.Language === "") {
 			return res.status(400).json({ message: "All identifier fields are not filled" });
 		}
@@ -5772,10 +5890,6 @@ app.post("/api/text-content/add", formFieldsValidator(contentSchema), authentica
 	const allowedFields = ["Site_Identifier", "Main_Tag", "Language", "Content_Text", "Content_Type"];
 
 	try {
-		if (req.user.RoleID !== 4) {
-			return res.status(401).json({ message: "User is not an admin" });
-		}
-
 		if (!Site_Identifier || !Content_Text) {
 			return res.status(400).json({ message: "All required form fields were not provided" });
 		}
@@ -5899,8 +6013,112 @@ app.post("/api/admin/users/add", rateLimitRoute(adminDataManipulationRateLimiter
 	}
 });
 
+app.get("/api/admin/users", routePagination, tableSearch("users"), async (req, res) => {
+	console.log("API admin users accessed");
+
+	const { items, offset } = req.pagination;
+	const searchTerms = req.searchTerms;
+	let sql;
+	let notOperator = "";
+	let sqlParams = [];
+
+	let searchQuery = " WHERE 1=1";
+
+	if (searchTerms.Activated && typeof searchTerms.Activated === "boolean") {
+		searchTerms.Activated = searchTerms.Activated === true ? "1" : "0";
+	}
+
+	if (searchTerms.inverted) {
+		notOperator = searchTerms.strict === true ? "!" : "NOT ";
+	}
+
+	const ignoreColumns = ["strict", "inverted"];
+
+	for (let [column, value] of Object.entries(searchTerms)) {
+		if (!ignoreColumns.includes(column)) {
+			if (searchTerms.strict && searchTerms.strict === true) {
+				searchQuery += ` AND u.${column} ${notOperator}= ?`;
+			} else {
+				value = `%${value}%`;
+				searchQuery += ` AND u.${column} ${notOperator}LIKE ?`;
+			}
+			sqlParams.push(value); // Push values to sqlParams array
+		}
+	}
+
+	sql = `SELECT
+		ad.AdminID,
+		ad.Department,
+		c.CustomerID,
+		u.UserID,
+		u.Name,
+		u.Gender,
+		u.ProfileImage,
+		u.RoleID,
+		u.Email,
+		u.Password,
+		u.Activated,
+		JSON_ARRAY(
+			GROUP_CONCAT(
+				JSON_OBJECT(
+					'AddressID',
+					a.AddressID,
+					'AddressTypeID',
+					a.AddressTypeID,
+					'Street',
+					a.Street,
+					'City',
+					a.City,
+					'State',
+					a.State,
+					'PostalCode',
+					a.PostalCode,
+					'Country',
+					a.Country
+				)
+			)
+		) AS Addresses
+	FROM users u
+	LEFT JOIN customers c ON u.UserID = c.UserID
+	LEFT JOIN admins ad ON u.UserID = ad.UserID
+	LEFT JOIN addresses a ON c.CustomerID = a.CustomerID
+		${searchQuery} GROUP BY u.UserID LIMIT ? OFFSET ?`;
+	sqlParams.push(items, offset); // Push pagination params after search params
+
+	try {
+		const [users] = await promisePool.query(sql, sqlParams);
+
+		// additionaldetails needs to be parsed
+		const processedUsers = users.map((user) => {
+			const isAdmin = user.RoleID === 4;
+			
+			if (user.Addresses) {
+				user.Addresses = parseJson(user.Addresses);
+
+				if (Array.isArray(user.Addresses)) {
+					user.Addresses = parseJson("[" + user.Addresses[0] + "]");
+				}
+
+				if (user.Addresses.every((address) => Object.values(address).every((item) => item === null || item === undefined || item === ""))) {
+					user.Addresses = null;
+				}
+			}
+
+			// Exclude sensitive information like hashed password
+			const { Password, ...userData } = user;
+			return { ...userData, isAdmin };
+		});
+
+		return res.status(200).json(processedUsers);
+	} catch (error) {
+		const [status, message] = handleServerError(error);
+		return res.status(status).json({ message: message });
+	}
+});
+
+
 app.patch("/api/admin/users/update", rateLimitRoute(adminDataManipulationRateLimiter), authenticateAdmin, profileImgUpload.single("ProfileImage"), formFieldsValidator(adminUserUpdateSchema), userFieldsValidator, async (req, res) => {
-	console.log("API update own credentials accessed");
+	console.log("API admin update user credentials accessed");
 	const jsonFormFields = req.validatedForm;
 	const userId = jsonFormFields.UserID;
 	const ProfileImage = req.file; // Profile image
@@ -5974,6 +6192,144 @@ app.patch("/api/admin/users/update", rateLimitRoute(adminDataManipulationRateLim
 	}
 });
 
+app.get("/api/admin/orders", authenticateAdmin, routePagination, tableSearch("users"), async (req, res) => {
+	console.log("API admin orders accessed");
+
+	const { items, offset } = req.pagination;
+	const searchTerms = req.searchTerms;
+	let sql;
+	let notOperator = "";
+	let sqlParams = [];
+
+	let searchQuery = " WHERE 1=1";
+
+	if (searchTerms.inverted) {
+		notOperator = searchTerms.strict === true ? "!" : "NOT ";
+	}
+
+	const ignoreColumns = ["strict", "inverted"];
+
+	for (let [column, value] of Object.entries(searchTerms)) {
+		if (!ignoreColumns.includes(column)) {
+			if (searchTerms.strict && searchTerms.strict === true) {
+				searchQuery += ` AND ${column} ${notOperator}= ?`;
+			} else {
+				value = `%${value}%`;
+				searchQuery += ` AND ${column} ${notOperator}LIKE ?`;
+			}
+			sqlParams.push(value);
+		}
+	}
+
+	sql = `SELECT * FROM orders ${searchQuery} LIMIT ? OFFSET ?`;
+	sqlParams.push(items, offset);
+
+	try {
+		const [orders] = await promisePool.query(sql, sqlParams);
+
+		const parseInventory = orders.map((item) => ({
+			...item,
+			Items: item.Items ? JSON.parse(item.Items) : null
+		}));
+
+		return res.status(200).json(parseInventory);
+	} catch (error) {
+		const [status, message] = handleServerError(error);
+		return res.status(status).json({ message: message });
+	}
+});
+
+app.patch("/api/admin/orders/update/:id", rateLimitRoute(adminDataManipulationRateLimiter), authenticateAdmin, formFieldsValidator(adminOrderUpdateSchema), async (req, res) => {
+	console.log("API admin update order accessed");
+	const jsonFormFields = req.validatedForm;
+	const orderId = req.validatedId;
+
+	try {
+		const userSql = "SELECT * FROM orders WHERE OrderID = ?";
+		const [[oldOrder]] = await promisePool.query(userSql, [orderId]);
+		if (!oldOrder) {
+			return res.status(404).json({ message: "Order does not exist" });
+		}
+		
+		const allowedFields = ["Status", "TotalPrice", "Currency", "Items", "PaymentStatus"]; 
+
+		let updateQuery = "UPDATE orders SET ";
+		let queryParams = [];
+
+		// More dynamic way of updating users
+		for (const key in jsonFormFields) {
+			if (allowedFields.includes(key)) {
+				if (jsonFormFields.hasOwnProperty(key)) {
+					if (jsonFormFields[key] !== "") {
+						updateQuery += key.charAt(0).toUpperCase() + key.slice(1) + " = ?, ";
+						queryParams.push(jsonFormFields[key]);
+					}
+				}
+			}
+		}
+
+		// Remove trailing comma and space
+		if (queryParams.length > 0) {
+			updateQuery = updateQuery.slice(0, -2);
+		}
+
+		updateQuery += " WHERE OrderID = ?";
+		queryParams.push(orderId);
+
+		const [result] = await promisePool.query(updateQuery, queryParams);
+		if (result.affectedRows === 0) {
+			return res.status(404).json({ message: "Item not found" });
+		}
+
+		return res.status(200).json({ message: "Order updated successfully" });
+	} catch (error) {
+		const [status, message] = handleServerError(error);
+		return res.status(status).json({ message: message });
+
+	}
+});
+
+app.get("/api/admin/email-transactions", authenticateAdmin, routePagination, tableSearch("emailtransactions"), async (req, res) => {
+	console.log("API admin users accessed");
+
+	const { items, offset } = req.pagination;
+	const searchTerms = req.searchTerms;
+	let sql;
+	let notOperator = "";
+	let sqlParams = [];
+
+	let searchQuery = " WHERE 1=1";
+
+	if (searchTerms.inverted) {
+		notOperator = searchTerms.strict === true ? "!" : "NOT ";
+	}
+
+	const ignoreColumns = ["strict", "inverted"];
+
+	for (let [column, value] of Object.entries(searchTerms)) {
+		if (!ignoreColumns.includes(column)) {
+			if (searchTerms.strict && searchTerms.strict === true) {
+				searchQuery += ` AND ${column} ${notOperator}= ?`;
+			} else {
+				value = `%${value}%`;
+				searchQuery += ` AND ${column} ${notOperator}LIKE ?`;
+			}
+			sqlParams.push(value); // Push values to sqlParams array
+		}
+	}
+
+	sql = `SELECT * FROM email_transactions ${searchQuery} LIMIT ? OFFSET ?`;
+	sqlParams.push(items, offset); // Push pagination params after search params
+
+	try {
+		const [emailTransactions] = await promisePool.query(sql, sqlParams);
+
+		return res.status(200).json(emailTransactions);
+	} catch (error) {
+		const [status, message] = handleServerError(error);
+		return res.status(status).json({ message: message });
+	}
+});
 
 ////////////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////
