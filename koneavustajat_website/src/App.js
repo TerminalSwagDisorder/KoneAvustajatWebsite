@@ -10,6 +10,7 @@ import Signup from "./components/Signup";
 import Admin from "./components/Admin";
 import DashboardAdmin from "./components/DashboardAdmin";
 import UsersAdmin from "./components/UsersAdmin";
+import OrdersAdmin from "./components/OrdersAdmin";
 import PartsDisplay from "./components/PartsDisplay";
 import ComputerWizard from './components/ComputerWizard';
 import ComputerWizardBrowse from './components/ComputerWizardBrowse';
@@ -100,6 +101,7 @@ function App() {
 							<Route path="admin" element={<ProtectedRoute adminOnly><Admin /></ProtectedRoute>}>
 								<Route path="dashboard" element={<DashboardAdmin />} />
 								<Route path="users" element={<UsersAdmin fetchDynamicData={fetchDynamicData} fetchDataAmount={fetchDataAmount} />} />
+								<Route path="orders" element={<OrdersAdmin fetchDynamicData={fetchDynamicData} fetchDataAmount={fetchDataAmount} fetchSearchData={fetchSearchData} />} />
 								<Route path="parts" element={<PartsDisplay fetchDynamicData={fetchDynamicData} />} />
 							</Route>
 
