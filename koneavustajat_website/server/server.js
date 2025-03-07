@@ -163,7 +163,7 @@ const redisClient = new Redis({
 const generalRateLimiter = new RateLimiterRedis({
 	storeClient: redisClient,
 	keyPrefix: "rlflimit-general",
-	points: 200,
+	points: 250,
 	duration: 10
 });
 
@@ -471,7 +471,8 @@ const routePagination = (req, res, next) => {
 	const validationResult = paginationSchema.validate({page: req.query.page, items: req.query.items});
 
 	if (validationResult.error) {
-		return res.status(400).json({ message: validationResult.error.details[0].message });
+		const errorMessage = validationResult.error.details ? validationResult.error.details[0].message : validationResult.error;
+		return res.status(400).json({ message: errorMessage });
 	}
 
 	const { page, items } = validationResult.value;
@@ -1173,7 +1174,7 @@ const tableSearch = (searchContext = "cpu") => {
 			};
 
 			let currentSchema = schemaMapping.default;
-			if (partName) {
+			if (partName && Object.keys(schemaMapping).includes(partName)) {
 				currentSchema = schemaMapping[partName];
 			}
 
@@ -1182,7 +1183,8 @@ const tableSearch = (searchContext = "cpu") => {
 			req.searchTerms = validationResult;
 			next();
 		} catch (error) {
-			return res.status(400).json({ message: error.details[0].message });
+			const errorMessage = error.details ? error.details[0].message : error;
+			return res.status(400).json({ message: errorMessage});
 		}
 	};
 };
@@ -1224,7 +1226,8 @@ const formFieldsValidator = (schema) => {
 			req.validatedForm = value;
 			next();
 		} catch (error) {
-			return res.status(400).json({ message: error.details[0].message || error });
+			const errorMessage = error.details ? error.details[0].message : error;
+			return res.status(400).json({ message: errorMessage});
 		}
 	};
 };
@@ -1288,7 +1291,8 @@ const idValidator = (req, res, next) => {
 		req.validatedId = value.id;
 		next();
 	} catch (error) {
-		return res.status(400).json({ message: error.details[0].message });
+		const errorMessage = error.details ? error.details[0].message : error;
+		return res.status(400).json({ message: errorMessage});
 	}
 };
 
@@ -1299,7 +1303,8 @@ const tableValidator = (schema, queryName) => {
 			req.query[queryName] = value;
 			next();
 		} catch (error) {
-			return res.status(400).json({ message: error.details[0].message });
+			const errorMessage = error.details ? error.details[0].message : error;
+			return res.status(400).json({ message: errorMessage});
 		}
 	};
 };
@@ -3538,7 +3543,7 @@ const rateLimitRoute = (limiter = generalRateLimiter) => {
 		} catch (rejRes) {
 			console.log();
 			res.status(429).json({
-				message: `Too many requests, please try again in ${Math.ceil(rejRes.msBeforeNext / 1000 / 60 )} minutes`,
+				message: `Too many requests, please try again ${rejRes.msBeforeNext && typeof rejRes.msBeforeNext === "number" ? `in ${typeof rejRes.msBeforeNext === "number" ? (Math.ceil(rejRes.msBeforeNext / 1000 / 60 )) : rejRes.msBeforeNext} minutes`  : ""}`,
 				remainingPoints: rejRes.remainingPoints,
 				retryAfter: Math.ceil(rejRes.msBeforeNext / 1000)
 			});
@@ -3552,7 +3557,7 @@ const rateLimitAction = async (req, res, limiter = generalRateLimiter, message =
 		return true;
 	} catch (rejRes) {
 		res.status(429).json({
-			message: `${message}. Please try again in ${Math.ceil(rejRes.msBeforeNext / 1000 / 60 )} minutes`,
+			message: `Too many requests, please try again ${rejRes.msBeforeNext && typeof rejRes.msBeforeNext === "number" ? `in ${typeof rejRes.msBeforeNext === "number" ? (Math.ceil(rejRes.msBeforeNext / 1000 / 60 )) : rejRes.msBeforeNext} minutes`  : ""}`,
 			remainingPoints: rejRes.remainingPoints,
 			retryAfter: Math.ceil(rejRes.msBeforeNext / 1000)
 		});
@@ -3565,7 +3570,7 @@ const checkRateLimit = async (req, res, limiter = generalRateLimiter, message = 
 		const failsRecord = await limiter.get(req.ip);
 		if (failsRecord && failsRecord.consumedPoints >= limiter.points) {
 			res.status(429).json({
-				message: `${message}. Please try again in ${Math.ceil(failsRecord.msBeforeNext / 1000 / 60 )} minutes`,
+				message: `Too many requests, please try again ${failsRecord.msBeforeNext && typeof failsRecord.msBeforeNext === "number" ? `in ${typeof failsRecord.msBeforeNext === "number" ? (Math.ceil(failsRecord.msBeforeNext / 1000 / 60 )) : failsRecord.msBeforeNext} minutes`  : ""}`,
 				remainingPoints: failsRecord.remainingPoints,
 				retryAfter: Math.ceil(failsRecord.msBeforeNext / 1000)
 			});
@@ -6192,7 +6197,7 @@ app.patch("/api/admin/users/update", rateLimitRoute(adminDataManipulationRateLim
 	}
 });
 
-app.get("/api/admin/orders", authenticateAdmin, routePagination, tableSearch("users"), async (req, res) => {
+app.get("/api/admin/orders", authenticateAdmin, routePagination, tableSearch("orders"), async (req, res) => {
 	console.log("API admin orders accessed");
 
 	const { items, offset } = req.pagination;
