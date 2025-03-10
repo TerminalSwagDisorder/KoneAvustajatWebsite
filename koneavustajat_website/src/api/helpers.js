@@ -128,7 +128,7 @@ export const buildQuery = async (correctSearchTerms, itemsBool, page = null) => 
 
     const params = new URLSearchParams();
     for (const term in correctSearchTerms) {
-        if (term !== "page" && correctSearchTerms[term] !== "" && correctSearchTerms[term] !== null) {
+        if (term !== "page" && correctSearchTerms[term] !== "" && correctSearchTerms[term] !== null && correctSearchTerms[term]) {
             params.append(term, correctSearchTerms[term]);
         }
     }
@@ -218,4 +218,14 @@ export const handleError = (error) => {
 	if (!error) throw new Error("Failed to catch error gracefully!");
 	console.error(error);
 	throw new Error(error.message || error); 
+};
+
+export const checkOrderBy = (orderBy) => {
+	if (!orderBy || !Array.isArray(orderBy) || typeof orderBy !== "object") throw new Error("Order by data is not an array!");
+	try {
+		orderBy = JSON.stringify(orderBy);
+	} catch {
+		console.warn("Could not parse order by!");
+	}
+	return orderBy;
 };

@@ -26,7 +26,17 @@ const UsersAdmin = ({ fetchDynamicData, fetchDataAmount, fetchSearchData, update
 	const [page, setPage] = useState(1);
 	const [currentOperation, setCurrentOperation] = useState("");
 	const [formFields, setFormFields] = useState({});
+	const [searchToggle, setSearchToggle] = useState(false);
+	const [searchActive, setSearchActive] = useState(false);
+	const [searchKey, setSearchKey] = useState("UserID");
+	const [searchTerm, setSearchTerm] = useState({});
 	
+	const roleMap = {
+		1: "guest",
+		2: "customer",
+		3: "employee",
+		4: "admin"
+	};
 
 	// Function to fetch data and set users state
 	const fetchData = async () => {
@@ -101,6 +111,70 @@ const UsersAdmin = ({ fetchDynamicData, fetchDataAmount, fetchSearchData, update
 		//setFormFields({});
 	};
 
+	const clearSearchTerm = async () => {
+		try {
+			setSearchActive(false);
+			if (searchTerm) setSearchTerm({});
+			await fetchData();
+		} catch (error) {
+			displayError(error);
+		}
+	};
+
+
+	const handleSearchKey = (value) => {
+		setSearchKey(value);
+	};
+
+	const handleSearchTerm = (event) => {
+		setSearchTerm((prevFields) => ({
+			...prevFields,
+			[event.target.name]: event.target.type === "checkbox" ? event.target.checked : event.target.value
+		}));
+	};
+
+	const handleSearchRendering = () => {
+		setSearchToggle(searchToggle === true ? false : true);
+	};
+
+	const fetchSearchTermData = async (event) => {
+		event.preventDefault();
+		try {
+			if (!searchToggle) {
+				displayError("Search is not active!");
+				return;
+			}
+			
+			if (!searchTerm || Object.keys(searchTerm).length === 0) {
+				displayError("Search cannot be empty!");
+				return;
+			}
+
+			const emptyCheck = Object.entries(searchTerm).every(([key, value]) => key === "inverted" || key === "strict" || value == null || String(value).trim() === "");
+			if (emptyCheck) {
+				displayError("Search cannot be empty!");
+				return;
+			}
+			
+			const data = await fetchSearchData(searchTerm, "admin/users");
+			
+			if (!data || data.length === 0) {
+				displayError("No data found using this search term!");
+				return;
+			}
+
+			setSearchActive(true);
+			setUsers(data);
+			setTotalPages(1);
+			setPage(1);
+			displayError(`Found ${data.length} items from the search.`, "success");
+
+		} catch (error) {
+			displayError(error);
+			console.error(error);
+		}
+	};
+
 	const renderPagination = (page, totalPages) => {
 		return (
 			<>
@@ -135,6 +209,7 @@ const UsersAdmin = ({ fetchDynamicData, fetchDataAmount, fetchSearchData, update
 						<tr key={user.UserID}>
 							<td> {user.UserID}</td>
 							<td> {user.Email}</td>
+							<td> {roleMap[user.RoleID]}</td>
 							<td> {user.Activated === 1 ? "Activated" : "Unactivated"}</td>
 							<td>
 								{renderAdminButtons(user)}
@@ -188,11 +263,15 @@ const UsersAdmin = ({ fetchDynamicData, fetchDataAmount, fetchSearchData, update
 										<a href={selectedUser[key]} target="_blank" rel="noopener noreferrer">
 											{selectedUser[key]}
 										</a>
+									) : key === "RoleID" ? (
+										roleMap[selectedUser[key]]
+									) : typeof selectedUser[key] === "boolean" ? (
+										selectedUser[key] === 1 ? "True" : "False" 
 									) : typeof selectedUser[key] === "object" ? (
 											renderNestedObject(selectedUser[key])
 									) : key === "ProfileImage" ? (
 										<Image
-											src={process.env.PUBLIC_URL + "/product_images/" + selectedUser[key]}
+											src={process.env.PUBLIC_URL + "/profile_images/" + selectedUser[key]}
 											alt={key}
 											style={{ width: "100px", height: "auto" }}
 										/>
@@ -263,10 +342,174 @@ const UsersAdmin = ({ fetchDynamicData, fetchDataAmount, fetchSearchData, update
 		}
 	};
 
+	const handleInputChange = (event) => {
+		
+		setFormFields((prevFields) => ({
+			...prevFields,
+			[event.target.name]: event.target.value,
+		}));
+		
+		if (event.target.id === "UserID") {
+			let orderId = parseInt(event.target.value, 10);
+
+			if (orderId < users[0].UserID) {
+				orderId = users[users.length - 1].UserID;
+			}
+			if (orderId > users[users.length - 1].UserID) {
+				orderId = users[0].UserID;
+			}
+
+			let selectedUser = users.find((order) => order.UserID === orderId);
+			if (selectedUser === undefined || typeof selectedUser !== "object" || typeof selectedUser === "undefined") {
+				selectedUser = {
+					ID: orderId,
+					Name: "Not a user",
+					Error: "Invalid order: User with the UserID does not exist"
+				};
+			}
+			setCurrentOperation("view");
+		}
+	};
+
+	const searchButton = () => {
+		return (
+			<>
+				<Button onClick={() => handleSearchRendering()}>Toggle search</Button>
+				<Button onClick={() => clearSearchTerm()}  disabled={Object.entries(searchTerm).length === 0}>Clear search</Button>
+			</>
+		)
+	}
+
+	const renderSearch = () => {
+		if (searchToggle && users) {
+			return (
+			<div className="searchForm">
+				<Form
+					className="bg-opaque"
+					onSubmit={fetchSearchTermData}
+					style={{ width: "400px" }}
+				>
+					<Dropdown>
+						<Dropdown.Toggle variant="success" id="dropdown-basic">
+							{searchKey || "Choose search type"}
+						</Dropdown.Toggle>
+
+						<Dropdown.Menu>
+							{Object.keys(users[0] || {}).map((key) => (
+								<Dropdown.Item
+									key={key}
+									onClick={() => handleSearchKey(key)}>
+									{key}
+
+								</Dropdown.Item>
+							))}
+						</Dropdown.Menu>
+					</Dropdown>
+					{renderSearchInput(searchKey)}
+					<Button style={{ width: "40%" }} type="submit">
+						Search
+					</Button>
+					<Button style={{ width: "40%" }} onClick={() => clearSearchTerm()} disabled={!searchToggle}>
+					Clear
+					</Button>
+				</Form>
+				<br />
+			</div>
+			)
+		}
+	}
+	
+	const renderSearchInput = (key) => {
+		if (!key) return;
+		return (
+			<>
+				<Form.Group className="mb-3">
+					<Form.Label>{key}</Form.Label>
+					<Form.Control 
+					type="text" 
+					id={key}
+					name={key} 
+					value={searchTerm[key] || ""} 
+					onChange={handleSearchTerm} 
+					/>
+				</Form.Group>
+				<Form.Group className="mb-3">
+					<Form.Check
+						type="checkbox"
+						label="Strict search"
+						name="strict"
+						onChange={handleSearchTerm}
+						id="strict"
+						checked={Boolean(searchTerm.strict)}
+					/>
+				</Form.Group>
+				<Form.Group className="mb-3">
+					<Form.Check
+						type="checkbox"
+						label="Inverted search"
+						name="inverted"
+						onChange={handleSearchTerm}
+						id="inverted"
+						checked={Boolean(searchTerm.inverted)}
+					/>
+				</Form.Group>
+			</>
+		);
+	};
+
+	const renderUserModification = () => {
+		if (currentUser && currentUser.RoleID === 4 && selectedUser && currentOperation === "modify") {
+			const viewOnly = ["UserID", "Email"];
+			return (
+				<div id="partform" className="partform d-flex justify-content-center align-items-center">
+					<Form onSubmit={handleSubmit} className="adminForm border rounded shadow p-4 bg-opaque">
+						<div className="d-flex justify-content-end mb-3">
+							<CloseButton onClick={() => closeForm()} />
+						</div>
+						<h4 className=" mb-3">Modify order</h4>
+						{Object.keys(selectedUser).map((key, index) => (
+							<ul key={index}>
+									<b>{key}</b>:{" "}
+									{viewOnly.includes(key) && key !== "Password" ? (
+										selectedUser[key]
+									)  : typeof selectedUser[key] === "boolean" ? (
+										selectedUser[key] === 1 ? "True" : "False" 
+									) : typeof selectedUser[key] === "object" ? (
+											renderNestedObject(selectedUser[key])
+									) : key === "ProfileImage" ? (
+										<Image
+											src={process.env.PUBLIC_URL + "/profile_images/" + selectedUser[key]}
+											alt={key}
+											style={{ width: "100px", height: "auto" }}
+										/>
+									) : (
+										<Form.Group className="mb-3">
+											<Form.Control
+												type="text"
+												placeholder={selectedUser[key]}
+												name={key}
+												onChange={handleInputChange}
+											/>
+										</Form.Group>
+									)}
+							</ul>
+						))}
+						<Button variant="primary" type="submit">
+							Modify user
+						</Button>
+					</Form>
+				</div>
+			);
+		}
+	};
+
 	return (
 		<div>
-			{renderConfirmation()}
 			{renderBasedOnUser()}
+			{searchButton()}
+			{renderSearch()}
+			{renderConfirmation()}
+			{renderUserModification()}
 			{renderPagination(page, totalPages)}
 			<h1>Manage Users</h1>
 			<Table responsive="md" hover bordered className="table-striped">
@@ -274,6 +517,7 @@ const UsersAdmin = ({ fetchDynamicData, fetchDataAmount, fetchSearchData, update
 					<tr>
 						<th>UserID</th>
 						<th>Email</th>
+						<th>Role</th>
 						<th>Activated</th>
 						<th>Actions</th>
 			 
@@ -285,21 +529,5 @@ const UsersAdmin = ({ fetchDynamicData, fetchDataAmount, fetchSearchData, update
 	);
 };
 
-/*
-return (
-  <div>
-    <h1>Manage Users</h1>
-    <ul>
-    <Col md={8}>
-	  		
-        {renderUserData()}
-        /*{/* User Form */ /*}
-        {renderUserForm()}
-      </Col>
-
-    </ul>
-  </div>
-  );
-};*/
 
 export default UsersAdmin;

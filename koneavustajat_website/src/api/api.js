@@ -2,7 +2,7 @@
 // Auth: Terminal Swag Disorder
 // Desc: File containing code for api functionality
 
-import { checkAllowedTableNames, checkAllowedPartNames, checkSearchTerms, buildQuery, validateIdentifiers, checkRes, sanitizeData, handleError } from "./helpers";
+import { checkAllowedTableNames, checkAllowedPartNames, checkSearchTerms, buildQuery, validateIdentifiers, checkRes, sanitizeData, handleError, checkOrderBy } from "./helpers";
 import "../style/style.scss";
 
 const apiUrl = process.env.REACT_APP_API_URL;
@@ -58,7 +58,7 @@ export const fetchUsers = async (page) => {
 
 
 // Fetch different types of data from pages
-export const fetchDynamicData = async (page, tableName, partName = "") => {
+export const fetchDynamicData = async (page, tableName, partName = "", orderBy = "") => {
 	try {
 		await checkAllowedTableNames(["getroutes"], tableName);
 		
@@ -68,9 +68,15 @@ export const fetchDynamicData = async (page, tableName, partName = "") => {
 			console.log("partName has no value. This might be intentional, but double check to be sure.");
 		}
 
-		const correctSearchTerms = await checkSearchTerms({page: page, partName: partName});
+		if (orderBy || orderBy.length !== 0) {
+			orderBy = checkOrderBy(orderBy);
+		}
+
+		const correctSearchTerms = await checkSearchTerms({page: page, partName: partName, orderBy: orderBy});
 
 		const query = await buildQuery(correctSearchTerms, true);
+		
+		console.log("query", query)
 		
 		const response = await fetch(`${apiUrl}/api/${tableName}?${query}`, {
 			method: "GET",
@@ -228,10 +234,15 @@ export const downloadFile = async (tableName, fileName = "downloaded_file.txt") 
 };
 
 // Search function for users/otherusers
-export const fetchSearchData = async (searchTerms, tableName) => {
+export const fetchSearchData = async (searchTerms, tableName, orderBy = "") => {
 	try {
 		await checkAllowedTableNames(["getroutes"], tableName);
-		const correctSearchTerms = await checkSearchTerms(searchTerms);
+
+		if (orderBy || orderBy.length !== 0) {
+			orderBy = checkOrderBy(orderBy);
+		}
+
+		const correctSearchTerms = await checkSearchTerms({...searchTerms, orderBy: orderBy[0]});
 		
 		const query = await buildQuery(correctSearchTerms, false);
 

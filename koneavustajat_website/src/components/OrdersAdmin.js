@@ -13,6 +13,7 @@ import {
 	Tooltip,
 	Image
 } from "react-bootstrap";
+import { FaChevronUp, FaChevronDown } from "react-icons/fa";
 import { useAuth, useError } from "../utils/Contexts";
 
 const OrdersAdmin = ({ fetchDynamicData, fetchDataAmount, fetchSearchData, updateDynamicData }) => {
@@ -31,12 +32,13 @@ const OrdersAdmin = ({ fetchDynamicData, fetchDataAmount, fetchSearchData, updat
 	const [searchKey, setSearchKey] = useState("OrderID");
 	const [searchTerm, setSearchTerm] = useState({});
 	const [catchState, setCatchState] = useState(state?.usersOrders || null);
+	const [orderBy, setOrderBy] = useState([]);
 	
 
 	// Function to fetch data and set orders state
 	const fetchData = async () => {
 		try {
-			const data = await fetchDynamicData(page, "admin/orders", null);
+			const data = await fetchDynamicData(page, "admin/orders", null, orderBy);
 			await handlePagination();
 			setOrders(data);
 		} catch (error) {
@@ -46,7 +48,7 @@ const OrdersAdmin = ({ fetchDynamicData, fetchDataAmount, fetchSearchData, updat
 
 	const fetchSearchState = async () => {
 		try {
-			const data = await fetchSearchData({ CustomerID: catchState }, "admin/orders");
+			const data = await fetchSearchData({ CustomerID: catchState }, "admin/orders", orderBy);
 			setOrders(data);
 			setTotalPages(1);
 			setPage(1);
@@ -76,6 +78,10 @@ const OrdersAdmin = ({ fetchDynamicData, fetchDataAmount, fetchSearchData, updat
 	}, []);
 
 	useEffect(() => {
+		console.log(orderBy);
+	}, [orderBy]);
+
+	useEffect(() => {
 		if (catchState) {
 			setSearchKey("CustomerID");
 			setSearchTerm({CustomerID: catchState});
@@ -86,7 +92,7 @@ const OrdersAdmin = ({ fetchDynamicData, fetchDataAmount, fetchSearchData, updat
 		if (!searchActive && !catchState) {
 			fetchData();
 		}
-	}, [page, searchActive, catchState]);
+	}, [page, searchActive, catchState, orderBy]);
 
 
 	const handleSelectOrder = (order, operation) => {
@@ -134,7 +140,7 @@ const OrdersAdmin = ({ fetchDynamicData, fetchDataAmount, fetchSearchData, updat
 				return;
 			}
 			
-			const data = await fetchSearchData(searchTerm, "admin/orders");
+			const data = await fetchSearchData(searchTerm, "admin/orders", orderBy);
 			
 			if (!data || data.length === 0) {
 				displayError("No data found using this search term!");
@@ -168,6 +174,32 @@ const OrdersAdmin = ({ fetchDynamicData, fetchDataAmount, fetchSearchData, updat
 		setSearchToggle(searchToggle === true ? false : true);
 	};
 
+	const handleOrderBy = (column) => {
+		setOrderBy((prevFields) => {
+			const exists = prevFields.find((item) => item.column === column);
+			if (exists) {
+				return prevFields.map((item) =>
+					item.column === column ? { ...item, direction: item.direction === "asc" ? "desc" : "asc" } : item
+				);
+			} else {
+				return [...prevFields, { column, direction: "asc" }];
+			}
+		});
+	};
+
+	const renderSortIcon = (column) => {
+		const orderItem = orderBy.find((item) => item.column === column);
+		if (orderItem) {
+			if (orderItem.direction === "asc") {
+				return <FaChevronUp />;
+			} else if (orderItem.direction === "desc") {
+				return <FaChevronDown />;
+			} else {
+				return "";
+			}			
+		}
+		return "";
+	};
 
 	const handleSubmit = async (event) => {
 		event.preventDefault();
@@ -300,6 +332,26 @@ const OrdersAdmin = ({ fetchDynamicData, fetchDataAmount, fetchSearchData, updat
 						checked={Boolean(searchTerm.inverted)}
 					/>
 				</Form.Group>
+				<Form.Group className="mb-3">
+					<Form.Label>Max total price</Form.Label>
+					<Form.Control 
+					type="number" 
+					id="priceMax"
+					name="priceMax"
+					value={searchTerm.priceMax || ""} 
+					onChange={handleSearchTerm} 
+					/>
+				</Form.Group>
+				<Form.Group className="mb-3">
+					<Form.Label>Min total price</Form.Label>
+					<Form.Control 
+					type="number" 
+					id="priceMin"
+					name="priceMin"
+					value={searchTerm.priceMin || ""} 
+					onChange={handleSearchTerm} 
+					/>
+				</Form.Group>
 			</>
 		);
 	};
@@ -339,9 +391,9 @@ const OrdersAdmin = ({ fetchDynamicData, fetchDataAmount, fetchSearchData, updat
 							<td> {order.OrderID}</td>
 							<td> {order.CustomerID}</td>
 							<td> {order.ReceiptID}</td>
-							<td> {order.OrderDate}</td>
+							<td> {new Date(order.OrderDate).toUTCString()}</td>
 							<td> {order.Status}</td>
-							<td> {order.PaymentStatus !== "paid" ? order.PaymentDate : order.PaymentStatus}</td>
+							<td> {order.PaymentStatus === "paid" ? new Date(order.PaymentDate).toUTCString() : order.PaymentStatus}</td>
 							<td>
 								{renderAdminButtons(order)}
 								<Button className="user-select-button" onClick={() => handleSelectOrder(order, "view")}>
@@ -476,14 +528,13 @@ const OrdersAdmin = ({ fetchDynamicData, fetchDataAmount, fetchSearchData, updat
 			<Table responsive="md" hover bordered className="table-striped">
 				<thead>
 					<tr>
-						<th>OrderID</th>
-						<th>CustomerID</th>
-						<th>ReceiptID</th>
-						<th>OrderDate</th>
-						<th>Status</th>
-						<th>PaymentDate</th>
+						<th className="order-by" onClick={() => handleOrderBy("OrderID")}>OrderID {renderSortIcon("OrderID")}</th>
+						<th className="order-by" onClick={() => handleOrderBy("CustomerID")}>CustomerID{renderSortIcon("CustomerID")}</th>
+						<th className="order-by" onClick={() => handleOrderBy("ReceiptID")}>ReceiptID{renderSortIcon("ReceiptID")}</th>
+						<th className="order-by" onClick={() => handleOrderBy("OrderDate")}>OrderDate{renderSortIcon("OrderDate")}</th>
+						<th className="order-by" onClick={() => handleOrderBy("Status")}>Status{renderSortIcon("Status")}</th>
+						<th className="order-by" onClick={() => handleOrderBy("PaymentDate")}>PaymentDate{renderSortIcon("PaymentDate")}</th>
 						<th>Actions</th>
-			 
 					</tr>
 				</thead>
 				<tbody>{renderOrders()}</tbody>

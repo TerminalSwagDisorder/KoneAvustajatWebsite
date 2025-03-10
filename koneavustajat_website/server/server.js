@@ -542,7 +542,8 @@ const partSchema = Joi.object({
 	Cpu_Cooler: Joi.string().trim().optional(),
 	Integrated_GPU: Joi.string().trim().optional(),
 	strict: Joi.boolean().optional(),
-	inverted: Joi.boolean().optional()
+	inverted: Joi.boolean().optional(),
+	orderBy: Joi.array().items(Joi.object().optional()).optional(),
 });
 
 const idSchema = Joi.object({
@@ -702,7 +703,8 @@ const userSearchSchema = Joi.object({
 		Joi.number().valid(0, 1)
 	).optional(),
 	strict: Joi.boolean().optional(),
-	inverted: Joi.boolean().optional()
+	inverted: Joi.boolean().optional(),
+	orderBy: Joi.array().items(Joi.object().optional()).optional(),
 });
 
 const passwordForgotSchema = Joi.object({
@@ -848,7 +850,8 @@ const inventorySchema = Joi.object({
 	Name: Joi.string().trim().optional(),
 	Manufacturer: Joi.string().trim().optional(),
 	strict: Joi.boolean().optional(),
-	inverted: Joi.boolean().optional()
+	inverted: Joi.boolean().optional(),
+	orderBy: Joi.array().items(Joi.object().optional()).optional(),
 
 });
 
@@ -866,7 +869,8 @@ const contentSchemaMin = Joi.object({
 	created_at: Joi.date().optional(),
 	modified_at: Joi.date().optional(),
 	strict: Joi.boolean().optional(),
-	inverted: Joi.boolean().optional()
+	inverted: Joi.boolean().optional(),
+	orderBy: Joi.array().items(Joi.object().optional()).optional(),
 
 });
 
@@ -884,7 +888,8 @@ const contentSchema = Joi.object({
 	Created_At: Joi.date().optional(),
 	Modified_At: Joi.date().optional(),
 	strict: Joi.boolean().optional(),
-	inverted: Joi.boolean().optional()
+	inverted: Joi.boolean().optional(),
+	orderBy: Joi.array().items(Joi.object().optional()).optional(),
 });
 
 const addressSchema = Joi.object({
@@ -933,7 +938,13 @@ const orderSearchSchema = Joi.object({
 	Status: Joi.string().trim().max(255).optional(),
 	TotalPrice: Joi.number().optional(),
 	Currency: Joi.string().trim().max(10).optional(),
-	Items: Joi.array().items(Joi.object().optional()).optional(),
+	Items: Joi.string().trim().optional(),
+	/*
+	Items: Joi.alternatives().try(
+		Joi.object(),
+		Joi.string().trim()
+	).optional(),
+	*/
 	PaymentMethod: Joi.string().trim().max(255).optional(),
 	PaymentProvider: Joi.string().trim().max(255).optional(),
 	TransactionID: Joi.string().trim().max(255).optional(),
@@ -941,7 +952,16 @@ const orderSearchSchema = Joi.object({
 	PaymentDate: Joi.date().optional(),
 	ModifiedAt: Joi.date().optional(),
 	strict: Joi.boolean().optional(),
-	inverted: Joi.boolean().optional()
+	inverted: Joi.boolean().optional(),
+	priceRange: Joi.string().trim()
+		.pattern(/^\d+-\d+$/)
+		.optional()
+		.messages({
+			"string.pattern.base": "Invalid range format format. Range must include number hyphen (-) number.",
+		}),
+	priceMin: Joi.number().optional(),
+	priceMax: Joi.number().optional(),
+	orderBy: Joi.array().items(Joi.object().optional()).optional(),
 });
 
 const adminOrderUpdateSchema = Joi.object({
@@ -979,7 +999,8 @@ const emailTransactionSearchSchema = Joi.object({
 	Content: Joi.string().trim().optional(),
 	CreatedAt: Joi.date().optional(),
 	strict: Joi.boolean().optional(),
-	inverted: Joi.boolean().optional()
+	inverted: Joi.boolean().optional(),
+	orderBy: Joi.array().items(Joi.object().optional()).optional(),
 });
 
 // Validators & searches
@@ -1124,7 +1145,7 @@ const searchSanitization = (key, value, term) => {
 	};
 
 	const universalPartColumns = ["ID", "Url", "Image", "Image_Url"];
-	const universalColumns = ["Price", "Name", "Manufacturer", "priceMin", "priceMax", "priceRange", "strict", "inverted"];
+	const universalColumns = ["Price", "Name", "Manufacturer", "priceMin", "priceMax", "priceRange", "strict", "inverted", "orderby"];
 	const combinedColumns = key !== "inventory" ? [...universalPartColumns, ...universalColumns] : universalColumns;
 	const tableTypeColumns = key !== "opensearch" ? combinedColumns : [];
 
@@ -1145,7 +1166,7 @@ const tableSearch = (searchContext = "cpu") => {
 		let searchTerms = {};
 		const partName = req.query.partName ? req.query.partName : searchContext;
 		for (let term in req.query) {
-			const excludedParams = ["items", "page", "partName"];
+			const excludedParams = ["items", "page", "partName", "orderBy"];
 			if (!excludedParams.includes(term)) {
 				let value = req.query[term];
 
@@ -4805,6 +4826,7 @@ app.get("/api/part", routePagination, tableValidator(partNameSchema, "partName")
 	const searchTerms = req.searchTerms;
 	let sql;
 	let notOperator = "";
+	let orderBy = "";
 	let sqlParams = [];
 
 	let searchQuery = " WHERE 1=1";
@@ -4828,7 +4850,7 @@ app.get("/api/part", routePagination, tableValidator(partNameSchema, "partName")
 		notOperator = searchTerms.strict === true ? "!" : "NOT ";
 	}
 
-	const ignoreColumns = ["strict", "priceMin", "priceMax", "priceRange", "inverted"];
+	const ignoreColumns = ["orderBy", "strict", "priceMin", "priceMax", "priceRange", "inverted"];
 	if (searchTerms.priceMin || searchTerms.priceMax || searchTerms.priceRange) {
 		ignoreColumns.push("price");
 	}
@@ -4846,6 +4868,8 @@ app.get("/api/part", routePagination, tableValidator(partNameSchema, "partName")
 
 	sql = `SELECT * FROM ${partName} ${searchQuery} LIMIT ? OFFSET ?`;
 	sqlParams.push(items, offset); // Push pagination params after search params
+	
+
 
 	try {
 		const [parts] = await promisePool.query(sql, sqlParams);
@@ -5025,7 +5049,7 @@ app.get("/api/inventory", routePagination, tableSearch("inventory"), async (req,
 		notOperator = searchTerms.strict === true ? "!" : "NOT ";
 	}
 
-	const ignoreColumns = ["strict", "priceMin", "priceMax", "priceRange", "inverted", "availableMin", "availableMax", "availableRange"];
+	const ignoreColumns = ["orderBy", "strict", "priceMin", "priceMax", "priceRange", "inverted", "availableMin", "availableMax", "availableRange"];
 	if (searchTerms.priceMin || searchTerms.priceMax || searchTerms.priceRange) {
 		ignoreColumns.push("price");
 	}
@@ -5722,7 +5746,7 @@ app.get("/api/text-content", routePagination, tableSearch("content"), async (req
 		notOperator = searchTerms.strict === true ? "!" : "NOT ";
 	}
 
-	const ignoreColumns = ["strict", "inverted"];
+	const ignoreColumns = ["orderBy", "strict", "inverted"];
 
 	for (let [column, value] of Object.entries(searchTerms)) {
 		if (!ignoreColumns.includes(column)) {
@@ -6069,7 +6093,7 @@ app.get("/api/admin/users", routePagination, tableSearch("users"), async (req, r
 		notOperator = searchTerms.strict === true ? "!" : "NOT ";
 	}
 
-	const ignoreColumns = ["strict", "inverted"];
+	const ignoreColumns = ["orderBy", "strict", "inverted"];
 
 	for (let [column, value] of Object.entries(searchTerms)) {
 		if (!ignoreColumns.includes(column)) {
@@ -6141,9 +6165,18 @@ app.get("/api/admin/users", routePagination, tableSearch("users"), async (req, r
 				}
 			}
 
-			// Exclude sensitive information like hashed password
-			const { Password, ...userData } = user;
-			return { ...userData, isAdmin };
+			const { Password, ...userData } = user; 
+
+			if (user.RoleID === 4) {
+				const { Password, CustomerID, ...adminData } = userData; 
+				return { ...adminData, isAdmin };
+			} else if (user.RoleID === 2) {
+				const { Password, AdminID, Department, ...customerData } = userData; 
+				return { ...customerData, isAdmin };
+			} else {
+				const { Password, CustomerID, AdminID, Department, ...otherData } = userData; 
+				return { ...otherData, isAdmin };
+			}
 		});
 
 		return res.status(200).json(processedUsers);
@@ -6240,7 +6273,9 @@ app.get("/api/admin/orders", authenticateAdmin, routePagination, tableSearch("or
 	const searchTerms = req.searchTerms;
 	let sql;
 	let notOperator = "";
+	let orderBy = "";
 	let sqlParams = [];
+	console.log(req.body);
 
 	let searchQuery = " WHERE 1=1";
 
@@ -6248,7 +6283,25 @@ app.get("/api/admin/orders", authenticateAdmin, routePagination, tableSearch("or
 		notOperator = searchTerms.strict === true ? "!" : "NOT ";
 	}
 
-	const ignoreColumns = ["strict", "inverted"];
+	if (searchTerms.priceMin) {
+		searchQuery += " AND TotalPrice >= ?";
+		sqlParams.push(searchTerms.priceMin);
+	}
+	if (searchTerms.priceMax) {
+		searchQuery += " AND TotalPrice <= ?";
+		sqlParams.push(searchTerms.priceMax);
+	}
+
+	if (searchTerms.priceRange) {
+		const [minPrice, maxPrice] = searchTerms.priceRange.split("-");
+		searchQuery += " AND TotalPrice BETWEEN ? AND ?";
+		sqlParams.push(minPrice, maxPrice);
+	}
+	const ignoreColumns = ["orderBy", "strict", "priceMin", "priceMax", "priceRange", "inverted"];
+
+	if (searchTerms.priceMin || searchTerms.priceMax || searchTerms.priceRange) {
+		ignoreColumns.push("TotalPrice");
+	}
 
 	for (let [column, value] of Object.entries(searchTerms)) {
 		if (!ignoreColumns.includes(column)) {
@@ -6262,9 +6315,19 @@ app.get("/api/admin/orders", authenticateAdmin, routePagination, tableSearch("or
 		}
 	}
 
-	sql = `SELECT * FROM orders ${searchQuery} LIMIT ? OFFSET ?`;
-	sqlParams.push(items, offset);
+	if (searchTerms.orderBy) {
+		orderBy += ` ORDER BY`;
+		for (const item of searchTerms.orderBy[0]) {
+			orderBy += " ? ? ";
+			sqlParams.push(item.column, item.direction);
+			
+		}
+	}
 
+	sql = `SELECT * FROM orders ${searchQuery} ${orderBy} LIMIT ? OFFSET ?`;
+	sqlParams.push(items, offset);
+	console.log(sql);
+	console.log(searchTerms.orderBy);
 	try {
 		const [orders] = await promisePool.query(sql, sqlParams);
 
@@ -6349,7 +6412,7 @@ app.get("/api/admin/email-transactions", authenticateAdmin, routePagination, tab
 		notOperator = searchTerms.strict === true ? "!" : "NOT ";
 	}
 
-	const ignoreColumns = ["strict", "inverted"];
+	const ignoreColumns = ["orderBy", "strict", "inverted"];
 
 	for (let [column, value] of Object.entries(searchTerms)) {
 		if (!ignoreColumns.includes(column)) {

@@ -29,6 +29,8 @@ stripe trigger payment_intent.payment_failed
 -Admin users can add more users, incl. admins
 -Admin dash -> add reset of opensearch stuff (/manage routes)
 -Admin dash -> add opensearch info
+-Table order by (instead of query params, maybe send as form?)
+-Secure routes with sensitive data (eg. /api/orders)
 -Set up CMS texts
 -Add a way to dismiss payment form
 -Clean up react warnings
