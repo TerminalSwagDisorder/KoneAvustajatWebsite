@@ -34,6 +34,7 @@ const ComputerWizardBrowse = ({ fetchDynamicData, fetchDataAmount, updateDynamic
 	const [inputValue, setInputValue] = useState("");
 	const [currentOperation, setCurrentOperation] = useState("");
 	const [formFields, setFormFields] = useState({});
+	const [searchToggle, setSearchToggle] = useState(false);
 	const [searchActive, setSearchActive] = useState(false);
 	const [searchKey, setSearchKey] = useState("ID");
 	const [searchTerm, setSearchTerm] = useState({});
@@ -52,7 +53,9 @@ const ComputerWizardBrowse = ({ fetchDynamicData, fetchDataAmount, updateDynamic
 	}, [searchTerm]);
 
 	useEffect(() => {
-		fetchData();
+		if (!searchActive) {
+			fetchData();
+		}
 	}, [page]);
 
 	useEffect(() => {
@@ -117,7 +120,7 @@ const ComputerWizardBrowse = ({ fetchDynamicData, fetchDataAmount, updateDynamic
 	};
 
 	const handleSearchRendering = () => {
-		setSearchActive(searchActive === true ? false : true);
+		setSearchToggle(searchToggle === true ? false : true);
 	};
 
 	const fetchData = async () => {
@@ -142,8 +145,7 @@ const ComputerWizardBrowse = ({ fetchDynamicData, fetchDataAmount, updateDynamic
 			} else if (currentOperation === "delete") {
 				success = await deleteDynamicData("part", partName.key, selectedPart.ID);
 			} else {
-				console.error("No valid part operation for submission");
-				alert("No valid part operation for submission");
+				displayError("No valid part operation for submission");
 			}
 			if (success) {
 				await fetchData();
@@ -190,7 +192,7 @@ const ComputerWizardBrowse = ({ fetchDynamicData, fetchDataAmount, updateDynamic
 	const fetchSearchTermData = async (event) => {
 		event.preventDefault();
 		try {
-			if (!searchActive) {
+			if (!searchToggle) {
 				displayError("Search is not active!");
 				return;
 			}
@@ -229,8 +231,9 @@ const ComputerWizardBrowse = ({ fetchDynamicData, fetchDataAmount, updateDynamic
 
 	const clearSearchTerm = async () => {
 		try {
+			setSearchActive(false);
 			if (searchTerm) setSearchTerm({});
-			//setSearchActive(false);
+			//setSearchToggle(false);
 			await fetchData();
 		} catch (error) {
 			displayError(error);
@@ -365,7 +368,6 @@ const ComputerWizardBrowse = ({ fetchDynamicData, fetchDataAmount, updateDynamic
 				</>
 			);
 		}
-		
 	};
 
 
@@ -489,7 +491,7 @@ const ComputerWizardBrowse = ({ fetchDynamicData, fetchDataAmount, updateDynamic
 
 	const renderSearch = () => {
 		// "strict", "priceMin", "priceMax", "priceRange", "inverted"
-		if (searchActive && parts) {
+		if (searchToggle && parts) {
 			//const searchTerms = Object.keys(parts[0]).map((key) => key);
 			return (
 			<div className="searchForm">
@@ -518,7 +520,7 @@ const ComputerWizardBrowse = ({ fetchDynamicData, fetchDataAmount, updateDynamic
 					<Button style={{ width: "40%" }} type="submit">
 						Search
 					</Button>
-					<Button style={{ width: "40%" }} onClick={() => clearSearchTerm()} disabled={!searchActive}>
+					<Button style={{ width: "40%" }} onClick={() => clearSearchTerm()} disabled={!searchToggle}>
 					Clear
 					</Button>
 				</Form>

@@ -100,8 +100,8 @@ function App() {
 
 							<Route path="admin" element={<ProtectedRoute adminOnly><Admin /></ProtectedRoute>}>
 								<Route path="dashboard" element={<DashboardAdmin />} />
-								<Route path="users" element={<UsersAdmin fetchDynamicData={fetchDynamicData} fetchDataAmount={fetchDataAmount} />} />
-								<Route path="orders" element={<OrdersAdmin fetchDynamicData={fetchDynamicData} fetchDataAmount={fetchDataAmount} fetchSearchData={fetchSearchData} />} />
+								<Route path="users" element={<UsersAdmin fetchDynamicData={fetchDynamicData} fetchDataAmount={fetchDataAmount} fetchSearchData={fetchSearchData} updateDynamicData={updateDynamicData} />} />
+								<Route path="orders" element={<OrdersAdmin fetchDynamicData={fetchDynamicData} fetchDataAmount={fetchDataAmount} fetchSearchData={fetchSearchData} updateDynamicData={updateDynamicData} />} />
 								<Route path="parts" element={<PartsDisplay fetchDynamicData={fetchDynamicData} />} />
 							</Route>
 

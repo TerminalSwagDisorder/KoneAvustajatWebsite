@@ -31,6 +31,7 @@ const UsedPartsBrowse = ({ fetchDynamicData, fetchDataAmount, postDynamicData, u
 	const [selectedPart, setSelectedPart] = useState("");
 	const [currentOperation, setCurrentOperation] = useState("");
 	const [formFields, setFormFields] = useState(formFieldsDefault);
+	const [searchToggle, setSearchToggle] = useState(false);
 	const [searchActive, setSearchActive] = useState(false);
 	const [searchKey, setSearchKey] = useState("ID");
 	const [searchTerm, setSearchTerm] = useState({});
@@ -158,7 +159,7 @@ const UsedPartsBrowse = ({ fetchDynamicData, fetchDataAmount, postDynamicData, u
 	};
 
 	const handleSearchRendering = () => {
-		setSearchActive(searchActive === true ? false : true);
+		setSearchToggle(searchToggle === true ? false : true);
 	};
 
 
@@ -171,7 +172,7 @@ const UsedPartsBrowse = ({ fetchDynamicData, fetchDataAmount, postDynamicData, u
 	const fetchSearchTermData = async (event) => {
 		event.preventDefault();
 		try {
-			if (!searchActive) {
+			if (!searchToggle) {
 				displayError("Search is not active!");
 				return;
 			}
@@ -208,8 +209,9 @@ const UsedPartsBrowse = ({ fetchDynamicData, fetchDataAmount, postDynamicData, u
 
 	const clearSearchTerm = async () => {
 		try {
+			setSearchActive(false);
 			if (searchTerm) setSearchTerm({});
-			//setSearchActive(false);
+			//setSearchToggle(false);
 			await fetchData();
 		} catch (error) {
 			displayError(error);
@@ -455,7 +457,7 @@ const UsedPartsBrowse = ({ fetchDynamicData, fetchDataAmount, postDynamicData, u
 
 	const renderSearch = () => {
 		// "strict", "priceMin", "priceMax", "priceRange", "inverted"
-		if (searchActive && parts) {
+		if (searchToggle && parts) {
 			//const searchTerms = Object.keys(parts[0]).map((key) => key);
 			return (
 			<div className="searchForm">
@@ -484,7 +486,7 @@ const UsedPartsBrowse = ({ fetchDynamicData, fetchDataAmount, postDynamicData, u
 					<Button style={{ width: "40%" }} type="submit">
 						Search
 					</Button>
-					<Button style={{ width: "40%" }} onClick={() => clearSearchTerm()} disabled={!searchActive}>
+					<Button style={{ width: "40%" }} onClick={() => clearSearchTerm()} disabled={!searchToggle}>
 					Clear
 					</Button>
 				</Form>

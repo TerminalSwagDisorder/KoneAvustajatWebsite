@@ -97,7 +97,6 @@ export const fetchDynamicData = async (page, tableName, partName = "") => {
 export const updateDynamicData = async (formFields, tableName, partName = null, id = null) => {
 	try {
 		console.log(`${apiUrl}/api/${tableName}/update/${partName}/${id}`);
-		console.log(formFields);
 		await checkAllowedTableNames(["patchroutes"], `${tableName}${partName ? "/" + partName : ""}${id ? "/" + id : ""}`);
 		
 		if (partName) {
@@ -111,6 +110,8 @@ export const updateDynamicData = async (formFields, tableName, partName = null, 
 			);
 
 		if (formFields && typeof formFields === "object" && !Array.isArray(formFields)) formFields = JSON.stringify(formFields);
+		console.log(formFields);
+		
 		// api call to register a new user
 		const response = await fetch(`${apiUrl}/api/${tableName}${tableName.includes("/update") ? "" : "/update"}${partName ? "/" + partName : ""}${id ? "/" + id : ""}`, {
 			method: "PATCH",

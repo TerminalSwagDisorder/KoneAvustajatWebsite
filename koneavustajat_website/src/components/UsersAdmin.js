@@ -15,7 +15,7 @@ import {
 } from "react-bootstrap";
 import { useAuth, useError } from "../utils/Contexts";
 
-const UsersAdmin = ({ fetchDynamicData, fetchDataAmount }) => {
+const UsersAdmin = ({ fetchDynamicData, fetchDataAmount, fetchSearchData, updateDynamicData }) => {
 	const { displayError } = useError();
 	const { currentUser } = useAuth();
 	const navigate = useNavigate();
@@ -60,6 +60,28 @@ const UsersAdmin = ({ fetchDynamicData, fetchDataAmount }) => {
 	useEffect(() => {
 		fetchData();
 	}, [page]);
+
+	const handleSubmit = async (event) => {
+		event.preventDefault();
+		try {
+			let success;
+			if (currentOperation === "modify") {
+				success = await updateDynamicData(formFields, "admin/users/update", null, selectedUser.UserID);
+			} else if (currentOperation === "activation") {
+				success = await updateDynamicData({Activated: (selectedUser.Activated ? 0 : 1)}, "admin/users/update", null, selectedUser.UserID);
+			} else if (currentOperation === "delete") {
+				//success = await deleteDynamicData("admin/users", null, selectedUser.UserID);
+			} else {
+				displayError("No valid operation for submission");
+			}
+			if (success) {
+				await fetchData();
+				closeForm();
+			}
+		} catch (error) {
+			displayError(error);
+		}
+	};
 
 	const handleSelectUser = (user, operation) => {
 		setFormFields({});
@@ -113,7 +135,7 @@ const UsersAdmin = ({ fetchDynamicData, fetchDataAmount }) => {
 						<tr key={user.UserID}>
 							<td> {user.UserID}</td>
 							<td> {user.Email}</td>
-							<td> {user.Activated === 1 ? "Activated" : "Unactvated"}</td>
+							<td> {user.Activated === 1 ? "Activated" : "Unactivated"}</td>
 							<td>
 								{renderAdminButtons(user)}
 								<Button className="user-select-button" onClick={() => handleSelectUser(user, "view")}>
@@ -139,7 +161,7 @@ const UsersAdmin = ({ fetchDynamicData, fetchDataAmount }) => {
 			return (
 				<>
 					<Button className="user-select-button" onClick={() => handleSelectUser(user, "activation")}>
-						{user.Activation === 1 ? "Deactivate" : "Activate"} User
+						{user.Activated === 1 ? "Deactivate" : "Activate"} User
 					</Button>
 					<Button className="user-select-button" onClick={() => handleSelectUser(user, "modify")}>
 						Modify user
@@ -206,8 +228,44 @@ const UsersAdmin = ({ fetchDynamicData, fetchDataAmount }) => {
 		);
 	};
 
+	const renderConfirmation = () => {
+		if (currentUser && currentUser.RoleID === 4 && selectedUser && currentOperation === "activation") {
+			return (
+				<div id="partform" className="partform d-flex justify-content-center align-items-center">
+					<Form onSubmit={handleSubmit} className="adminForm border rounded shadow p-4 bg-opaque">
+						<div className="d-flex justify-content-end mb-3">
+							<CloseButton onClick={() => closeForm()} />
+						</div>
+						{currentOperation === "activation" ? (
+							<>
+							<h4 className=" mb-3">Are you sure you want to toggle the activation of this user?</h4>
+								<ul>
+									<p><b>Current activation status:</b> {selectedUser.Activated ? "Activated" : "Unactivated"} </p>
+									<p><b>ID:</b> {selectedUser.UserID} </p>
+									<p><b>Email:</b> {selectedUser.Email} </p>
+									<p><b>Name:</b> {selectedUser.Name} </p>
+								</ul>
+							</>
+						) : (
+							<>
+								<h4 className=" mb-3">Unsupported operation type</h4>
+							</>
+						)}
+						<Button variant="primary" type="submit">
+							Yes
+						</Button>						
+						<Button variant="primary" style={{"background-color": "#990000"}} onClick={() => closeForm()}>
+							No
+						</Button>
+					</Form>
+				</div>
+			);
+		}
+	};
+
 	return (
 		<div>
+			{renderConfirmation()}
 			{renderBasedOnUser()}
 			{renderPagination(page, totalPages)}
 			<h1>Manage Users</h1>

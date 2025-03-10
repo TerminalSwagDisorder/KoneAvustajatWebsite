@@ -15,22 +15,22 @@ import {
 } from "react-bootstrap";
 import { useAuth, useError } from "../utils/Contexts";
 
-const OrdersAdmin = ({ fetchDynamicData, fetchDataAmount, fetchSearchData }) => {
+const OrdersAdmin = ({ fetchDynamicData, fetchDataAmount, fetchSearchData, updateDynamicData }) => {
 	const { displayError } = useError();
-	const { currentOrder } = useAuth();
+	const { currentUser } = useAuth();
 	const { state } = useLocation();
-	const usersOrders = state?.usersOrders || null;
 
 	const [orders, setOrders] = useState([]);
-	const [selectedOrder, setSelectedOrder] = useState([]);
+	const [selectedOrder, setSelectedOrder] = useState(null);
 	const [totalPages, setTotalPages] = useState(0);
 	const [page, setPage] = useState(1);
 	const [currentOperation, setCurrentOperation] = useState("");
 	const [formFields, setFormFields] = useState({});
+	const [searchToggle, setSearchToggle] = useState(false);
 	const [searchActive, setSearchActive] = useState(false);
-	const [searchKey, setSearchKey] = useState("ID");
+	const [searchKey, setSearchKey] = useState("OrderID");
 	const [searchTerm, setSearchTerm] = useState({});
-	const [catchState, setCatchState] = useState(null);
+	const [catchState, setCatchState] = useState(state?.usersOrders || null);
 	
 
 	// Function to fetch data and set orders state
@@ -46,9 +46,11 @@ const OrdersAdmin = ({ fetchDynamicData, fetchDataAmount, fetchSearchData }) => 
 
 	const fetchSearchState = async () => {
 		try {
-			const data = await fetchSearchData(catchState, "admin/orders");
+			const data = await fetchSearchData({ CustomerID: catchState }, "admin/orders");
 			setOrders(data);
-			//displayError(`Found ${data.length} orders belonging to customer ${catchState.CustomerID}.`, "success");
+			setTotalPages(1);
+			setPage(1);
+			//displayError(`Found ${data.length} orders belonging to customer ${usersOrders}.`, "success");
 		} catch (error) {
 			displayError(error.message || error);
 		}
@@ -68,36 +70,23 @@ const OrdersAdmin = ({ fetchDynamicData, fetchDataAmount, fetchSearchData }) => 
 	};
 
 	useEffect(() => {
-		if (!usersOrders && !searchActive && !catchState) {
+		if (!catchState) {
 			fetchData();
-			console.log("!usersOrders && !searchActive && !catchState", "warning");
 		}
 	}, []);
 
 	useEffect(() => {
+		if (catchState) {
+			setSearchKey("CustomerID");
+			setSearchTerm({CustomerID: catchState});
+			setSearchToggle(true);
+			setSearchActive(true);
+			fetchSearchState();
+		}
 		if (!searchActive && !catchState) {
 			fetchData();
-			console.log("!searchActive && !catchState", "warning");
 		}
-	}, [page]);
-	
-	useEffect(() => {
-		if (catchState && searchActive) {
-			fetchSearchState();
-			setCatchState(null);
-			console.log("catchState && searchActive");
-		}
-	}, [catchState, searchActive]);	
-
-	useEffect(() => {
-		if (usersOrders) {
-			setCatchState({ CustomerID: usersOrders });
-			setTotalPages(1);
-			setPage(1);
-			setSearchActive(true);
-			console.log("usersOrders", "warning");
-		}
-	}, [usersOrders]);
+	}, [page, searchActive, catchState]);
 
 
 	const handleSelectOrder = (order, operation) => {
@@ -116,14 +105,204 @@ const OrdersAdmin = ({ fetchDynamicData, fetchDataAmount, fetchSearchData }) => 
 
 	const clearSearchTerm = async () => {
 		try {
-			if (searchTerm) setSearchTerm({});
 			setSearchActive(false);
+			if (catchState) setCatchState(null);
+			if (searchTerm) setSearchTerm({});
 			await fetchData();
 		} catch (error) {
 			displayError(error);
 		}
 	};
 
+
+	const fetchSearchTermData = async (event) => {
+		event.preventDefault();
+		try {
+			if (!searchToggle) {
+				displayError("Search is not active!");
+				return;
+			}
+			
+			if (!searchTerm || Object.keys(searchTerm).length === 0) {
+				displayError("Search cannot be empty!");
+				return;
+			}
+
+			const emptyCheck = Object.entries(searchTerm).every(([key, value]) => key === "inverted" || key === "strict" || value == null || String(value).trim() === "");
+			if (emptyCheck) {
+				displayError("Search cannot be empty!");
+				return;
+			}
+			
+			const data = await fetchSearchData(searchTerm, "admin/orders");
+			
+			if (!data || data.length === 0) {
+				displayError("No data found using this search term!");
+				return;
+			}
+
+			setSearchActive(true);
+			setOrders(data);
+			setTotalPages(1);
+			setPage(1);
+			displayError(`Found ${data.length} items from the search.`, "success");
+
+		} catch (error) {
+			displayError(error);
+			console.error(error);
+		}
+	};
+
+	const handleSearchKey = (value) => {
+		setSearchKey(value);
+	};
+
+	const handleSearchTerm = (event) => {
+		setSearchTerm((prevFields) => ({
+			...prevFields,
+			[event.target.name]: event.target.type === "checkbox" ? event.target.checked : event.target.value
+		}));
+	};
+
+	const handleSearchRendering = () => {
+		setSearchToggle(searchToggle === true ? false : true);
+	};
+
+
+	const handleSubmit = async (event) => {
+		event.preventDefault();
+		try {
+			let success;
+			if (currentOperation === "modify") {
+				success = await updateDynamicData(formFields, "admin/orders/update", null, selectedOrder.OrderID);
+			} else if (currentOperation === "delete") {
+				//success = await deleteDynamicData("part", null, selectedOrder.OrderID);
+			} else {
+				displayError("No valid operation for submission");
+			}
+			if (success) {
+				await fetchData();
+				closeForm();
+			}
+		} catch (error) {
+			displayError(error);
+		}
+	};
+
+	const handleInputChange = (event) => {
+		
+		setFormFields((prevFields) => ({
+			...prevFields,
+			[event.target.name]: event.target.value,
+		}));
+		
+		if (event.target.id === "OrderID") {
+			let orderId = parseInt(event.target.value, 10);
+
+			if (orderId < orders[0].OrderID) {
+				orderId = orders[orders.length - 1].OrderID;
+			}
+			if (orderId > orders[orders.length - 1].OrderID) {
+				orderId = orders[0].OrderID;
+			}
+
+			let selectedOrder = orders.find((order) => order.OrderID === orderId);
+			if (selectedOrder === undefined || typeof selectedOrder !== "object" || typeof selectedOrder === "undefined") {
+				selectedOrder = {
+					ID: orderId,
+					Name: "Not an order",
+					Error: "Invalid order: Order with the OrderID does not exist"
+				};
+			}
+			setCurrentOperation("view");
+		}
+	};
+
+	const searchButton = () => {
+		return (
+			<>
+				<Button onClick={() => handleSearchRendering()}>Toggle search</Button>
+				<Button onClick={() => clearSearchTerm()}  disabled={Object.entries(searchTerm).length === 0}>Clear search</Button>
+			</>
+		)
+	}
+
+	const renderSearch = () => {
+		if (searchToggle && orders) {
+			return (
+			<div className="searchForm">
+				<Form
+					className="bg-opaque"
+					onSubmit={fetchSearchTermData}
+					style={{ width: "400px" }}
+				>
+					<Dropdown>
+						<Dropdown.Toggle variant="success" id="dropdown-basic">
+							{searchKey || "Choose search type"}
+						</Dropdown.Toggle>
+
+						<Dropdown.Menu>
+							{Object.keys(orders[0] || {}).map((key) => (
+								<Dropdown.Item
+									key={key}
+									onClick={() => handleSearchKey(key)}>
+									{key}
+
+								</Dropdown.Item>
+							))}
+						</Dropdown.Menu>
+					</Dropdown>
+					{renderSearchInput(searchKey)}
+					<Button style={{ width: "40%" }} type="submit">
+						Search
+					</Button>
+					<Button style={{ width: "40%" }} onClick={() => clearSearchTerm()} disabled={!searchToggle}>
+					Clear
+					</Button>
+				</Form>
+				<br />
+			</div>
+			)
+		}
+	}
+	
+	const renderSearchInput = (key) => {
+		if (!key) return;
+		return (
+			<>
+				<Form.Group className="mb-3">
+					<Form.Label>{key}</Form.Label>
+					<Form.Control 
+					type="text" 
+					id={key}
+					name={key} 
+					value={searchTerm[key] || ""} 
+					onChange={handleSearchTerm} 
+					/>
+				</Form.Group>
+				<Form.Group className="mb-3">
+					<Form.Check
+						type="checkbox"
+						label="Strict search"
+						name="strict"
+						onChange={handleSearchTerm}
+						id="strict"
+						checked={Boolean(searchTerm.strict)}
+					/>
+				</Form.Group>
+				<Form.Group className="mb-3">
+					<Form.Check
+						type="checkbox"
+						label="Inverted search"
+						name="inverted"
+						onChange={handleSearchTerm}
+						id="inverted"
+						checked={Boolean(searchTerm.inverted)}
+					/>
+				</Form.Group>
+			</>
+		);
+	};
 
 	const renderPagination = (page, totalPages) => {
 		return (
@@ -179,12 +358,9 @@ const OrdersAdmin = ({ fetchDynamicData, fetchDataAmount, fetchSearchData }) => 
 	};
 
 	const renderAdminButtons = (order) => {
-		if (currentOrder && currentOrder.RoleID === 4) {
+		if (currentUser && currentUser.RoleID === 4) {
 			return (
 				<>
-					<Button className="user-select-button" onClick={() => handleSelectOrder(order, "activation")}>
-						{order.Activation === 1 ? "Deactivate" : "Activate"} Order
-					</Button>
 					<Button className="user-select-button" onClick={() => handleSelectOrder(order, "modify")}>
 						Modify order
 					</Button>
@@ -250,18 +426,51 @@ const OrdersAdmin = ({ fetchDynamicData, fetchDataAmount, fetchSearchData }) => 
 		);
 	};
 
+	const renderOrderModification = () => {
+		if (currentUser && currentUser.RoleID === 4 && selectedOrder && currentOperation === "modify") {
+			const viewOnly = ["OrderID", "OrderTypeID", "CustomerID", "ReceiptID", "OrderDate", "TotalPrice", "Currency", "PaymentMethod", "PaymentProvider", "TransactionID", "PaymentDate", "ModifiedAt"];
+			return (
+				<div id="partform" className="partform d-flex justify-content-center align-items-center">
+					<Form onSubmit={handleSubmit} className="adminForm border rounded shadow p-4 bg-opaque">
+						<div className="d-flex justify-content-end mb-3">
+							<CloseButton onClick={() => closeForm()} />
+						</div>
+						<h4 className=" mb-3">Modify order</h4>
+						{Object.keys(selectedOrder).map((key, index) => (
+							<ul key={index}>
+									<b>{key}</b>:{" "}
+									{viewOnly.includes(key) ? (
+										selectedOrder[key]
+									) : typeof selectedOrder[key] === "object" ? (
+										renderNestedObject(selectedOrder[key])
+									) : (
+										<Form.Group className="mb-3">
+											<Form.Control
+												type="text"
+												placeholder={selectedOrder[key]}
+												name={key}
+												onChange={handleInputChange}
+											/>
+										</Form.Group>
+									)}
+							</ul>
+						))}
+						<Button variant="primary" type="submit">
+							Modify order
+						</Button>
+					</Form>
+				</div>
+			);
+		}
+	};
+
 	return (
 		<div>
-			{catchState && (
-			 	catchState.CustomerID || ""
-			 )}
-			{searchActive && (
-				<Button className="user-select-button" onClick={() => clearSearchTerm()}>
-					Clear filters
-				</Button>
-			 )}
 				
 			{renderBasedOnOrder()}
+			{searchButton()}
+			{renderSearch()}
+			{renderOrderModification()}
 			{renderPagination(page, totalPages)}
 			<h1>Manage Orders</h1>
 			<Table responsive="md" hover bordered className="table-striped">
