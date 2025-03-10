@@ -609,7 +609,7 @@ const userFieldsSchema = Joi.string()
 	.valid("Name", "Email", "Password", "currentPassword", "Gender", "ProfileImage");
 
 const adminUserFieldsSchema = Joi.string()
-	.valid("Name", "Email", "Password", "currentPassword", "Gender", "ProfileImage", "RoleID");
+	.valid("Name", "Email", "Password", "Gender", "ProfileImage", "RoleID", "UserUD", "Activated");
 
 const loginSchema = Joi.object({
 	Email: Joi.string().trim()
@@ -793,14 +793,6 @@ const adminUserUpdateSchema = Joi.object({
 			"string.pattern.base": "Invalid password format. Password must be at least 9 characters long, include 1 capital letter, and 1 number.",
 			"string.empty": "Password cannot be empty"
 		}),
-	currentPassword: Joi.string().trim()
-		.pattern(/^(?=.*[A-Z])(?=.*\d)[\w!@#$%^&*()_\-+=\[\]{}:;"'<>,.?\/]{9,}$/)
-		.required()
-		.messages({
-			"string.pattern.base": "Invalid password format for current password.",
-			"string.empty": "Current password cannot be empty",
-			"any.required": "Current password is required"
-		}),
 	Gender: Joi.string().trim().valid("male", "female").optional().messages({
 		"string.base": "Gender must be a string",
 		"any.only": "Gender must be one of either 'male' or 'female'"
@@ -821,7 +813,11 @@ const adminUserUpdateSchema = Joi.object({
 		"number.empty": "UserID cannot be empty",
 		"number.min": "UserID must be at least 1 character and cannot exceed 1 characters",
 		"number.max": "UserID must be at least 1 character and cannot exceed 1 characters",
-	})
+	}),
+	Activated: Joi.alternatives().try(
+		Joi.boolean(),
+		Joi.number().valid(0, 1)
+	).optional(),
 });
 
 const inventorySchema = Joi.object({
@@ -4780,6 +4776,10 @@ app.patch("/api/profile", rateLimitRoute(dataManipulationRateLimiter), authentic
 			updateQuery = updateQuery.slice(0, -2);
 		}
 
+		if (queryParams.length === 0) {
+			return res.status(400).json({ message: "No valid fields provided for query!" });
+		}
+
 		updateQuery += " WHERE UserID = ?";
 		queryParams.push(userId);
 
@@ -4918,6 +4918,10 @@ app.patch("/api/part/update/:part/:id", rateLimitRoute(adminDataManipulationRate
 			// Remove trailing comma and space
 			if (queryParams.length > 0) {
 				updateQuery = updateQuery.slice(0, -2);
+			}
+
+			if (queryParams.length === 0) {
+				return res.status(400).json({ message: "No valid fields provided for query!" });
 			}
 
 			updateQuery += " WHERE ID = ?";
@@ -5086,6 +5090,10 @@ app.post("/api/inventory/add", authenticateAdmin, formFieldsValidator(inventoryS
 			insertQuery = insertQuery.slice(0, -2);
 		}
 
+		if (queryParams.length === 0) {
+			return res.status(400).json({ message: "No valid fields provided for query!" });
+		}
+
 		const [result] = await promisePool.query(insertQuery, queryParams);
 		return res.status(200).json({ message: "Added part to inventory successfully", id: result.insertId });
 	} catch (error) {
@@ -5126,6 +5134,10 @@ app.patch("/api/inventory/update/:id", rateLimitRoute(adminDataManipulationRateL
 			// Remove trailing comma and space
 			if (queryParams.length > 0) {
 				updateQuery = updateQuery.slice(0, -2);
+			}
+
+			if (queryParams.length === 0) {
+				return res.status(400).json({ message: "No valid fields provided for query!" });
 			}
 
 			updateQuery += " WHERE PartID = ?";
@@ -5614,6 +5626,10 @@ app.post("/api/users/customers/addresses/add", authenticateSession, formFieldsVa
 			insertQuery = insertQuery.slice(0, -2);
 		}
 
+		if (queryParams.length === 0) {
+			return res.status(400).json({ message: "No valid fields provided for query!" });
+		}
+
 		insertQuery += ", CustomerID = ?";
 		queryParams.push(parseInt(customer[0].CustomerID));
 
@@ -5667,6 +5683,10 @@ app.patch("/api/users/customers/addresses/update", rateLimitRoute(dataManipulati
 		// Remove trailing comma and space
 		if (queryParams.length > 0) {
 			updateQuery = updateQuery.slice(0, -2);
+		}
+
+		if (queryParams.length === 0) {
+			return res.status(400).json({ message: "No valid fields provided for query!" });
 		}
 
 		updateQuery += " WHERE CustomerID = ? AND AddressTypeID = ?";
@@ -5807,6 +5827,10 @@ app.patch("/api/text-content/update/:id", rateLimitRoute(adminDataManipulationRa
 			updateQuery = updateQuery.slice(0, -2);
 		}
 
+		if (queryParams.length === 0) {
+			return res.status(400).json({ message: "No valid fields provided for query!" });
+		}
+
 		updateQuery += " WHERE ContentID = ?";
 		queryParams.push(parseInt(id));
 
@@ -5859,6 +5883,10 @@ app.patch("/api/text-content/update", rateLimitRoute(adminDataManipulationRateLi
 		// Remove trailing comma and space
 		if (queryParams.length > 0) {
 			updateQuery = updateQuery.slice(0, -2);
+		}
+
+		if (queryParams.length === 0) {
+			return res.status(400).json({ message: "No valid fields provided for query!" });
 		}
 
 		updateQuery += " WHERE Site_Identifier = ?";
@@ -5915,6 +5943,10 @@ app.post("/api/text-content/add", formFieldsValidator(contentSchema), authentica
 
 		if (queryParams.length > 0) {
 			insertQuery = insertQuery.slice(0, -2);
+		}
+
+		if (queryParams.length === 0) {
+			return res.status(400).json({ message: "No valid fields provided for query!" });
 		}
 
 		insertQuery += ", Added_By = ?";
@@ -6122,10 +6154,10 @@ app.get("/api/admin/users", routePagination, tableSearch("users"), async (req, r
 });
 
 
-app.patch("/api/admin/users/update", rateLimitRoute(adminDataManipulationRateLimiter), authenticateAdmin, profileImgUpload.single("ProfileImage"), formFieldsValidator(adminUserUpdateSchema), userFieldsValidator, async (req, res) => {
+app.patch("/api/admin/users/update/:id", rateLimitRoute(adminDataManipulationRateLimiter), authenticateAdmin, idValidator, profileImgUpload.single("ProfileImage"), formFieldsValidator(adminUserUpdateSchema), adminUserFieldsValidator, async (req, res) => {
 	console.log("API admin update user credentials accessed");
 	const jsonFormFields = req.validatedForm;
-	const userId = jsonFormFields.UserID;
+	const userId = req.validatedId;
 	const ProfileImage = req.file; // Profile image
 
 	try {
@@ -6137,7 +6169,7 @@ app.patch("/api/admin/users/update", rateLimitRoute(adminDataManipulationRateLim
 		const oldProfileImage = oldUser.ProfileImage;
 		
 		let hashedPassword = null;
-		const allowedFields = ["Name", "Email", "Password", "Gender", "ProfileImage", "RoleID"]; 
+		const allowedFields = ["Name", "Email", "Password", "Gender", "ProfileImage", "RoleID", "Activated"]; 
 
 		if (ProfileImage) {
 			if (oldProfileImage && oldProfileImage !== null && oldProfileImage !== "default-profile.png") {
@@ -6179,6 +6211,10 @@ app.patch("/api/admin/users/update", rateLimitRoute(adminDataManipulationRateLim
 		// Remove trailing comma and space
 		if (queryParams.length > 0) {
 			updateQuery = updateQuery.slice(0, -2);
+		}
+
+		if (queryParams.length === 0) {
+			return res.status(400).json({ message: "No valid fields provided for query!" });
 		}
 
 		updateQuery += " WHERE UserID = ?";
@@ -6244,7 +6280,7 @@ app.get("/api/admin/orders", authenticateAdmin, routePagination, tableSearch("or
 	}
 });
 
-app.patch("/api/admin/orders/update/:id", rateLimitRoute(adminDataManipulationRateLimiter), authenticateAdmin, formFieldsValidator(adminOrderUpdateSchema), async (req, res) => {
+app.patch("/api/admin/orders/update/:id", rateLimitRoute(adminDataManipulationRateLimiter), authenticateAdmin, idValidator, formFieldsValidator(adminOrderUpdateSchema), async (req, res) => {
 	console.log("API admin update order accessed");
 	const jsonFormFields = req.validatedForm;
 	const orderId = req.validatedId;
@@ -6276,6 +6312,10 @@ app.patch("/api/admin/orders/update/:id", rateLimitRoute(adminDataManipulationRa
 		// Remove trailing comma and space
 		if (queryParams.length > 0) {
 			updateQuery = updateQuery.slice(0, -2);
+		}
+
+		if (queryParams.length === 0) {
+			return res.status(400).json({ message: "No valid fields provided for query!" });
 		}
 
 		updateQuery += " WHERE OrderID = ?";
