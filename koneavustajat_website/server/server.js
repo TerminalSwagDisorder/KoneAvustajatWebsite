@@ -522,7 +522,6 @@ const routeOrderBy = (req, res, next) => {
 
 	const { orderBy } = validationResult.value;
 
-	// If successful, attach page and items to the req object to be used in the routes
 	req.orderBy = { orderBy };
 	next();
 };
@@ -6363,7 +6362,6 @@ app.get("/api/admin/orders", authenticateAdmin, routePagination, routeOrderBy, t
 	console.log(sql, sqlParams);
 	try {
 		const [orders] = await promisePool.query(sql, sqlParams);
-		console.log(orders[0].OrderID, orders[1].OrderID, orders[2].OrderID, orders[3].OrderID, orders[4].OrderID);
 
 		const parseInventory = orders.map((item) => ({
 			...item,

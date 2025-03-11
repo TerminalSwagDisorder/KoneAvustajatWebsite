@@ -242,12 +242,11 @@ export const downloadFile = async (tableName, fileName = "downloaded_file.txt") 
 export const fetchSearchData = async (searchTerms, tableName, orderBy = "") => {
 	try {
 		await checkAllowedTableNames(["getroutes"], tableName);
-
+		
 		let orderArr;
 		if (orderBy || orderBy.length !== 0) {
 			orderArr = checkOrderBy(orderBy);
 		}
-
 
 		const correctSearchTerms = await checkSearchTerms({...searchTerms});
 		
@@ -256,7 +255,7 @@ export const fetchSearchData = async (searchTerms, tableName, orderBy = "") => {
 		}
 
 		const query = await buildQuery(correctSearchTerms, false);
-
+		console.log(query);
 		const response = await fetch(`${apiUrl}/api/${tableName}?${query}`, {
 			method: "GET",
 			credentials: "include", // Important, because we're using cookies

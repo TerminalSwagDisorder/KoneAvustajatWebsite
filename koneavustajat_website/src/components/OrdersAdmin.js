@@ -92,6 +92,9 @@ const OrdersAdmin = ({ fetchDynamicData, fetchDataAmount, fetchSearchData, updat
 		if (!searchActive && !catchState) {
 			fetchData();
 		}
+		if (searchActive && orderBy) {
+			reFetchSearchTermData();
+		}
 	}, [page, searchActive, catchState, orderBy]);
 
 
@@ -119,7 +122,19 @@ const OrdersAdmin = ({ fetchDynamicData, fetchDataAmount, fetchSearchData, updat
 			displayError(error);
 		}
 	};
+	
+	const reFetchSearchTermData = async (event) => {
+		try {
+			const data = await fetchSearchData(searchTerm, "admin/orders", orderBy);
 
+			setSearchActive(true);
+			setOrders(data);
+			setTotalPages(1);
+			setPage(1);
+		} catch (error) {
+			displayError(error);
+		}
+	};
 
 	const fetchSearchTermData = async (event) => {
 		event.preventDefault();
