@@ -466,6 +466,13 @@ const paginationSchema = Joi.object({
 	items: Joi.number().min(1).max(1000).default(100),
 });
 
+const orderBySchema = Joi.object({
+	orderBy: Joi.array().items(Joi.object({
+		column: Joi.string(),
+		direction: Joi.string().valid("desc", "asc"),
+	}))
+});
+
 // Middleware for pagination
 const routePagination = (req, res, next) => {
 	const validationResult = paginationSchema.validate({page: req.query.page, items: req.query.items});
@@ -489,6 +496,34 @@ const routePagination = (req, res, next) => {
 
 	// If successful, attach page and items to the req object to be used in the routes
 	req.pagination = { page, items, offset };
+	next();
+};
+
+const routeOrderBy = (req, res, next) => {
+	if (!req.query.orderBy) {
+		req.orderBy = { orderBy: [] };
+		return next();
+	}
+	const orderByUri = decodeURIComponent(req.query.orderBy);
+	const orderByArr = orderByUri.split(";");
+	const orderByItems = [];
+    for (const i of orderByArr) {
+		if (!i) return;
+    	const uriItem = i.split("--", 2);
+        orderByItems.push({column: uriItem[0], direction: uriItem[1]});
+    }
+	
+	const validationResult = orderBySchema.validate({orderBy: orderByItems});
+
+	if (validationResult.error) {
+		const errorMessage = validationResult.error.details ? validationResult.error.details[0].message : validationResult.error;
+		return res.status(400).json({ message: errorMessage });
+	}
+
+	const { orderBy } = validationResult.value;
+
+	// If successful, attach page and items to the req object to be used in the routes
+	req.orderBy = { orderBy };
 	next();
 };
 
@@ -6266,14 +6301,15 @@ app.patch("/api/admin/users/update/:id", rateLimitRoute(adminDataManipulationRat
 	}
 });
 
-app.get("/api/admin/orders", authenticateAdmin, routePagination, tableSearch("orders"), async (req, res) => {
+app.get("/api/admin/orders", authenticateAdmin, routePagination, routeOrderBy, tableSearch("orders"), async (req, res) => {
 	console.log("API admin orders accessed");
 
 	const { items, offset } = req.pagination;
+	const { orderBy } = req.orderBy;
 	const searchTerms = req.searchTerms;
 	let sql;
 	let notOperator = "";
-	let orderBy = "";
+	let orderBySql = "";
 	let sqlParams = [];
 	console.log(req.body);
 
@@ -6315,27 +6351,24 @@ app.get("/api/admin/orders", authenticateAdmin, routePagination, tableSearch("or
 		}
 	}
 
-	if (searchTerms.orderBy) {
-		orderBy += ` ORDER BY`;
-		for (const item of searchTerms.orderBy[0]) {
-			orderBy += " ? ? ";
-			sqlParams.push(item.column, item.direction);
-			
+	if (orderBy && orderBy.length !== 0) {
+		orderBySql += ` ORDER BY 1=1`;
+		for (const item of orderBy) {
+			orderBySql += `, ${item.column} ${item.direction} `;
 		}
 	}
 
-	sql = `SELECT * FROM orders ${searchQuery} ${orderBy} LIMIT ? OFFSET ?`;
+	sql = `SELECT * FROM orders ${searchQuery} ${orderBySql} LIMIT ? OFFSET ?`;
 	sqlParams.push(items, offset);
-	console.log(sql);
-	console.log(searchTerms.orderBy);
+	console.log(sql, sqlParams);
 	try {
 		const [orders] = await promisePool.query(sql, sqlParams);
+		console.log(orders[0].OrderID, orders[1].OrderID, orders[2].OrderID, orders[3].OrderID, orders[4].OrderID);
 
 		const parseInventory = orders.map((item) => ({
 			...item,
 			Items: item.Items ? JSON.parse(item.Items) : null
 		}));
-
 		return res.status(200).json(parseInventory);
 	} catch (error) {
 		const [status, message] = handleServerError(error);

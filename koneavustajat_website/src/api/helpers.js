@@ -222,10 +222,17 @@ export const handleError = (error) => {
 
 export const checkOrderBy = (orderBy) => {
 	if (!orderBy || !Array.isArray(orderBy) || typeof orderBy !== "object") throw new Error("Order by data is not an array!");
+	const orderArr = [];
 	try {
-		orderBy = JSON.stringify(orderBy);
+		console.log("checkOrderBy", orderBy);
+		for (const item of orderBy) {
+		console.log("checkOrderBy", item);
+			orderArr.push(`${item.column}--${item.direction}`);
+		}
+		
+		//orderBy = JSON.stringify(orderArr);
 	} catch {
 		console.warn("Could not parse order by!");
 	}
-	return orderBy;
+	return orderArr;
 };

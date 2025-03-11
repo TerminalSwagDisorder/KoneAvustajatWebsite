@@ -178,11 +178,15 @@ const OrdersAdmin = ({ fetchDynamicData, fetchDataAmount, fetchSearchData, updat
 		setOrderBy((prevFields) => {
 			const exists = prevFields.find((item) => item.column === column);
 			if (exists) {
-				return prevFields.map((item) =>
-					item.column === column ? { ...item, direction: item.direction === "asc" ? "desc" : "asc" } : item
-				);
+				if (exists.column === column && exists.direction === "desc") {
+					return prevFields.map((item) => (item.column === column ? { ...item, direction: "asc" } : item));
+				} else if (exists.column === column && exists.direction === "asc") {
+					return prevFields.filter((item) => item.column !== column);
+				} else {
+					return prevFields.map((item) => (item.column === column ? { ...item, direction: "desc" } : item));
+				}
 			} else {
-				return [...prevFields, { column, direction: "asc" }];
+				return [...prevFields, { column, direction: "desc" }];
 			}
 		});
 	};

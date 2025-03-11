@@ -68,11 +68,16 @@ export const fetchDynamicData = async (page, tableName, partName = "", orderBy =
 			console.log("partName has no value. This might be intentional, but double check to be sure.");
 		}
 
+		let orderArr;
 		if (orderBy || orderBy.length !== 0) {
-			orderBy = checkOrderBy(orderBy);
+			orderArr = checkOrderBy(orderBy);
 		}
 
-		const correctSearchTerms = await checkSearchTerms({page: page, partName: partName, orderBy: orderBy});
+		const correctSearchTerms = await checkSearchTerms({page: page, partName: partName});
+
+		if (orderArr) {
+			correctSearchTerms.orderBy = encodeURIComponent(orderArr.join(";"));
+		}
 
 		const query = await buildQuery(correctSearchTerms, true);
 		
@@ -238,12 +243,18 @@ export const fetchSearchData = async (searchTerms, tableName, orderBy = "") => {
 	try {
 		await checkAllowedTableNames(["getroutes"], tableName);
 
+		let orderArr;
 		if (orderBy || orderBy.length !== 0) {
-			orderBy = checkOrderBy(orderBy);
+			orderArr = checkOrderBy(orderBy);
 		}
 
-		const correctSearchTerms = await checkSearchTerms({...searchTerms, orderBy: orderBy[0]});
+
+		const correctSearchTerms = await checkSearchTerms({...searchTerms});
 		
+		if (orderArr) {
+			correctSearchTerms.orderBy = encodeURIComponent(orderArr.join(";"));
+		}
+
 		const query = await buildQuery(correctSearchTerms, false);
 
 		const response = await fetch(`${apiUrl}/api/${tableName}?${query}`, {
