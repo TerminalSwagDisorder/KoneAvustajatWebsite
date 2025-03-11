@@ -123,7 +123,7 @@ const OrdersAdmin = ({ fetchDynamicData, fetchDataAmount, fetchSearchData, updat
 		}
 	};
 	
-	const reFetchSearchTermData = async (event) => {
+	const reFetchSearchTermData = async () => {
 		try {
 			const data = await fetchSearchData(searchTerm, "admin/orders", orderBy);
 

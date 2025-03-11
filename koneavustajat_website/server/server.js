@@ -4852,15 +4852,16 @@ app.patch("/api/profile", rateLimitRoute(dataManipulationRateLimiter), authentic
 });
 
 // Route for viewing parts
-app.get("/api/part", routePagination, tableValidator(partNameSchema, "partName"), tableSearch(), async (req, res) => {
+app.get("/api/part", routePagination, routeOrderBy, tableValidator(partNameSchema, "partName"), tableSearch(), async (req, res) => {
 	console.log("API parts accessed");
 
 	const partName = req.query.partName; // Get the table name from the query
 	const { items, offset } = req.pagination;
+	const { orderBy } = req.orderBy;
 	const searchTerms = req.searchTerms;
 	let sql;
 	let notOperator = "";
-	let orderBy = "";
+	let orderBySql = "";
 	let sqlParams = [];
 
 	let searchQuery = " WHERE 1=1";
@@ -4900,7 +4901,14 @@ app.get("/api/part", routePagination, tableValidator(partNameSchema, "partName")
 		}
 	}
 
-	sql = `SELECT * FROM ${partName} ${searchQuery} LIMIT ? OFFSET ?`;
+	if (orderBy && orderBy.length !== 0) {
+		orderBySql += ` ORDER BY 1=1`;
+		for (const item of orderBy) {
+			orderBySql += `, ${item.column} ${item.direction} `;
+		}
+	}
+
+	sql = `SELECT * FROM ${partName} ${searchQuery} ${orderBySql} LIMIT ? OFFSET ?`;
 	sqlParams.push(items, offset); // Push pagination params after search params
 	
 
@@ -5020,14 +5028,16 @@ app.get("/api/part/:id", tableValidator(partNameSchema, "partName"), idValidator
 });
 
 // Route for viewing inventory
-app.get("/api/inventory", routePagination, tableSearch("inventory"), async (req, res) => {
+app.get("/api/inventory", routePagination, routeOrderBy, tableSearch("inventory"), async (req, res) => {
 	console.log("API inventory accessed");
 
 	const { items, offset } = req.pagination;
+	const { orderBy } = req.orderBy;
 	const searchTerms = req.searchTerms;
 	const partName = req.query.partName; 
 	let sql;
 	let notOperator = "";
+	let orderBySql = "";
 	let sqlParams = [];
 
 	let searchQuery = " WHERE 1=1";
@@ -5098,8 +5108,15 @@ app.get("/api/inventory", routePagination, tableSearch("inventory"), async (req,
 			sqlParams.push(value); // Push values to sqlParams array
 		}
 	}
+	
+	if (orderBy && orderBy.length !== 0) {
+		orderBySql += ` ORDER BY 1=1`;
+		for (const item of orderBy) {
+			orderBySql += `, ${item.column} ${item.direction} `;
+		}
+	}
 
-	sql = `SELECT * FROM part_inventory ${searchQuery} LIMIT ? OFFSET ?`;
+	sql = `SELECT * FROM part_inventory ${searchQuery} ${orderBySql} LIMIT ? OFFSET ?`;
 	sqlParams.push(items, offset); // Push pagination params after search params
 
 	try {
@@ -6108,13 +6125,15 @@ app.post("/api/admin/users/add", rateLimitRoute(adminDataManipulationRateLimiter
 	}
 });
 
-app.get("/api/admin/users", routePagination, tableSearch("users"), async (req, res) => {
+app.get("/api/admin/users", routePagination, routeOrderBy, tableSearch("users"), async (req, res) => {
 	console.log("API admin users accessed");
 
 	const { items, offset } = req.pagination;
+	const { orderBy } = req.orderBy;
 	const searchTerms = req.searchTerms;
 	let sql;
 	let notOperator = "";
+	let orderBySql = "";
 	let sqlParams = [];
 
 	let searchQuery = " WHERE 1=1";
@@ -6138,6 +6157,13 @@ app.get("/api/admin/users", routePagination, tableSearch("users"), async (req, r
 				searchQuery += ` AND u.${column} ${notOperator}LIKE ?`;
 			}
 			sqlParams.push(value); // Push values to sqlParams array
+		}
+	}
+
+	if (orderBy && orderBy.length !== 0) {
+		orderBySql += ` ORDER BY 1=1`;
+		for (const item of orderBy) {
+			orderBySql += `, ${item.column} ${item.direction} `;
 		}
 	}
 
@@ -6177,7 +6203,7 @@ app.get("/api/admin/users", routePagination, tableSearch("users"), async (req, r
 	LEFT JOIN customers c ON u.UserID = c.UserID
 	LEFT JOIN admins ad ON u.UserID = ad.UserID
 	LEFT JOIN addresses a ON c.CustomerID = a.CustomerID
-		${searchQuery} GROUP BY u.UserID LIMIT ? OFFSET ?`;
+		${searchQuery} GROUP BY u.UserID  ${orderBySql} LIMIT ? OFFSET ?`;
 	sqlParams.push(items, offset); // Push pagination params after search params
 
 	try {
@@ -6310,7 +6336,6 @@ app.get("/api/admin/orders", authenticateAdmin, routePagination, routeOrderBy, t
 	let notOperator = "";
 	let orderBySql = "";
 	let sqlParams = [];
-	console.log(req.body);
 
 	let searchQuery = " WHERE 1=1";
 

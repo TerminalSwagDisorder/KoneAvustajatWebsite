@@ -18,7 +18,7 @@ import { useSelector, useDispatch } from "react-redux";
 import { addToShoppingCart, removeFromShoppingCart, clearShoppingCart } from "../redux/shoppingCartSlice";
 import { addToCompletedBuild, removeFromCompletedBuild, clearCompletedBuild } from "../redux/wizardSlice";
 import { useAuth, useError } from "../utils/Contexts";
-
+import { FaChevronUp, FaChevronDown } from "react-icons/fa";
 
 const ComputerWizardBrowse = ({ fetchDynamicData, fetchDataAmount, updateDynamicData, deleteDynamicData, fetchSearchData }) => {
 	const { displayError } = useError();
@@ -38,6 +38,7 @@ const ComputerWizardBrowse = ({ fetchDynamicData, fetchDataAmount, updateDynamic
 	const [searchActive, setSearchActive] = useState(false);
 	const [searchKey, setSearchKey] = useState("ID");
 	const [searchTerm, setSearchTerm] = useState({});
+	const [orderBy, setOrderBy] = useState([]);
 	const shoppingCart = useSelector((state) => state.shoppingCart.shoppingCart);
 	const completedBuild = useSelector((state) => state.wizard.completedBuild);
 	const dispatch = useDispatch();
@@ -47,16 +48,14 @@ const ComputerWizardBrowse = ({ fetchDynamicData, fetchDataAmount, updateDynamic
 		fetchData();
 	}, []);
 
-	// Update run fetchData when pagination changes
-	useEffect(() => {
-		console.log(searchTerm);
-	}, [searchTerm]);
-
 	useEffect(() => {
 		if (!searchActive) {
 			fetchData();
 		}
-	}, [page]);
+		if (searchActive && orderBy) {
+			reFetchSearchTermData();
+		}
+	}, [page, searchActive, orderBy]);
 
 	useEffect(() => {
 		fetchData();
@@ -125,7 +124,7 @@ const ComputerWizardBrowse = ({ fetchDynamicData, fetchDataAmount, updateDynamic
 
 	const fetchData = async () => {
 		try {
-			const data = await fetchDynamicData(page, "part", partName.key);
+			const data = await fetchDynamicData(page, "part", partName.key, orderBy);
 			await handlePagination();
 
 			setParts(data);
@@ -210,7 +209,7 @@ const ComputerWizardBrowse = ({ fetchDynamicData, fetchDataAmount, updateDynamic
 			
 			searchTerm.partName = partName.key;
 			
-			const data = await fetchSearchData(searchTerm, "part");
+			const data = await fetchSearchData(searchTerm, "part", orderBy);
 			
 			if (!data || data.length === 0) {
 				displayError("No data found using this search term!");
@@ -238,6 +237,50 @@ const ComputerWizardBrowse = ({ fetchDynamicData, fetchDataAmount, updateDynamic
 		} catch (error) {
 			displayError(error);
 		}
+	};
+	
+	const reFetchSearchTermData = async () => {
+		try {
+			const data = await fetchSearchData(searchTerm, "part", orderBy);
+
+			setSearchActive(true);
+			setParts(data);
+			setTotalPages(1);
+			setPage(1);
+		} catch (error) {
+			displayError(error);
+		}
+	};
+
+	const handleOrderBy = (column) => {
+		setOrderBy((prevFields) => {
+			const exists = prevFields.find((item) => item.column === column);
+			if (exists) {
+				if (exists.column === column && exists.direction === "desc") {
+					return prevFields.map((item) => (item.column === column ? { ...item, direction: "asc" } : item));
+				} else if (exists.column === column && exists.direction === "asc") {
+					return prevFields.filter((item) => item.column !== column);
+				} else {
+					return prevFields.map((item) => (item.column === column ? { ...item, direction: "desc" } : item));
+				}
+			} else {
+				return [...prevFields, { column, direction: "desc" }];
+			}
+		});
+	};
+
+	const renderSortIcon = (column) => {
+		const orderItem = orderBy.find((item) => item.column === column);
+		if (orderItem) {
+			if (orderItem.direction === "asc") {
+				return <FaChevronUp />;
+			} else if (orderItem.direction === "desc") {
+				return <FaChevronDown />;
+			} else {
+				return "";
+			}			
+		}
+		return "";
 	};
 
 	const renderPartModification = () => {
@@ -602,9 +645,9 @@ const ComputerWizardBrowse = ({ fetchDynamicData, fetchDataAmount, updateDynamic
 			<Table responsive="md" hover bordered className="table-striped">
 				<thead>
 					<tr>
-						<th>ID</th>
-						<th>Name</th>
-						<th>Price</th>
+						<th className="order-by" onClick={() => handleOrderBy("ID")}>ID {renderSortIcon("ID")}</th>
+						<th className="order-by" onClick={() => handleOrderBy("Name")}>Name {renderSortIcon("Name")}</th>
+						<th className="order-by" onClick={() => handleOrderBy("Price")}>Price {renderSortIcon("Price")}</th>
 						<th>Actions</th>
 					</tr>
 				</thead>

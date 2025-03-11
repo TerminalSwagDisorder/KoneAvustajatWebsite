@@ -6,7 +6,7 @@ import { useSelector, useDispatch } from "react-redux";
 import { addToShoppingCart, removeFromShoppingCart, clearShoppingCart } from "../redux/shoppingCartSlice";
 import { addToCompletedBuild, removeFromCompletedBuild, clearCompletedBuild } from "../redux/wizardSlice";
 import { useAuth, useError } from "../utils/Contexts";
-
+import { FaChevronUp, FaChevronDown } from "react-icons/fa";
 
 const UsedPartsBrowse = ({ fetchDynamicData, fetchDataAmount, postDynamicData, updateDynamicData, fetchSearchData, deleteDynamicData }) => {
     const { displayError } = useError();
@@ -35,6 +35,7 @@ const UsedPartsBrowse = ({ fetchDynamicData, fetchDataAmount, postDynamicData, u
 	const [searchActive, setSearchActive] = useState(false);
 	const [searchKey, setSearchKey] = useState("ID");
 	const [searchTerm, setSearchTerm] = useState({});
+	const [orderBy, setOrderBy] = useState([]);
 	const shoppingCart = useSelector((state) => state.shoppingCart.shoppingCart);
 	const completedBuild = useSelector((state) => state.wizard.completedBuild);
 	const dispatch = useDispatch();
@@ -78,12 +79,14 @@ const UsedPartsBrowse = ({ fetchDynamicData, fetchDataAmount, postDynamicData, u
 
 	}, []);
 
-	// Update run fetchData when pagination changes
 	useEffect(() => {
-		fetchData();
-	}, [page]);
-
-	
+		if (!searchActive) {
+			fetchData();
+		}
+		if (searchActive && orderBy) {
+			reFetchSearchTermData();
+		}
+	}, [page, searchActive, orderBy]);
 /*
 	useEffect(() => {
 		fetchData();
@@ -136,7 +139,7 @@ const UsedPartsBrowse = ({ fetchDynamicData, fetchDataAmount, postDynamicData, u
 
 	const fetchData = async () => {
 		try {
-			const data = await fetchDynamicData(page, "inventory");
+			const data = await fetchDynamicData(page, "inventory", null, orderBy);
 			await handlePagination();
 			setParts(data);
 			//console.log(data);
@@ -146,6 +149,18 @@ const UsedPartsBrowse = ({ fetchDynamicData, fetchDataAmount, postDynamicData, u
 		}
 	};
 
+	const reFetchSearchTermData = async () => {
+		try {
+			const data = await fetchSearchData(searchTerm, "inventory", orderBy);
+
+			setSearchActive(true);
+			setParts(data);
+			setTotalPages(1);
+			setPage(1);
+		} catch (error) {
+			displayError(error);
+		}
+	};
 
 	const handleSearchKey = (value) => {
 		setSearchKey(value);
@@ -188,7 +203,7 @@ const UsedPartsBrowse = ({ fetchDynamicData, fetchDataAmount, postDynamicData, u
 				return;
 			}
 			
-			const data = await fetchSearchData(searchTerm, "inventory");
+			const data = await fetchSearchData(searchTerm, "inventory", orderBy);
 			
 			if (!data || data.length === 0) {
 				displayError("No data found using this search term!");
@@ -217,6 +232,38 @@ const UsedPartsBrowse = ({ fetchDynamicData, fetchDataAmount, postDynamicData, u
 			displayError(error);
 		}
 	};
+
+	const handleOrderBy = (column) => {
+		setOrderBy((prevFields) => {
+			const exists = prevFields.find((item) => item.column === column);
+			if (exists) {
+				if (exists.column === column && exists.direction === "desc") {
+					return prevFields.map((item) => (item.column === column ? { ...item, direction: "asc" } : item));
+				} else if (exists.column === column && exists.direction === "asc") {
+					return prevFields.filter((item) => item.column !== column);
+				} else {
+					return prevFields.map((item) => (item.column === column ? { ...item, direction: "desc" } : item));
+				}
+			} else {
+				return [...prevFields, { column, direction: "desc" }];
+			}
+		});
+	};
+
+	const renderSortIcon = (column) => {
+		const orderItem = orderBy.find((item) => item.column === column);
+		if (orderItem) {
+			if (orderItem.direction === "asc") {
+				return <FaChevronUp />;
+			} else if (orderItem.direction === "desc") {
+				return <FaChevronDown />;
+			} else {
+				return "";
+			}			
+		}
+		return "";
+	};
+
 
 	const handleInputChange = (event) => {		
 		setFormFields((prevFields) => ({
@@ -722,10 +769,10 @@ const renderAddForm = () => {
 		<Table responsive="md" hover bordered className="table-striped">
 			<thead>
 				<tr>
-					<th>ID</th>
-					<th>Name</th>
-					<th>Price</th>
-					<th>Part Type</th> 
+					<th className="order-by" onClick={() => handleOrderBy("ID")}>ID {renderSortIcon("ID")}</th>
+					<th className="order-by" onClick={() => handleOrderBy("Name")}>Name {renderSortIcon("Name")}</th>
+					<th className="order-by" onClick={() => handleOrderBy("Price")}>Price {renderSortIcon("Price")}</th>
+					<th className="order-by" onClick={() => handleOrderBy("PartTypeID")}>Part Type {renderSortIcon("PartTypeID")}</th>
 					<th>Actions</th> 
 
 				</tr>

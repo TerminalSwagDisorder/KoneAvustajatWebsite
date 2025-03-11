@@ -14,6 +14,7 @@ import {
 	Image
 } from "react-bootstrap";
 import { useAuth, useError } from "../utils/Contexts";
+import { FaChevronUp, FaChevronDown } from "react-icons/fa";
 
 const UsersAdmin = ({ fetchDynamicData, fetchDataAmount, fetchSearchData, updateDynamicData }) => {
 	const { displayError } = useError();
@@ -30,6 +31,7 @@ const UsersAdmin = ({ fetchDynamicData, fetchDataAmount, fetchSearchData, update
 	const [searchActive, setSearchActive] = useState(false);
 	const [searchKey, setSearchKey] = useState("UserID");
 	const [searchTerm, setSearchTerm] = useState({});
+	const [orderBy, setOrderBy] = useState([]);
 	
 	const roleMap = {
 		1: "guest",
@@ -41,11 +43,24 @@ const UsersAdmin = ({ fetchDynamicData, fetchDataAmount, fetchSearchData, update
 	// Function to fetch data and set users state
 	const fetchData = async () => {
 		try {
-			const data = await fetchDynamicData(page, "admin/users", null);
+			const data = await fetchDynamicData(page, "admin/users", null, orderBy);
 			await handlePagination();
 			setUsers(data);
 		} catch (error) {
 			displayError(error.message || error);
+		}
+	};
+
+	const reFetchSearchTermData = async () => {
+		try {
+			const data = await fetchSearchData(searchTerm, "admin/users", orderBy);
+
+			setSearchActive(true);
+			setUsers(data);
+			setTotalPages(1);
+			setPage(1);
+		} catch (error) {
+			displayError(error);
 		}
 	};
 
@@ -68,8 +83,13 @@ const UsersAdmin = ({ fetchDynamicData, fetchDataAmount, fetchSearchData, update
 	}, []);
 
 	useEffect(() => {
-		fetchData();
-	}, [page]);
+		if (!searchActive) {
+			fetchData();
+		}
+		if (searchActive && orderBy) {
+			reFetchSearchTermData();
+		}
+	}, [page, searchActive, orderBy]);
 
 	const handleSubmit = async (event) => {
 		event.preventDefault();
@@ -121,6 +141,37 @@ const UsersAdmin = ({ fetchDynamicData, fetchDataAmount, fetchSearchData, update
 		}
 	};
 
+	const handleOrderBy = (column) => {
+		setOrderBy((prevFields) => {
+			const exists = prevFields.find((item) => item.column === column);
+			if (exists) {
+				if (exists.column === column && exists.direction === "desc") {
+					return prevFields.map((item) => (item.column === column ? { ...item, direction: "asc" } : item));
+				} else if (exists.column === column && exists.direction === "asc") {
+					return prevFields.filter((item) => item.column !== column);
+				} else {
+					return prevFields.map((item) => (item.column === column ? { ...item, direction: "desc" } : item));
+				}
+			} else {
+				return [...prevFields, { column, direction: "desc" }];
+			}
+		});
+	};
+
+	const renderSortIcon = (column) => {
+		const orderItem = orderBy.find((item) => item.column === column);
+		if (orderItem) {
+			if (orderItem.direction === "asc") {
+				return <FaChevronUp />;
+			} else if (orderItem.direction === "desc") {
+				return <FaChevronDown />;
+			} else {
+				return "";
+			}			
+		}
+		return "";
+	};
+
 
 	const handleSearchKey = (value) => {
 		setSearchKey(value);
@@ -156,7 +207,7 @@ const UsersAdmin = ({ fetchDynamicData, fetchDataAmount, fetchSearchData, update
 				return;
 			}
 			
-			const data = await fetchSearchData(searchTerm, "admin/users");
+			const data = await fetchSearchData(searchTerm, "admin/users", orderBy);
 			
 			if (!data || data.length === 0) {
 				displayError("No data found using this search term!");
@@ -515,10 +566,10 @@ const UsersAdmin = ({ fetchDynamicData, fetchDataAmount, fetchSearchData, update
 			<Table responsive="md" hover bordered className="table-striped">
 				<thead>
 					<tr>
-						<th>UserID</th>
-						<th>Email</th>
-						<th>Role</th>
-						<th>Activated</th>
+						<th className="order-by" onClick={() => handleOrderBy("UserID")}>UserID {renderSortIcon("UserID")}</th>
+						<th className="order-by" onClick={() => handleOrderBy("Email")}>Email {renderSortIcon("Email")}</th>
+						<th className="order-by" onClick={() => handleOrderBy("Role")}>Role {renderSortIcon("Role")}</th>
+						<th className="order-by" onClick={() => handleOrderBy("Activated")}>Activated {renderSortIcon("Activated")}</th>
 						<th>Actions</th>
 			 
 					</tr>
