@@ -568,7 +568,7 @@ const UsersAdmin = ({ fetchDynamicData, fetchDataAmount, fetchSearchData, update
 					<tr>
 						<th className="order-by" onClick={() => handleOrderBy("UserID")}>UserID {renderSortIcon("UserID")}</th>
 						<th className="order-by" onClick={() => handleOrderBy("Email")}>Email {renderSortIcon("Email")}</th>
-						<th className="order-by" onClick={() => handleOrderBy("Role")}>Role {renderSortIcon("Role")}</th>
+						<th className="order-by" onClick={() => handleOrderBy("RoleID")}>Role {renderSortIcon("RoleID")}</th>
 						<th className="order-by" onClick={() => handleOrderBy("Activated")}>Activated {renderSortIcon("Activated")}</th>
 						<th>Actions</th>
 			 
