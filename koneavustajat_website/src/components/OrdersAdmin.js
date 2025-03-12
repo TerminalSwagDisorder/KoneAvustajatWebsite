@@ -415,6 +415,9 @@ const OrdersAdmin = ({ fetchDynamicData, fetchDataAmount, fetchSearchData, updat
 							<td> {order.PaymentStatus === "paid" ? new Date(order.PaymentDate).toUTCString() : order.PaymentStatus}</td>
 							<td>
 								{renderAdminButtons(order)}
+								<Button className="user-select-button" onClick={() => handleSelectOrder(order, "condensedview")}>
+									Quick view
+								</Button>
 								<Button className="user-select-button" onClick={() => handleSelectOrder(order, "view")}>
 									View order
 								</Button>
@@ -441,53 +444,94 @@ const OrdersAdmin = ({ fetchDynamicData, fetchDataAmount, fetchSearchData, updat
 	};
 
 	const renderBasedOnOrder = () => {
-		if (selectedOrder && currentOperation === "view") {
-			return (
-				<div id="partform" className="partform d-flex justify-content-center align-items-center">
-					<Form className="adminForm border rounded shadow p-4 bg-opaque">
-						<div className="d-flex justify-content-end mb-3">
-							<CloseButton onClick={() => closeForm()} />
-						</div>
-						<h4 className=" mb-3">Order details</h4>
-						{Object.keys(selectedOrder).map((key, index) => (
-							<ul key={index}>
-								<li>
-									<b>{key}</b>:{" "}
-									{key === "Url" || key === "Image_Url" ? (
-										<a href={selectedOrder[key]} target="_blank" rel="noopener noreferrer">
-											{selectedOrder[key]}
-										</a>
-									) : typeof selectedOrder[key] === "object" ? (
-											renderNestedObject(selectedOrder[key])
-									) : key === "ProfileImage" ? (
-										<Image
-											src={process.env.PUBLIC_URL + "/product_images/" + selectedOrder[key]}
-											alt={key}
-											style={{ width: "100px", height: "auto" }}
-										/>
-										
-									) : (
-										selectedOrder[key]
-									)}
-								</li>
-							</ul>
-						))}
-					</Form>
-				</div>
-			);
+		if (!selectedOrder || (currentOperation !== "condensedview" && currentOperation !== "view")) {
+			return null;
 		}
+
+		const condensedFields = ["OrderID", "CustomerID", "ReceiptID", "OrderDate", "Status", "TotalPrice", "Items", "PaymentStatus", "PaymentDate"];
+
+		const keysToRender = Object.keys(selectedOrder).filter((key) =>
+			currentOperation === "view" || (currentOperation === "condensedview" && condensedFields.includes(key))
+		);
+
+		return (
+			<div id="partform" className="partform d-flex justify-content-center align-items-center">
+				<Form className="adminForm border rounded shadow p-4 bg-opaque">
+					<div className="d-flex justify-content-end mb-3">
+						<CloseButton onClick={closeForm} />
+					</div>
+					<h4 className="mb-3">Order details</h4>
+					{keysToRender.map((key, index) => (
+						<ul key={index}>
+							<li>
+								<b>{key}</b>:{" "}
+								{key === "Url" || key === "Image_Url" ? (
+									<a href={selectedOrder[key]} target="_blank" rel="noopener noreferrer">
+										{selectedOrder[key]}
+									</a>
+								) : typeof selectedOrder[key] === "object" && selectedOrder[key] !== null ? (
+									renderNestedObject(selectedOrder[key])
+								) : key === "Image" ? (
+									<Image
+										src={process.env.PUBLIC_URL + "/product_images/" + selectedOrder[key]}
+										alt={key}
+										style={{ width: "100px", height: "auto" }}
+									/>
+								) : (key.toLowerCase().includes("date") || key.toLowerCase().includes("modifiedat")) && new Date(selectedOrder[key]).toUTCString() !== "Invalid Date" ? (
+									new Date(selectedOrder[key]).toUTCString()
+								) : (
+									selectedOrder[key]
+								)}
+							</li>
+						</ul>
+					))}
+				</Form>
+			</div>
+		);
 	};
 
 	const renderNestedObject = (nestedObj) => {
+		if (currentOperation === "condensedview") {
+			const condensedItems = ["chassis", "cpu", "cpu_cooler", "gpu", "memory", "motherboard", "psu", "storage", "ID", "Url", "Price", "Name", "Manufacturer", "PartID", "PartTypeID"];
+			return (
+				<ul>
+					{Object.entries(nestedObj).map(([key, value], idx) => {
+						if (Number.isNaN(parseInt(key)) && condensedItems.includes(key) || !Number.isNaN(parseInt(key))) {
+							return (
+							<li key={idx}>
+								<span>
+									<b>{value.AddressTypeID === 1 ? "Billing" : value.AddressTypeID === 2 ? "Shipping" : value.table ? value.table : key }</b>:{" "}
+								</span>
+							{typeof value === "object" && value !== null ? (
+								renderNestedObject(value)
+							) :  key.toLowerCase().includes("date") && new Date(value).toUTCString() !== "Invalid Date" ? (
+								new Date(value).toUTCString()
+							) : key === "Url" || key === "Image_Url" ? (
+							<a href={value} target="_blank" rel="noopener noreferrer">
+								{value}
+							</a>
+							) : (
+								value
+							)}
+							</li>
+							)
+						}
+						return null;
+					})}
+				</ul>
+			);
+		}
 		return (
 			<ul>
 				{Object.entries(nestedObj).map(([key, value], idx) => (
 					<li key={idx}>
 						<span>
-							<b>{value.AddressTypeID === 1 ? "Billing" : value.AddressTypeID === 2 ? "Shipping" : key}</b>:{" "}
+								<b>{value.AddressTypeID === 1 ? "Billing" : value.AddressTypeID === 2 ? "Shipping" : value.table ? value.table : key }</b>:{" "}
 						</span>
 					{typeof value === "object" && value !== null ? (
 						renderNestedObject(value)
+					) :  key.toLowerCase().includes("date") && new Date(value).toUTCString() !== "Invalid Date" ? (
+						new Date(value).toUTCString()
 					) : (
 						value
 					)}
