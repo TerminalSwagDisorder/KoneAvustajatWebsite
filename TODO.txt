@@ -26,11 +26,13 @@ stripe trigger payment_intent.payment_failed
 -In orders (and similarly any other data manipulation that relies on frontend data, instead of using frontend prices, query the db and get new data that way x
 -Admin user page -> add full user details & orders x
 -Table order by x
+-Admin orders -> add a condensed order view (for example only view item names, urls etc) for easier readability x
 
--Admin orders -> add a condensed order view (for example only view item names, urls etc) for easier readability
+-Admin email transactions (copy all features from orders, except no modification)
 -Admin users can add more users, incl. admins
 -Admin dash -> add reset of opensearch stuff (/manage routes)
 -Admin dash -> add opensearch info
+-Externalize some functions (Handleinputchange, handlesubmit, fetchdata etc)
 -Secure routes with sensitive data (eg. /api/orders)
 -Set up CMS texts
 -Add a way to dismiss payment form
