@@ -27,9 +27,9 @@ stripe trigger payment_intent.payment_failed
 -Admin user page -> add full user details & orders x
 -Table order by x
 -Admin orders -> add a condensed order view (for example only view item names, urls etc) for easier readability x
+-Admin email transactions (copy all features from orders, except no modification) x
 
--Admin email transactions (copy all features from orders, except no modification)
--Admin users can add more users, incl. admins
+-Admin users can add more users, incl. admins (needs own page for inserting password)
 -Admin dash -> add reset of opensearch stuff (/manage routes)
 -Admin dash -> add opensearch info
 -Externalize some functions (Handleinputchange, handlesubmit, fetchdata etc)
