@@ -433,8 +433,18 @@ $dark_user_select_button: #697ef5;
 	.alert:hover {
 		opacity: 1;
 	}
+	
+	.email-content {
+		// Issue 1
+		background-color: $even_row;
+		color: $box_text !important;
+		text-align: left;
+		border: 1px solid #ccc;
+		border-radius: 0.5rem;
+		padding: 1.25rem;
+	}
 
-}
+} // End of mixin
 
 :root {
 	@include theme(

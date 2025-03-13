@@ -3,6 +3,8 @@
 // Auth: Terminal Swag Disorder
 // Desc: File containing code for server-side, including express-session, jwt & mysql
 
+/*jshint scripturl:true*/
+
 // General exports
 const express = require("express");
 const helmet = require("helmet");
@@ -10,6 +12,7 @@ const cors = require("cors");
 const path = require("path");
 const bcrypt = require("bcrypt");
 const crypto = require("crypto");
+const xss = require("xss");
 const fs = require("fs");
 const cookieParser = require("cookie-parser");
 const multer = require("multer");
@@ -227,6 +230,56 @@ const downloadRateLimiter = new RateLimiterRedis({
 	duration: 900,
 	blockDuration: 1800
 });
+
+const emailXssOptions = {
+	whiteList: {
+		html: [],
+		body: [ "style" ],
+		div: [ "style" ],
+		h2: [ "style" ],
+		p: [ "style" ],
+		strong: [],
+		a: [ "href", "style", "target" ],
+		br: []
+	},
+
+	stripIgnoreTag: true,
+
+	stripIgnoreTagBody: [ "script" ],
+
+	css: {
+		whiteList: {
+			"font-family": true,
+			"background-color": true,
+			"margin": true,
+			"padding": true,
+			"max-width": true,
+			"border-radius": true,
+			"box-shadow": true,
+			"color": true,
+			"font-size": true,
+			"text-align": true,
+			"text-decoration": true,
+			"width": true,
+			"height": true,
+			"line-height": true
+		}
+	},
+
+	onTagAttr: (tag, name, value, isWhiteAttr) => {
+		if (tag === "a" && name === "href") {
+			const urls = [backendUrl, frontendUrl, corsUrl, opensearch];
+			// Remove href values that start with "javascript:" or similar.
+			if (value.trim().toLowerCase().startsWith("javascript:")) {
+				return "";
+			}
+			if (!urls.map((url) => url.trim().toLowerCase()).includes(value.trim().toLowerCase())) {
+				return "";
+			  }
+		}
+		return `${name}="${value}"`;
+	}
+};
 
 ////////////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////
@@ -637,7 +690,7 @@ const partNameSchema = Joi.string()
 	.default("cpu");
 
 const tableNameSchema = Joi.string()
-	.valid("chassis", "cpu", "cpu_cooler", "gpu", "memory", "motherboard", "psu", "storage", "addresses", "address_types", "admins", "customers", "orders", "order_types", "part_inventory", "part_types", "users")
+	.valid("chassis", "cpu", "cpu_cooler", "gpu", "memory", "motherboard", "psu", "storage", "addresses", "address_types", "admins", "customers", "orders", "order_types", "part_inventory", "part_types", "users", "email_transactions")
 	.default("cpu");
 
 const userFieldsSchema = Joi.string()
@@ -3552,15 +3605,19 @@ const checkItemLength = (item) => {
 };
 
 const sendEmail = async (from, to, subject, text, html = "", toUser = null) => {
-		const mailOptions = {
-		from: `"KoneAvustajat ${from}"`,
-		to: to,
-		subject: subject,
-		text: text,
-		html: html
-	};
-
 	try {
+		if (html) {
+			html = xss(html, emailXssOptions); // Some sanitization just in case
+		}
+
+		const mailOptions = {
+			from: `"KoneAvustajat ${from}"`,
+			to: to,
+			subject: subject,
+			text: text,
+			html: html
+		};
+
 		const emailQuery = "INSERT INTO email_transactions (EmailTypeID, ToUserID, ToEmail, FromEmail, Subject, Text, Content) VALUES (?, ?, ?, ?, ?, ?, ?)";
 		const emailParams = [1, toUser, to, from, subject, text, html];
 		const [email] = await promisePool.query(emailQuery, emailParams);
@@ -6453,11 +6510,13 @@ app.patch("/api/admin/orders/update/:id", rateLimitRoute(adminDataManipulationRa
 	}
 });
 
-app.get("/api/admin/email-transactions", authenticateAdmin, routePagination, tableSearch("emailtransactions"), async (req, res) => {
+app.get("/api/admin/email-transactions", authenticateAdmin, routePagination, routeOrderBy, tableSearch("emailtransactions"), async (req, res) => {
 	console.log("API admin users accessed");
 
 	const { items, offset } = req.pagination;
 	const searchTerms = req.searchTerms;
+	const { orderBy } = req.orderBy;
+	let orderBySql = "";
 	let sql;
 	let notOperator = "";
 	let sqlParams = [];
@@ -6482,7 +6541,14 @@ app.get("/api/admin/email-transactions", authenticateAdmin, routePagination, tab
 		}
 	}
 
-	sql = `SELECT * FROM email_transactions ${searchQuery} LIMIT ? OFFSET ?`;
+	if (orderBy && orderBy.length !== 0) {
+		orderBySql += ` ORDER BY 1=1`;
+		for (const item of orderBy) {
+			orderBySql += `, ${item.column} ${item.direction} `;
+		}
+	}
+
+	sql = `SELECT * FROM email_transactions ${searchQuery} ${orderBySql} LIMIT ? OFFSET ?`;
 	sqlParams.push(items, offset); // Push pagination params after search params
 
 	try {

@@ -22,6 +22,12 @@ const DashboardAdmin = () => {
 					<FaUsersCog />
 				</Button>
 			</Link>
+			<Link to="/admin/email-transactions">
+				<Button className="adminDashboardButton" style={{ width: "100%" }}>
+					All email transactions &nbsp;
+					<FaUsersCog />
+				</Button>
+			</Link>
 			<Link to="/computerwizard/browse">
 				<Button className="adminDashboardButton" style={{ width: "100%" }}>
 					Modify parts &nbsp;

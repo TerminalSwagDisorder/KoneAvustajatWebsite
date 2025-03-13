@@ -49,7 +49,7 @@ export const checkAllowedTableNames = async (routeTypeArr, tableName) => {
 };
 
 export const checkAllowedPartNames = async (partName) => {
-    const allowedPartNamesArray = ["chassis", "cpu", "cpu_cooler", "gpu", "memory", "motherboard", "psu", "storage", "part_inventory", "inventory", "users", "orders"];
+    const allowedPartNamesArray = ["chassis", "cpu", "cpu_cooler", "gpu", "memory", "motherboard", "psu", "storage", "part_inventory", "inventory", "users", "orders", "email_transactions"];
 
     if (!allowedPartNamesArray.includes(partName) || partName === "") {
         throw new Error(`partName "${partName}" is not allowed!`);

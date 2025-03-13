@@ -124,6 +124,10 @@ const UsersAdmin = ({ fetchDynamicData, fetchDataAmount, fetchSearchData, update
 		navigate("/admin/orders", { state: { usersOrders: user } });
 	};
 
+	const handleViewEmailTransactions = (user) => {
+		navigate("/admin/email-transactions", { state: { usersEmailTransactions: user } });
+	};
+
 	const closeForm = () => {
 		setFormFields({});
 		setCurrentOperation(null);
@@ -267,11 +271,14 @@ const UsersAdmin = ({ fetchDynamicData, fetchDataAmount, fetchSearchData, update
 								<Button className="user-select-button" onClick={() => handleSelectUser(user, "view")}>
 									View user
 								</Button>
+								<Button className="user-select-button" onClick={() => handleViewEmailTransactions(user.UserID)}>
+									View email transactions
+								</Button>
 								{user.CustomerID && (
 									<Button className="user-select-button" onClick={() => handleViewOrders(user.CustomerID)}>
 										View orders
 									</Button>
-								)}	
+								)}
 							</td>
 						</tr>
 					))}
