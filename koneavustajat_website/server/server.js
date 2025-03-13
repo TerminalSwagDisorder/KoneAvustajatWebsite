@@ -744,6 +744,17 @@ const userSchema = Joi.object({
 		})
 });
 
+const adminAddedUserSchema = Joi.object({
+	Password: Joi.string().trim()
+		.required()
+		.pattern(/^(?=.*[A-Z])(?=.*\d)[\w!@#$%^&*()_\-+=\[\]{}:;"'<>,.?\/]{9,}$/)
+		.messages({
+			"string.pattern.base": "Invalid password format. Password must be at least 9 characters long, include 1 capital letter, and 1 number.",
+			"string.empty": "Password cannot be empty",
+			"any.required": "Password is required"
+		})
+});
+
 const adminUserSchema = Joi.object({
 	Name: Joi.string().trim().min(3).max(50).required().messages({
 		"string.base": "Name must be a string",
@@ -760,20 +771,24 @@ const adminUserSchema = Joi.object({
 			"string.empty": "Email cannot be empty",
 			"any.required": "Email is required"
 		}),
-	Password: Joi.string().trim()
-		.required()
-		.pattern(/^(?=.*[A-Z])(?=.*\d)[\w!@#$%^&*()_\-+=\[\]{}:;"'<>,.?\/]{9,}$/)
-		.messages({
-			"string.pattern.base": "Invalid password format. Password must be at least 9 characters long, include 1 capital letter, and 1 number.",
-			"string.empty": "Password cannot be empty",
-			"any.required": "Password is required"
-		}),
-	RoleID: Joi.number().min(1).max(1).required().messages({
+	RoleID: Joi.number().min(1).max(1).required().valid(2, 4).messages({ // 1 & 3 are not yet implemented
 		"number.base": "RoleID must be a number",
 		"number.empty": "RoleID cannot be empty",
 		"number.min": "RoleID must be at least 1 character and cannot exceed 1 characters",
 		"number.max": "RoleID must be at least 1 character and cannot exceed 1 characters",
 		"any.required": "RoleID is required"
+	}),
+	Department: Joi.when("RoleID", {
+		is: 4,
+		then: Joi.string().trim().max(50).required().messages({
+			"string.base": "Department must be a string",
+			"string.empty": "Department cannot be empty",
+			"string.max": "Department cannot exceed 50 characters",
+			"any.required": "Department is required"
+		}),
+		otherwise: Joi.forbidden().messages({
+			"any.unknown": "Department is not allowed for non-admin users"
+		})
 	})
 });
 
@@ -875,13 +890,6 @@ const adminUserUpdateSchema = Joi.object({
 			"string.email": "Invalid email format. Please enter a valid email address in the format: example@domain.com",
 			"string.empty": "Email cannot be empty"
 		}),
-	Password: Joi.string().trim()
-		.pattern(/^(?=.*[A-Z])(?=.*\d)[\w!@#$%^&*()_\-+=\[\]{}:;"'<>,.?\/]{9,}$/)
-		.optional()
-		.messages({
-			"string.pattern.base": "Invalid password format. Password must be at least 9 characters long, include 1 capital letter, and 1 number.",
-			"string.empty": "Password cannot be empty"
-		}),
 	Gender: Joi.string().trim().valid("male", "female").optional().messages({
 		"string.base": "Gender must be a string",
 		"any.only": "Gender must be one of either 'male' or 'female'"
@@ -891,7 +899,7 @@ const adminUserUpdateSchema = Joi.object({
 		.messages({
 			"string.base": "Profile image must be a valid filename",
 		}),
-	RoleID: Joi.number().min(1).max(1).optional().messages({
+	RoleID: Joi.number().min(1).max(1).optional().valid(2, 4).messages({ // 1 & 3 are not yet implemented
 		"number.base": "RoleID must be a number",
 		"number.empty": "RoleID cannot be empty",
 		"number.min": "RoleID must be at least 1 character and cannot exceed 1 characters",
@@ -4439,6 +4447,89 @@ app.get("/api/users/activate", unloggedOnly, async (req, res) => {
 	}
 });
 
+app.post("/api/users/newuser", rateLimitRoute(criticalRateLimiter), unloggedOnly, formFieldsValidator(adminAddedUserSchema), userFieldsValidator, async (req, res) => {
+	console.log("API user new user accessed");
+
+	const { newUserToken } = req.query;
+	const { Password } = req.validatedForm;
+	const randomToken = generateToken();
+	const hashedNewToken = hashToken(randomToken);
+
+	try {
+		if (!newUserToken) {
+			return res.status(400).json({ message: "Activation token is missing" });
+		}
+
+		const hashedUserToken = hashToken(newUserToken);
+		
+		const tokenSql = "SELECT * FROM tokens WHERE Token = ? AND TokenTypeID = ?";
+		const [[token]] = await promisePool.query(tokenSql, [hashedUserToken, 3]); // TokenTypeID 3 = admin_added_user
+		if (!token) {
+			return res.status(400).json({ message: "Invalid or expired activation token" });
+		}
+
+		// Check if email exists
+		const emailCheckSql = "SELECT Name, Email FROM users WHERE UserID = ?";
+		const [[user]] = await promisePool.query(emailCheckSql, [token.UserID]);
+		if (!user) {
+			return res.status(409).json({ message: "One or more fields already in use" });
+		}
+
+		// Hash password & insert data into db
+		const hashedPassword = await bcrypt.hash(Password, 10);
+		const updateSql = "UPDATE users SET password = ? WHERE UserID = ?";
+		const [result] = await promisePool.query(updateSql, [hashedPassword, token.UserID]);
+
+		const usedToken = "UPDATE tokens SET UsedAt = NOW() WHERE TokenID = ?";
+		await promisePool.query(usedToken, [token.TokenID]);
+		
+		const insertToken = "INSERT INTO tokens (UserID, TokenTypeID, Token, ExpiresAt) VALUES (?, ?, ?, NOW() + INTERVAL 1 HOUR)";
+		const tokenParams = [token.UserID, 1, hashedNewToken]; // TokenTypeID 1 = activation
+		const [newToken] = await promisePool.query(insertToken, tokenParams);
+		
+		const activationLink = `${corsUrl}/activate?activationToken=${randomToken}`;
+		
+		const emailSuccess = await sendEmail(
+			companyEmail,
+			user.Email,
+			"Account registration for KoneAvustajat",
+			"Account registration for KoneAvustajat!",
+			`
+			<html>
+			  <body style="font-family: Arial, sans-serif; background-color: #f2f2f2; margin: 0; padding: 20px;">
+				<div style="max-width: 600px; margin: 0 auto; background-color: #ffffff; padding: 30px; border-radius: 8px; box-shadow: 0 2px 5px rgba(0,0,0,0.1);">
+				  <h2 style="color: #333;">Welcome, <strong>${user.Name}</strong>!</h2>
+				  <p style="color: #555; font-size: 16px;">
+					Thank you for signing up using the email <strong>${user.Email}</strong>.
+				  </p>
+				  <p style="color: #555; font-size: 16px;">
+					Please click the button below to verify your account and get started.
+				  </p>
+				  <div style="text-align: center; margin: 30px 0;">
+					<a href="${activationLink}" style="background-color: #007BFF; color: #ffffff; padding: 12px 20px; text-decoration: none; border-radius: 5px; font-size: 16px;">
+					  Activate Your Account
+					</a>
+				  </div>
+				  <p style="color: #999; font-size: 14px;">
+					If you did not create an account, please ignore this email.
+				  </p>
+				  <p style="color: #999; font-size: 14px; margin-top: 30px;">
+					Best regards,<br>KoneAvustajat
+				  </p>
+				</div>
+			  </body>
+			</html>
+			`,
+			token.UserID
+		);
+		
+		return res.status(200).json({ message: "User finalized registration successfully", id: token.UserID });
+	} catch (error) {
+		const [status, message] = handleServerError(error);
+		return res.status(status).json({ message: message });
+	}
+});
+
 app.post("/api/users/forgotpassword", rateLimitRoute(criticalRateLimiter), unloggedOnly, formFieldsValidator(passwordForgotSchema), userFieldsValidator, async (req, res) => {
 	console.log("API user forgot password accessed");
 
@@ -6118,9 +6209,11 @@ app.get("/api/admin/count", authenticateAdmin, async (req, res) => {
 app.post("/api/admin/users/add", rateLimitRoute(adminDataManipulationRateLimiter), authenticateAdmin, formFieldsValidator(adminUserSchema), adminUserFieldsValidator, async (req, res) => {
 	console.log("API user signup accessed");
 
-	const { Name, Email, Password, RoleID } = req.validatedForm;
+	const { Name, Email, RoleID, Department } = req.validatedForm;
 	const randomToken = generateToken();
 	const hashedToken = hashToken(randomToken);
+	let insertUserRole;
+	let userRole;
 
 	try {
 		const emailCheckSql = "SELECT Email FROM users WHERE Email = ?";
@@ -6129,17 +6222,22 @@ app.post("/api/admin/users/add", rateLimitRoute(adminDataManipulationRateLimiter
 			return res.status(409).json({ message: "One or more fields already in use" });
 		}
 
-		const hashedPassword = await bcrypt.hash(Password, 10);
-		const insertSql = "INSERT INTO users (Name, Email, Password, RoleID) VALUES (?, ?, ?, ?)";
-		const [result] = await promisePool.query(insertSql, [Name, Email, hashedPassword, RoleID]); // 2 = Customer
-		const insertCustomer = "INSERT INTO customers (UserID) VALUES (?)";
-		const [customer] = await promisePool.query(insertCustomer, result.insertId);
+		const insertSql = "INSERT INTO users (Name, Email, RoleID) VALUES (?, ?, ?, ?)";
+		const [result] = await promisePool.query(insertSql, [Name, Email, RoleID]); // 2 = Customer
+
+		if (RoleID === 2) {
+			insertUserRole = "INSERT INTO customers (UserID) VALUES (?)";
+			[userRole] = await promisePool.query(insertUserRole, result.insertId);
+		} else if (RoleID === 4) {
+			insertUserRole = "INSERT INTO admins (UserID, Department) VALUES (?, ?)";
+			[userRole] = await promisePool.query(insertUserRole, [result.insertId, Department]);
+		}
 		
 		const insertToken = "INSERT INTO tokens (UserID, TokenTypeID, Token, ExpiresAt) VALUES (?, ?, ?, NOW() + INTERVAL 1 HOUR)";
 		const tokenParams = [result.insertId, 1, hashedToken];
 		const [token] = await promisePool.query(insertToken, tokenParams);
 		
-		const activationLink = `${corsUrl}/activate?activationToken=${randomToken}`;
+		const activationLink = `${corsUrl}/activate?newUserToken=${randomToken}`;
 		
 		const emailSuccess = await sendEmail(
 			companyEmail,
@@ -6318,8 +6416,7 @@ app.patch("/api/admin/users/update/:id", rateLimitRoute(adminDataManipulationRat
 		}
 		const oldProfileImage = oldUser.ProfileImage;
 		
-		let hashedPassword = null;
-		const allowedFields = ["Name", "Email", "Password", "Gender", "ProfileImage", "RoleID", "Activated"]; 
+		const allowedFields = ["Name", "Email", "Gender", "ProfileImage", "RoleID", "Activated"]; 
 
 		if (ProfileImage) {
 			if (oldProfileImage && oldProfileImage !== null && oldProfileImage !== "default-profile.png") {
@@ -6340,13 +6437,7 @@ app.patch("/api/admin/users/update/:id", rateLimitRoute(adminDataManipulationRat
 				if (jsonFormFields.hasOwnProperty(key)) {
 					if (jsonFormFields[key] !== "") {
 						updateQuery += key.charAt(0).toUpperCase() + key.slice(1) + " = ?, "; // Since the first letters are capitalized in the db
-						if (key === "Password") {
-							// Hash the new password before storing it
-							hashedPassword = await bcrypt.hash(jsonFormFields[key], 10);
-							queryParams.push(hashedPassword);
-						} else {
-							queryParams.push(jsonFormFields[key]);
-						}
+						queryParams.push(jsonFormFields[key]);
 					}
 				}
 			}

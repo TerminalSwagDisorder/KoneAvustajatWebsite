@@ -119,6 +119,14 @@ const UsersAdmin = ({ fetchDynamicData, fetchDataAmount, fetchSearchData, update
 		setSelectedUser(user);
 		window.scrollTo(0, 180);
 	};
+	
+	const handleAddNewUser = (operation) => {
+		setFormFields({
+			Name: "", Email: "", Password: "", RoleID: "", Department: ""
+		});
+		setCurrentOperation(operation);
+		window.scrollTo(0, 180);
+	};
 
 	const handleViewOrders = (user) => {
 		navigate("/admin/orders", { state: { usersOrders: user } });
@@ -293,6 +301,9 @@ const UsersAdmin = ({ fetchDynamicData, fetchDataAmount, fetchSearchData, update
 		if (currentUser && currentUser.RoleID === 4) {
 			return (
 				<>
+					<Button className="user-select-button" onClick={() => handleSelectUser(null, "add")}>
+						Add new user
+					</Button>
 					<Button className="user-select-button" onClick={() => handleSelectUser(user, "activation")}>
 						{user.Activated === 1 ? "Deactivate" : "Activate"} User
 					</Button>
