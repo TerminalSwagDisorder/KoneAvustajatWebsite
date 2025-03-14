@@ -268,14 +268,31 @@ const emailXssOptions = {
 
 	onTagAttr: (tag, name, value, isWhiteAttr) => {
 		if (tag === "a" && name === "href") {
-			const urls = [backendUrl, frontendUrl, corsUrl, opensearch];
-			// Remove href values that start with "javascript:" or similar.
-			if (value.trim().toLowerCase().startsWith("javascript:")) {
+			const trimmedValue = value.trim();
+			const lowerValue = trimmedValue.toLowerCase();
+
+			// Block any URLs that start with "javascript:"
+			if (lowerValue.startsWith("javascript:")) {
 				return "";
 			}
-			if (!urls.map((url) => url.trim().toLowerCase()).includes(value.trim().toLowerCase())) {
+
+			// Allow relative URLs (e.g., "/about", "page.html")
+			if (trimmedValue.startsWith("/")) {
+				return `${name}="${trimmedValue}"`;
+			}
+
+			// Allowed base URLs
+			const allowedBaseUrls = [backendUrl, frontendUrl, corsUrl, opensearch];
+
+			// Check if the URL starts with any of the allowed base URLs.
+			const isAllowed = allowedBaseUrls.some((allowedUrl) => {
+				const base = allowedUrl.trim().toLowerCase();
+				return lowerValue.startsWith(base);
+			});
+
+			if (!isAllowed) {
 				return "";
-			  }
+			}
 		}
 		return `${name}="${value}"`;
 	}
@@ -697,7 +714,7 @@ const userFieldsSchema = Joi.string()
 	.valid("Name", "Email", "Password", "currentPassword", "Gender", "ProfileImage");
 
 const adminUserFieldsSchema = Joi.string()
-	.valid("Name", "Email", "Password", "Gender", "ProfileImage", "RoleID", "UserUD", "Activated");
+	.valid("Name", "Email", "Password", "Gender", "ProfileImage", "RoleID", "UserUD", "Activated", "Department");
 
 const loginSchema = Joi.object({
 	Email: Joi.string().trim()
@@ -4404,7 +4421,7 @@ app.post("/api/users/signup", rateLimitRoute(criticalRateLimiter), unloggedOnly,
 	}
 });
 
-app.get("/api/users/activate", unloggedOnly, async (req, res) => {
+app.patch("/api/users/activate", unloggedOnly, async (req, res) => {
 	console.log("API user activation accessed");
 
 	const { activationToken } = req.query;
@@ -4447,25 +4464,25 @@ app.get("/api/users/activate", unloggedOnly, async (req, res) => {
 	}
 });
 
-app.post("/api/users/newuser", rateLimitRoute(criticalRateLimiter), unloggedOnly, formFieldsValidator(adminAddedUserSchema), userFieldsValidator, async (req, res) => {
-	console.log("API user new user accessed");
+app.patch("/api/users/invite", rateLimitRoute(criticalRateLimiter), unloggedOnly, formFieldsValidator(adminAddedUserSchema), userFieldsValidator, async (req, res) => {
+	console.log("API user invite accessed");
 
-	const { newUserToken } = req.query;
+	const { inviteToken } = req.query;
 	const { Password } = req.validatedForm;
 	const randomToken = generateToken();
 	const hashedNewToken = hashToken(randomToken);
 
 	try {
-		if (!newUserToken) {
-			return res.status(400).json({ message: "Activation token is missing" });
+		if (!inviteToken) {
+			return res.status(400).json({ message: "Invite token is missing" });
 		}
 
-		const hashedUserToken = hashToken(newUserToken);
+		const hashedUserToken = hashToken(inviteToken);
 		
 		const tokenSql = "SELECT * FROM tokens WHERE Token = ? AND TokenTypeID = ?";
-		const [[token]] = await promisePool.query(tokenSql, [hashedUserToken, 3]); // TokenTypeID 3 = admin_added_user
+		const [[token]] = await promisePool.query(tokenSql, [hashedUserToken, 3]); // TokenTypeID 3 = admin_added_user / invite
 		if (!token) {
-			return res.status(400).json({ message: "Invalid or expired activation token" });
+			return res.status(400).json({ message: "Invalid or expired invite token" });
 		}
 
 		// Check if email exists
@@ -6222,7 +6239,7 @@ app.post("/api/admin/users/add", rateLimitRoute(adminDataManipulationRateLimiter
 			return res.status(409).json({ message: "One or more fields already in use" });
 		}
 
-		const insertSql = "INSERT INTO users (Name, Email, RoleID) VALUES (?, ?, ?, ?)";
+		const insertSql = "INSERT INTO users (Name, Email, RoleID) VALUES (?, ?, ?)";
 		const [result] = await promisePool.query(insertSql, [Name, Email, RoleID]); // 2 = Customer
 
 		if (RoleID === 2) {
@@ -6234,10 +6251,10 @@ app.post("/api/admin/users/add", rateLimitRoute(adminDataManipulationRateLimiter
 		}
 		
 		const insertToken = "INSERT INTO tokens (UserID, TokenTypeID, Token, ExpiresAt) VALUES (?, ?, ?, NOW() + INTERVAL 1 HOUR)";
-		const tokenParams = [result.insertId, 1, hashedToken];
+		const tokenParams = [result.insertId, 3, hashedToken];
 		const [token] = await promisePool.query(insertToken, tokenParams);
 		
-		const activationLink = `${corsUrl}/activate?newUserToken=${randomToken}`;
+		const activationLink = `${corsUrl}/invited-user?inviteToken=${randomToken}`;
 		
 		const emailSuccess = await sendEmail(
 			companyEmail,
@@ -6250,7 +6267,7 @@ app.post("/api/admin/users/add", rateLimitRoute(adminDataManipulationRateLimiter
 				<div style="max-width: 600px; margin: 0 auto; background-color: #ffffff; padding: 30px; border-radius: 8px; box-shadow: 0 2px 5px rgba(0,0,0,0.1);">
 				  <h2 style="color: #333;">Welcome, <strong>${Name}</strong>!</h2>
 				  <p style="color: #555; font-size: 16px;">
-					An admin has registered you using this email <strong>${Email}</strong>.
+					An admin has registered you ${RoleID === 2 ? "as a customer" : RoleID === 4 ? "as an admin" : ""} using this email <strong>${Email}</strong>.
 				  </p>
 				  <p style="color: #555; font-size: 16px;">
 					Please click the button below to verify your account and get started.

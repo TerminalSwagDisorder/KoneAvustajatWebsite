@@ -11,12 +11,13 @@ import {
 	CloseButton,
 	OverlayTrigger,
 	Tooltip,
-	Image
+	Image,
+	Spinner
 } from "react-bootstrap";
 import { useAuth, useError } from "../utils/Contexts";
 import { FaChevronUp, FaChevronDown } from "react-icons/fa";
 
-const UsersAdmin = ({ fetchDynamicData, fetchDataAmount, fetchSearchData, updateDynamicData }) => {
+const UsersAdmin = ({ fetchDynamicData, fetchDataAmount, fetchSearchData, updateDynamicData, postDynamicData }) => {
 	const { displayError } = useError();
 	const { currentUser } = useAuth();
 	const navigate = useNavigate();
@@ -32,6 +33,11 @@ const UsersAdmin = ({ fetchDynamicData, fetchDataAmount, fetchSearchData, update
 	const [searchKey, setSearchKey] = useState("UserID");
 	const [searchTerm, setSearchTerm] = useState({});
 	const [orderBy, setOrderBy] = useState([]);
+	const [isLoading, setIsLoading] = useState(false);
+	const [EmailValid, setEmailValid] = useState(false);
+
+	const EmailRegex = /^[-A-Za-z0-9!#$%&'*+/=?^_`{|}~]+(?:\.[-A-Za-z0-9!#$%&'*+/=?^_`{|}~]+)*@(?:[A-Za-z0-9](?:[-A-Za-z0-9]*[A-Za-z0-9])?\.)+[A-Za-z0-9](?:[-A-Za-z0-9]*[A-Za-z0-9])?$/;
+	
 	
 	const roleMap = {
 		1: "guest",
@@ -95,10 +101,16 @@ const UsersAdmin = ({ fetchDynamicData, fetchDataAmount, fetchSearchData, update
 		event.preventDefault();
 		try {
 			let success;
+			let successMessage;
 			if (currentOperation === "modify") {
 				success = await updateDynamicData(formFields, "admin/users/update", null, selectedUser.UserID);
+				successMessage = `Successfully modified user ${selectedUser.UserID}!`;
+			} else if (currentOperation === "add") {
+				success = await postDynamicData(formFields, "admin/users/add", null);
+				successMessage = "Successfully added new user, they should be getting an email soon!";
 			} else if (currentOperation === "activation") {
 				success = await updateDynamicData({Activated: (selectedUser.Activated ? 0 : 1)}, "admin/users/update", null, selectedUser.UserID);
+				successMessage = `Successfully ${selectedUser.Activated ? "activated" : "deactivated"} user ${selectedUser.UserID}!`;
 			} else if (currentOperation === "delete") {
 				//success = await deleteDynamicData("admin/users", null, selectedUser.UserID);
 			} else {
@@ -106,6 +118,7 @@ const UsersAdmin = ({ fetchDynamicData, fetchDataAmount, fetchSearchData, update
 			}
 			if (success) {
 				await fetchData();
+				displayError(successMessage, "success");
 				closeForm();
 			}
 		} catch (error) {
@@ -122,7 +135,7 @@ const UsersAdmin = ({ fetchDynamicData, fetchDataAmount, fetchSearchData, update
 	
 	const handleAddNewUser = (operation) => {
 		setFormFields({
-			Name: "", Email: "", Password: "", RoleID: "", Department: ""
+			Name: "", Email: "", RoleID: 2, Department: ""
 		});
 		setCurrentOperation(operation);
 		window.scrollTo(0, 180);
@@ -297,13 +310,17 @@ const UsersAdmin = ({ fetchDynamicData, fetchDataAmount, fetchSearchData, update
 		}
 	};
 
+	const renderOtherButtons = () => {
+		return (
+			<Button className="user-add-button" onClick={() => handleAddNewUser("add")}>
+				Add new user
+			</Button>
+	)};
+
 	const renderAdminButtons = (user) => {
 		if (currentUser && currentUser.RoleID === 4) {
 			return (
 				<>
-					<Button className="user-select-button" onClick={() => handleSelectUser(null, "add")}>
-						Add new user
-					</Button>
 					<Button className="user-select-button" onClick={() => handleSelectUser(user, "activation")}>
 						{user.Activated === 1 ? "Deactivate" : "Activate"} User
 					</Button>
@@ -417,21 +434,25 @@ const UsersAdmin = ({ fetchDynamicData, fetchDataAmount, fetchSearchData, update
 			...prevFields,
 			[event.target.name]: event.target.value,
 		}));
+
+		if (event.target.name === "Email") {
+			setEmailValid(EmailRegex.test(event.target.value));
+		}
 		
 		if (event.target.id === "UserID") {
-			let orderId = parseInt(event.target.value, 10);
+			let userId = parseInt(event.target.value, 10);
 
-			if (orderId < users[0].UserID) {
-				orderId = users[users.length - 1].UserID;
+			if (userId < users[0].UserID) {
+				userId = users[users.length - 1].UserID;
 			}
-			if (orderId > users[users.length - 1].UserID) {
-				orderId = users[0].UserID;
+			if (userId > users[users.length - 1].UserID) {
+				userId = users[0].UserID;
 			}
 
-			let selectedUser = users.find((order) => order.UserID === orderId);
+			let selectedUser = users.find((order) => order.UserID === userId);
 			if (selectedUser === undefined || typeof selectedUser !== "object" || typeof selectedUser === "undefined") {
 				selectedUser = {
-					ID: orderId,
+					ID: userId,
 					Name: "Not a user",
 					Error: "Invalid order: User with the UserID does not exist"
 				};
@@ -526,6 +547,114 @@ const UsersAdmin = ({ fetchDynamicData, fetchDataAmount, fetchSearchData, update
 		);
 	};
 
+
+	const renderTooltip = (props) => (
+		<Tooltip id="button-tooltip" {...props}>
+			Password must be at least 9 characters long, include 1 capital letter, and 1 number.
+		</Tooltip>
+	);
+	
+	const renderAddUserForm = () => {
+		if (currentOperation !== "add") return;
+		// Name, Email, RoleID, Department
+		return (
+			<div>
+				<Container
+					style={{
+						display: "flex",
+						justifyContent: "center",
+						alignItems: "center",
+						minHeight: "90vh"
+					}}>
+					<div
+						style={{
+							width: "75rem",
+							padding: "20px",
+							borderRadius: "8px",
+							boxShadow: "0 4px 8px rgba(0,0,0,0.1)"
+						}}>
+							
+						<Form onSubmit={handleSubmit} className="adminForm border rounded shadow p-4 bg-opaque">
+							<div className="d-flex justify-content-end mb-3">
+								<CloseButton onClick={() => closeForm()} />
+							</div>
+							<h1>Sign up</h1>
+
+							<Form.Group className="mb-3">
+								<Form.Label>Name</Form.Label>
+								<Form.Control
+									type="text"
+									placeholder="Enter Name"
+									required
+									name="Name"
+									value={formFields.Name}
+									onChange={handleInputChange}
+								/>
+							</Form.Group>
+
+							<Form.Group className="mb-3" controlId="formBasicEmail">
+								<Form.Label>Email address</Form.Label>
+								<Form.Control
+									type="Email"
+									placeholder="Enter Email"
+									required
+									name="Email"
+									value={formFields.Email}
+									onChange={handleInputChange}
+									className={EmailValid ? "valid-input" : "invalid-input"}
+								/>
+							</Form.Group>
+
+							<Form.Group className="mb-3">
+								<Form.Label>Role</Form.Label>
+								<Form.Select name="RoleID" value={formFields.RoleID} onChange={handleInputChange}>
+									<option disabled>
+										Guest
+									</option>
+									<option value="2">
+										Customer
+									</option>
+									<option disabled>
+										Employee
+									</option>
+									<option value="4">
+										Admin
+									</option>
+								</Form.Select>
+							</Form.Group>
+
+							{formFields && formFields.RoleID === "4" && (
+							<Form.Group className="mb-3">
+								<Form.Label>Department</Form.Label>
+								<Form.Control
+									type="text"
+									placeholder="Enter department"
+									required
+									name="Department"
+									value={formFields.Department}
+									onChange={handleInputChange}
+								/>
+							</Form.Group>
+							)}
+
+							<Button type={isLoading ? "" : "submit"} style={{ width: "100%" }} disabled={isLoading}>
+								{isLoading ? (
+									<>
+										<Spinner as="span" animation="border" size="sm" role="status" aria-hidden="true" />
+										<span className="visually-hidden">Loading...</span>
+									</>
+								) : (
+									"Send invitation"
+								)}
+							</Button>
+						</Form>
+
+					</div>
+				</Container>
+			</div>
+		);
+	};
+
 	const renderUserModification = () => {
 		if (currentUser && currentUser.RoleID === 4 && selectedUser && currentOperation === "modify") {
 			const viewOnly = ["UserID", "Email"];
@@ -575,8 +704,10 @@ const UsersAdmin = ({ fetchDynamicData, fetchDataAmount, fetchSearchData, update
 	return (
 		<div>
 			{renderBasedOnUser()}
+			{renderOtherButtons()}
 			{searchButton()}
 			{renderSearch()}
+			{renderAddUserForm()}
 			{renderConfirmation()}
 			{renderUserModification()}
 			{renderPagination(page, totalPages)}

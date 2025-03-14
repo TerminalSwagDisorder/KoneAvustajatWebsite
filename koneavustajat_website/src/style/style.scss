@@ -297,6 +297,15 @@ $dark_user_select_button: #697ef5;
 		cursor: pointer;
 		width: fit-content;
 	}
+	.user-add-button {
+		color: white !important;
+		font-size: 14px;
+		font-weight: 700;
+		float: right;
+		text-decoration: unset !important;
+		cursor: pointer;
+		width: fit-content;
+	}
 	.wizard-details,
 	.completedBuild-details {
 		.list-group-item {
@@ -367,6 +376,9 @@ $dark_user_select_button: #697ef5;
 
 			& option:checked {
 				background-color: $active_elems;
+			}
+			& option:disabled {
+				background-color: lightgray;
 			}
 		}
 

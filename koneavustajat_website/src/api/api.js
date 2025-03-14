@@ -745,18 +745,25 @@ export const handleCredentialChange = async (event, formFields) => {
     }
 };
 
-export const activateAccount = async (activationToken) => {
+export const activateAccount = async (activationToken, invite = false, formFields = null) => {
 	try {
-		const tableName = "users/activate";
+		let tableName = "users/activate";
+		if (invite) tableName = "users/invite";
+		if (invite && !formFields) throw new Error("Invitaion activation requires a form object!");
 
-		await checkAllowedTableNames(["getroutes"], tableName);
+		await checkAllowedTableNames(["patchroutes"], tableName);
 
 		const query = await buildQuery(activationToken, false);
 		
-		const response = await fetch(`${apiUrl}/api/${tableName}?${query}`, {
-			method: "GET",
+		const response = await fetch(`${apiUrl}/api/${tableName}?${query}`, invite ? {
+			method: "PATCH",
+			credentials: "include", // Important, because we're using cookies
+			body: JSON.stringify({ formFields })
+		} : {
+			method: "PATCH",
 			credentials: "include", // Important, because we're using cookies
 		});
+
         await checkRes(response);
 
 		const data = await response.json();

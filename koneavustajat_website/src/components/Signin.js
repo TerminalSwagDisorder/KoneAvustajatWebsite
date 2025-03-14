@@ -83,7 +83,7 @@ export const Signin = ({ handleSignin }) => {
 						/>
 					</Form.Group>
 
-					<Button type="submit" style={{ width: "100%" }} disabled={isLoading}>
+					<Button type={isLoading ? "" : "submit"} style={{ width: "100%" }} disabled={isLoading}>
 						{isLoading ? (
 							<>
 								<Spinner as="span" animation="border" size="sm" role="status" aria-hidden="true" />

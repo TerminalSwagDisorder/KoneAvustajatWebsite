@@ -3,6 +3,7 @@ import React, { useState, useEffect, useCallback, useRef } from "react";
 import "./style/style.scss";
 import Home from "./components/Home";
 import Activate from "./components/Activate";
+import InvitedUser from "./components/InvitedUser";
 import Profile from "./components/Profile";
 import NavBar from "./components/Nav";
 import Signin from "./components/Signin";
@@ -94,14 +95,14 @@ function App() {
 						<ContentManagementModal fetchWholeContent={fetchWholeContent} fetchContentIdentifiers={fetchContentIdentifiers} addContent={addContent} updateContent={updateContent} />
 						<Routes>
 							<Route path="/" element={<Home />} />
-							<Route path="/activate" element={<Activate activateAccount={activateAccount} />} />
+							<Route path="/activate" element={<ProtectedRoute unloggedOnly><Activate activateAccount={activateAccount} /></ProtectedRoute>} />
+							<Route path="/invited-user" element={<ProtectedRoute unloggedOnly><InvitedUser activateAccount={activateAccount} /></ProtectedRoute>} />
 							<Route path="/forgot-password" element={<ProtectedRoute unloggedOnly><PasswordForgot postDynamicData={postDynamicData} /></ProtectedRoute>} />
 							<Route path="/reset-password" element={<ProtectedRoute unloggedOnly><PasswordReset postDynamicData={postDynamicData} /></ProtectedRoute>} />
-							{/*{currentUser && currentUser.role === "admin" && (*/}
 
 							<Route path="admin" element={<ProtectedRoute adminOnly><Admin /></ProtectedRoute>}>
 								<Route path="dashboard" element={<DashboardAdmin />} />
-								<Route path="users" element={<UsersAdmin fetchDynamicData={fetchDynamicData} fetchDataAmount={fetchDataAmount} fetchSearchData={fetchSearchData} updateDynamicData={updateDynamicData} />} />
+								<Route path="users" element={<UsersAdmin fetchDynamicData={fetchDynamicData} fetchDataAmount={fetchDataAmount} fetchSearchData={fetchSearchData} updateDynamicData={updateDynamicData} postDynamicData={postDynamicData} />} />
 								<Route path="email-transactions" element={<EmailTransactionsAdmin fetchDynamicData={fetchDynamicData} fetchDataAmount={fetchDataAmount} fetchSearchData={fetchSearchData} updateDynamicData={updateDynamicData} />} />
 								<Route path="orders" element={<OrdersAdmin fetchDynamicData={fetchDynamicData} fetchDataAmount={fetchDataAmount} fetchSearchData={fetchSearchData} updateDynamicData={updateDynamicData} />} />
 								<Route path="parts" element={<PartsDisplay fetchDynamicData={fetchDynamicData} />} />
