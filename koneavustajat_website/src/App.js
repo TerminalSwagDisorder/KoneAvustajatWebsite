@@ -12,6 +12,7 @@ import Admin from "./components/Admin";
 import DashboardAdmin from "./components/DashboardAdmin";
 import UsersAdmin from "./components/UsersAdmin";
 import OrdersAdmin from "./components/OrdersAdmin";
+import OpensearchAdmin from "./components/OpensearchAdmin";
 import EmailTransactionsAdmin from "./components/EmailTransactionsAdmin";
 import PartsDisplay from "./components/PartsDisplay";
 import ComputerWizard from './components/ComputerWizard';
@@ -105,6 +106,7 @@ function App() {
 								<Route path="users" element={<UsersAdmin fetchDynamicData={fetchDynamicData} fetchDataAmount={fetchDataAmount} fetchSearchData={fetchSearchData} updateDynamicData={updateDynamicData} postDynamicData={postDynamicData} />} />
 								<Route path="email-transactions" element={<EmailTransactionsAdmin fetchDynamicData={fetchDynamicData} fetchDataAmount={fetchDataAmount} fetchSearchData={fetchSearchData} updateDynamicData={updateDynamicData} />} />
 								<Route path="orders" element={<OrdersAdmin fetchDynamicData={fetchDynamicData} fetchDataAmount={fetchDataAmount} fetchSearchData={fetchSearchData} updateDynamicData={updateDynamicData} />} />
+								<Route path="opensearch" element={<OpensearchAdmin fetchDynamicData={fetchDynamicData} fetchSearchData={fetchSearchData} />} />
 								<Route path="parts" element={<PartsDisplay fetchDynamicData={fetchDynamicData} />} />
 							</Route>
 

@@ -4008,7 +4008,7 @@ app.get("/api/opensearch/manage", rateLimitRoute(opensearchRateLimiter), authent
 			} 
 			if (amount === "single" && (type === "document" || type === "data")) {
 				if (!part || !data) {
-					console.log("Missing part or data for single document insertion.");
+					return res.status(400).json({ message: "Missing part or ID for single document insertion." });
 				}
 				await insertSingleToPartIndex(part, data);
 				operation = `insertSingleToPartIndex with ${part} and ${data} completed successfully`;
@@ -4027,7 +4027,7 @@ app.get("/api/opensearch/manage", rateLimitRoute(opensearchRateLimiter), authent
 			}
 			if (amount === "single" && type === "document") {
 				if (!part || !id) {
-					console.log("Missing part or ID for single document deletion.");
+					return res.status(400).json({ message: "Missing part or ID for single document deletion." });
 				}
 				await deleteSingleFromPartIndex(part, id);
 				operation = `deleteSingleFromPartIndex with ${part} and ${id} completed successfully`;
@@ -4066,9 +4066,9 @@ app.get("/api/opensearch/view", authenticateAdmin, async (req, res) => {
 	const viewQuery = req.query.type || "indices";
 	try {
 	// const response2 = await axios.get(`${opensearch}/${viewQuery}`, { timeout: 5000 });
-	const response = await client.cat[viewQuery]({ format: 'json' });
+	const response = await client.cat[viewQuery]({ format: 'json' }, "v");
 
-	return res.status(200).json(response);
+	return res.status(200).json(response.body);
 	} catch (error) {
 		const [status, message] = handleServerError(error);
 		return res.status(status).json({ message: message });

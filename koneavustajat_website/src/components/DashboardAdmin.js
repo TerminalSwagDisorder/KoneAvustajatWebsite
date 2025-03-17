@@ -28,6 +28,12 @@ const DashboardAdmin = () => {
 					<FaUsersCog />
 				</Button>
 			</Link>
+			<Link to="/admin/opensearch">
+				<Button className="adminDashboardButton" style={{ width: "100%" }}>
+					Manage opensearch &nbsp;
+					<FaUsersCog />
+				</Button>
+			</Link>
 			<Link to="/computerwizard/browse">
 				<Button className="adminDashboardButton" style={{ width: "100%" }}>
 					Modify parts &nbsp;
