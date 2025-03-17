@@ -38,7 +38,6 @@ const Activate = ({ activateAccount }) => {
 	
 	const renderActivationStatus = () => {
 		if (!activationToken || activationAttemptedRef.current) {
-			displayError("Invalid or used activation token!");
 			return <Navigate to="/profile" />;
 		}
 		if (!activationStatus) {

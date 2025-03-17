@@ -16,7 +16,6 @@ const InvitedUser = ({ activateAccount }) => {
 		{
 		Password: "",
 		});
-	const [inputValue, setInputValue] = useState("");
 	const [isLoading, setIsLoading] = useState(false);
 	const [PasswordValid, setPasswordValid] = useState(false);
 	const [invitationStatus, setInvitationStatus] = useState(false);
@@ -44,10 +43,9 @@ const InvitedUser = ({ activateAccount }) => {
 		} finally {
 			setIsLoading(false);
 		}
-	}, [inviteToken, activateAccount, displayError]);
+	}, [inviteToken, activateAccount, displayError, formFields]);
 
 	const handleInputChange = (event) => {
-		setInputValue(event.target.value);
 		setFormFields((prevFields) => ({
 			...prevFields,
 			[event.target.name]: event.target.value,
@@ -66,7 +64,7 @@ const InvitedUser = ({ activateAccount }) => {
 
 	const renderInvitationStatus = () => {
 		if (!inviteToken || submissionAttemptedRef.current) {
-			displayError("Invalid or used invitation token!");
+			//displayError("Invalid or used invitation token!");
 			return <Navigate to="/profile" />;
 		}
 		if (invitationStatus) {

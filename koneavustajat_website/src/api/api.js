@@ -754,14 +754,16 @@ export const activateAccount = async (activationToken, invite = false, formField
 		await checkAllowedTableNames(["patchroutes"], tableName);
 
 		const query = await buildQuery(activationToken, false);
-		
-		const response = await fetch(`${apiUrl}/api/${tableName}?${query}`, invite ? {
+
+		const response = await fetch(`${apiUrl}/api/${tableName}?${query}`, {
 			method: "PATCH",
 			credentials: "include", // Important, because we're using cookies
-			body: JSON.stringify({ formFields })
-		} : {
-			method: "PATCH",
-			credentials: "include", // Important, because we're using cookies
+			...(invite && {
+				headers: {
+					"Content-Type": "application/json"
+				},
+				body: JSON.stringify({ formFields })
+			})
 		});
 
         await checkRes(response);
