@@ -415,9 +415,20 @@ const EmailTransactionsAdmin = ({ fetchDynamicData, fetchDataAmount, fetchSearch
 		let sanitizedContent;
 		
 		const condensedFields = ["ToEmail", "FromEmail", "Subject", "Content", "CreatedAt"];
+
+		const disableLinksHook = (node) => {
+			if (node.tagName && node.tagName.toLowerCase() === "a") {
+				node.removeAttribute("href");
+			}
+		};
+
 		
 		if (selectedEmailTransaction.Content) {
-			sanitizedContent = DOMPurify.sanitize(selectedEmailTransaction.Content);
+			//DOMPurify.addHook("afterSanitizeAttributes", disableLinksHook); // more leanient, and fine-grained
+			sanitizedContent = DOMPurify.sanitize(selectedEmailTransaction.Content, {
+				FORBID_ATTR: ["href"],
+				FORBID_TAGS: ["script"],
+			});
 		}
 
 		const keysToRender = Object.keys(selectedEmailTransaction).filter((key) =>
