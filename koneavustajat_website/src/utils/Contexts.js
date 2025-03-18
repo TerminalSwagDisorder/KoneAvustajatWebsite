@@ -21,6 +21,7 @@ export const useError = () => useContext(ErrorContext);
 
 export const AuthProvider = ({ children }) => {
 	const [currentUser, setCurrentUser] = useState(null);
+	const [isLoading, setIsLoading] = useState(true);
     const { displayError } = useError();
   	const errorDisplayedRef = useRef(false); // To avoid repeated error messages
 	const currentUserRef = useRef(currentUser);
@@ -42,6 +43,8 @@ export const AuthProvider = ({ children }) => {
 		} catch (error) {
 			console.error("Error fetching user status:", error);
 			setCurrentUser(null);
+		} finally {
+			setIsLoading(false); 
 		}
 	};
 
@@ -98,7 +101,7 @@ export const AuthProvider = ({ children }) => {
 	};
 
 	return (
-		<AuthContext.Provider value={{ currentUser, handleUserChange, refreshProfileData }}>
+		<AuthContext.Provider value={{ currentUser, handleUserChange, refreshProfileData, isLoading }}>
 			{children}
 		</AuthContext.Provider>
 	);
