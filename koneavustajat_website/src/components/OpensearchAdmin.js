@@ -46,24 +46,34 @@ const OpensearchAdmin = ({ fetchDynamicData, fetchSearchData }) => {
 		const sorted = [...data];
 		if (orderBy.length > 0) {
 			sorted.sort((a, b) => {
-				for (let i = 0; i < orderBy.length; i++) {
-					const { column, direction } = orderBy[i];
-					const valA = a[column];
-					const valB = b[column];
+				for (let { column, direction } of orderBy) {
+					let valA = a[column];
+					let valB = b[column];
 
-					// If values are equal, move to the next sort rule.
-					if (valA === valB) continue;
+					if (valA == null && valB == null) continue;
+					if (valA == null) return direction === "asc" ? -1 : 1;
+					if (valB == null) return direction === "asc" ? 1 : -1;
 
-					// Handle date strings if needed.
-					if ((key => key.toLowerCase().includes("date"))(column)) {
+					if (column.toLowerCase().includes("date")) {
 						const dateA = new Date(valA);
 						const dateB = new Date(valB);
 						if (dateA < dateB) return direction === "asc" ? -1 : 1;
 						if (dateA > dateB) return direction === "asc" ? 1 : -1;
-					} else {
-						if (valA < valB) return direction === "asc" ? -1 : 1;
-						if (valA > valB) return direction === "asc" ? 1 : -1;
+						continue;
 					}
+
+					const numA = parseFloat(valA);
+					const numB = parseFloat(valB);
+					if (!isNaN(numA) && !isNaN(numB)) {
+						if (numA < numB) return direction === "asc" ? -1 : 1;
+						if (numA > numB) return direction === "asc" ? 1 : -1;
+						continue;
+					}
+
+					const strA = String(valA).toLowerCase();
+					const strB = String(valB).toLowerCase();
+					if (strA < strB) return direction === "asc" ? -1 : 1;
+					if (strA > strB) return direction === "asc" ? 1 : -1;
 				}
 				return 0;
 			});
