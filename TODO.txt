@@ -31,9 +31,10 @@ stripe trigger payment_intent.payment_failed
 -Admin users can add more users, incl. admins (needs own page for inserting password) x
 -Admin dash -> add reset of opensearch stuff (/manage routes) x
 -Admin dash -> add opensearch info x
+-Admin dashboard -> add some general data (ie admin/count and similar) x
+-Nav -> add admin subitems to dashboard x
+-Email transactions -> disable link clicking x
 
--Admin dashboard -> add some general data (ie admin/count and similar)
--Nav -> add admin subitems to dashboard
 -Secure routes with sensitive data (eg. /api/orders)
 -Set up CMS texts
 -Add a way to dismiss payment form
