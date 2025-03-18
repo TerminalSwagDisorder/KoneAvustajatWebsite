@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import Container from "react-bootstrap/Container";
-import { Nav, Navbar, NavDropdown, Button, Image } from "react-bootstrap";
+import { Nav, Navbar, NavDropdown, Button, Image, Spinner } from "react-bootstrap";
 import { Link } from "react-router-dom";
 import { AiOutlineShoppingCart } from "react-icons/ai";
 import { useSelector, useDispatch } from "react-redux";
@@ -12,6 +12,7 @@ const NavBar = ({ handleSignout }) => {
 	const location = useLocation();
 	const [scrolled, setScrolled] = useState(false);
 	const [showDropdown, setShowDropdown] = useState(false);
+	const [isLoggingOut, setIsLoggingOut] = useState(false);
 	const { theme, toggleTheme } = useTheme();
 	const { language, changeLanguage } = useLanguage();
 	const { openModal } = useModal();
@@ -48,12 +49,15 @@ const NavBar = ({ handleSignout }) => {
 	// Async function for signout
 	const handleLogout = async () => {
 		try {
+			setIsLoggingOut(true);
 			await handleSignout();
 			handleUserChange(null);
 			displayError("Successfully logged out!", "success")
 		} catch (error) {
 			displayError(error);
 			console.log(error.message || error);
+		} finally {
+			setIsLoggingOut(false);
 		}
 	};
 
@@ -80,21 +84,77 @@ const NavBar = ({ handleSignout }) => {
 		let userCheck;
 		if (currentUser && currentUser.RoleID === 4) {
 			adminCheck = (
-				<>
-					<Nav.Link as={Link} to="/admin/dashboard" className={location.pathname === "/admin/dashboard" ? "active-navbar-link" : "navbar-link"}>
-						Dashboard
-					</Nav.Link>
+			<>
+					<NavDropdown
+						title={
+							<Link
+								to="/admin/dashboard">
+								Admin dashboard
+							</Link>
+						}
+						className={
+							[
+								"/admin/dashboard",
+								"/admin/users",
+								"/admin/orders",
+								"/admin/email-transactions",
+								"/admin/opensearch",
+							].includes(location.pathname)
+								? "active-navbar-link"
+								: "navbar-link"
+						}
+						name="admin"
+						id="collasible-nav-dropdown"
+						show={showDropdown === "admin"}
+						onMouseEnter={() => toggleDropdownShow("admin")}
+						onMouseLeave={toggleDropdownHide}>
+						<NavDropdown.Item
+							as={Link}
+							to="/admin/users"
+							className={
+								location.pathname === "/admin/users" ? "active-navbar-link" : "navbar-link"
+							}>
+							Manage users
+						</NavDropdown.Item>
+						<NavDropdown.Item
+							as={Link}
+							to="/admin/orders"
+							className={
+								location.pathname === "/admin/orders" ? "active-navbar-link" : "navbar-link"
+							}>
+							Manage orders
+						</NavDropdown.Item>
+						<NavDropdown.Item
+							as={Link}
+							to="/admin/email-transactions"
+							className={
+								location.pathname === "/admin/email-transactions" ? "active-navbar-link" : "navbar-link"
+							}>
+							View email transactions
+						</NavDropdown.Item>
+						<NavDropdown.Item
+							as={Link}
+							to="/admin/opensearch"
+							className={
+								location.pathname === "/admin/opensearch" ? "active-navbar-link" : "navbar-link"
+							}>
+							Manage opensearch
+						</NavDropdown.Item>
+					</NavDropdown>
 				</>
 			);
 		}
 		if (currentUser) {
 			userCheck = (
 				<>
-					<Nav.Link as={Link} to="/profile">
+					<Nav.Link as={Link} to="/profile" className={location.pathname === "/profile" ? "active-navbar-link" : "navbar-link"}>
 						{currentUser.Name}
 					</Nav.Link>
-					<Nav.Link as={Link} to="/" onClick={handleLogout}>
-						Log out
+					<Nav.Link as={Link} to="/" onClick={isLoggingOut ? "" : handleLogout}>
+						{isLoggingOut ?
+						 <Spinner as="span" animation="border" size="sm" role="status" aria-hidden="true" /> : (
+						 "Log out"
+						 )}
 					</Nav.Link>
 				</>
 			);

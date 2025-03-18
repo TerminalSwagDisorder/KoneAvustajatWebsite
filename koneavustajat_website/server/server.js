@@ -4066,7 +4066,7 @@ app.get("/api/opensearch/view", authenticateAdmin, async (req, res) => {
 	const viewQuery = req.query.type || "indices";
 	try {
 	// const response2 = await axios.get(`${opensearch}/${viewQuery}`, { timeout: 5000 });
-	const response = await client.cat[viewQuery]({ format: 'json' }, "v");
+	const response = await client.cat[viewQuery]({ format: 'json' });
 
 	return res.status(200).json(response.body);
 	} catch (error) {
@@ -6200,12 +6200,14 @@ app.post("/api/text-content/add", formFieldsValidator(contentSchema), authentica
 	}
 });
 
-app.get("/api/admin/count", authenticateAdmin, async (req, res) => {
+app.get("/api/admin/dashboard", authenticateAdmin, async (req, res) => {
 	console.log("API admin dashboard counts accessed");
 
 	const tables = ["users", "customers", "admins", "part_inventory", "chassis", "cpu", "cpu_cooler", "gpu", "motherboard", "memory", "storage", "psu"];
 	const parts = ["chassis", "cpu", "cpu_cooler", "gpu", "motherboard", "memory", "storage", "psu"];
-
+	// Opensearch Number of pending tasks, number of docs & store size & health & status in each index, storage taken by opensearch
+	// pending_tasks, indices, allocation, 
+	
 	try {
 		const tableSql = tables.map(item => ` (SELECT COUNT(*) FROM ${item}) AS total_${item}`).join(", ");
 		const partSql = parts.map(item => `(SELECT COUNT(*) FROM ${item})`).join(" + ");
@@ -6214,9 +6216,25 @@ app.get("/api/admin/count", authenticateAdmin, async (req, res) => {
 			${tableSql},
 			(${partSql} + 0) as total_parts
 		`;
-		const [[result]] = await promisePool.query(sql);
 
-		return res.status(200).json({ counts: result });
+		const promises = await Promise.allSettled([
+			client.cat.pending_tasks({ format: 'json' }),
+			client.cat.indices({ format: 'json' }),
+			client.cat.allocation({ format: 'json' }),
+			promisePool.query(sql)
+		]);	
+	
+		const results = promises.map((result) =>  {
+			if (result.status !== "fulfilled") {
+				return [];
+			}
+			if (result.value.meta && result.value.meta.request && result.value.meta.request.params && result.value.meta.request.params.path.includes("_cat")) {
+				return result.value.body;
+			}
+			return result.value[0];
+		});
+
+		return res.status(200).json({ pending_tasks: results[0], indices: results[1], allocation: results[2], counts: results[3] });
 	} catch (error) {
 		const [status, message] = handleServerError(error);
 		return res.status(status).json({ message: message });

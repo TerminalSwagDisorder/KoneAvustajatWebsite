@@ -102,12 +102,11 @@ function App() {
 							<Route path="/reset-password" element={<ProtectedRoute unloggedOnly><PasswordReset postDynamicData={postDynamicData} /></ProtectedRoute>} />
 
 							<Route path="admin" element={<ProtectedRoute adminOnly><Admin /></ProtectedRoute>}>
-								<Route path="dashboard" element={<DashboardAdmin />} />
+								<Route path="dashboard" element={<DashboardAdmin fetchDynamicData={fetchDynamicData} />} />
 								<Route path="users" element={<UsersAdmin fetchDynamicData={fetchDynamicData} fetchDataAmount={fetchDataAmount} fetchSearchData={fetchSearchData} updateDynamicData={updateDynamicData} postDynamicData={postDynamicData} />} />
 								<Route path="email-transactions" element={<EmailTransactionsAdmin fetchDynamicData={fetchDynamicData} fetchDataAmount={fetchDataAmount} fetchSearchData={fetchSearchData} updateDynamicData={updateDynamicData} />} />
 								<Route path="orders" element={<OrdersAdmin fetchDynamicData={fetchDynamicData} fetchDataAmount={fetchDataAmount} fetchSearchData={fetchSearchData} updateDynamicData={updateDynamicData} />} />
 								<Route path="opensearch" element={<OpensearchAdmin fetchDynamicData={fetchDynamicData} fetchSearchData={fetchSearchData} />} />
-								<Route path="parts" element={<PartsDisplay fetchDynamicData={fetchDynamicData} />} />
 							</Route>
 
 							<Route path="profile" element={<ProtectedRoute><Profile handleCredentialChange={handleCredentialChange} handleSignout={handleSignout} fetchDynamicData={fetchDynamicData} updateDynamicData={updateDynamicData} postDynamicData={postDynamicData} downloadFile={downloadFile} /></ProtectedRoute>} />
