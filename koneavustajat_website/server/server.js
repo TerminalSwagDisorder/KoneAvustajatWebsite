@@ -176,22 +176,24 @@ const redisClient = new Redis({
 	}
 });
 
-const checkRedisError = () => {
+const checkRedisError = () => { // RIP, could use lodash to limit error spam, but alas dont have it at this point, so no.
 	let redisErrorMessage = null;
+	let redisErrorMessageTime = 0;
 	let redisErrorLast = 0;
 
 	redisClient.on("error", (err) => {
 		const now = Date.now();
+		if (now - redisErrorMessageTime > 60000) {
+			redisErrorMessageTime = now;
+			redisErrorMessage = null;
+		}
 		if (err.code !== redisErrorMessage || now - redisErrorLast > 5000) {
 			redisErrorMessage = err.code;
 			redisErrorLast = now;
-			console.error("Redis connection error:", err, redisErrorMessage);
+			console.error("Redis connection error:", err);
 		}
 	});
 };
-
-checkRedisError();
-
 
 const createLimiter = (keyPrefix, points, duration, blockDuration = 0) => {
 	return new RateLimiterRedis({
@@ -513,7 +515,7 @@ const checkFile = async (filePath, fileName) => {
 			console.warn(`File does not exist: ${fileName}`);
 			throw new Error(`File does not exist`);
 		}
-		throw new Error(`Error checking file: ${error}`);
+		throw new Error(`Error checking file: ${error.message ? error.message : error}`);
 	}
 };
 
@@ -1501,7 +1503,7 @@ const indexPartData = async (partData) => {
         });
         console.log('Part data indexed:', response);
     } catch (error) {
-        console.error('Error indexing part data:', error);
+        throw new Error(`Error indexing part data: ${error.message ? error.message : error}`);
     }
 };
 
@@ -1608,8 +1610,7 @@ const createPartIndex = async () => {
 			console.log(`${part} index created:`, response);
 		}
 	} catch (error) {
-		console.error(`Error creating index:`, error);
-		return null;
+		throw new Error(`Error creating index: ${error.message ? error.message : error}`);
 	}
 };
 
@@ -1656,7 +1657,7 @@ const createIndexTemplate = async () => {
 		});
 		console.log("Index template created:", response);
 	} catch (error) {
-		console.error("Error creating index template:", error);
+		throw new Error(`Error creating index template: ${error.message ? error.message : error}`);
 	}
 };
 
@@ -1748,8 +1749,7 @@ const insertToPartIndex = async (items = 250) => {
 		}
 		console.log("All parts indexed succesfully!");
 	} catch (error) {
-		console.error("Error inserting data:", error);
-		return null;
+		throw new Error(`Error inserting data: ${error.message ? error.message : error}`);
 	}
 };
 
@@ -1772,7 +1772,7 @@ const insertSingleToPartIndex = async (part, data) => {
 		});
 		console.log(`Data added to index ${part}:`, response);
 	} catch (error) {
-		console.error(`Error adding data to index ${part}:`, error);
+		throw new Error(`Error adding data to index ${part}: ${error.message ? error.message : error}`);
 	}
 };
 
@@ -1794,8 +1794,7 @@ const purgePartIndices = async (confirmation) => {
 
 		console.log("All part indices have been purged.");
 	} catch (error) {
-		console.error(`Error deleting indices:`, error);
-		return null;
+		throw new Error(`Error deleting indices: ${error.message ? error.message : error}`);
 	}
 };
 
@@ -1818,7 +1817,7 @@ const deleteAllFromPartIndex = async (part) => {
 
 		console.log(`All data deleted from ${part} index:`, response);
 	} catch (error) {
-		console.error(`Error deleting data from index ${part}:`, error);
+		throw new Error(`Error deleting data from index ${part}: ${error.message ? error.message : error}`);
 	}
 };
 
@@ -1836,7 +1835,7 @@ const deleteSingleFromPartIndex = async (part, dataId) => {
 
 		console.log(`Data with ID ${dataId} deleted from index ${part}:`, response);
 	} catch (error) {
-		console.error(`Error deleting data from index ${part}:`, error);
+		throw new Error(`Error deleting data from index ${part}: ${error.message ? error.message : error}`);
 	}
 };
 
@@ -1854,7 +1853,7 @@ const viewDataInIndex = async (index) => {
 		console.log("Data in index:", response.body.hits.hits.length);
 		return response.body.hits.hits;
 	} catch (error) {
-		console.error("Error viewing data:", error);
+		throw new Error(`Error viewing data: ${error.message ? error.message : error}`);
 	}
 };
 const searchInIndex = async (index, query) => {
@@ -1873,7 +1872,7 @@ const searchInIndex = async (index, query) => {
 		});
 		return response;
 	} catch (error) {
-		console.error("Error during search:", error);
+		throw new Error(`Error during search: ${error.message ? error.message : error}`);
 	}
 };
 
@@ -1895,7 +1894,7 @@ const searchWithFilters = async (index) => {
 		console.log(response.hits.hits);
 		return response.hits.hits;
 	} catch (error) {
-		console.error("Error during filtered search:", error);
+		throw new Error(`Error during filtered search: ${error.message ? error.message : error}`);
 	}
 };
 
@@ -1914,7 +1913,7 @@ const fullTextSearch = async (index, searchTerm) => {
 		console.log(response.hits.hits);
 		return response.hits.hits;
 	} catch (error) {
-		console.error("Error during full-text search:", error);
+		throw new Error(`Error during full-text search: ${error.message ? error.message : error}`);
 	}
 };
 
@@ -1927,7 +1926,7 @@ const wizardSearch = async (index, query) => {
 		});
 		return response;
 	} catch (error) {
-		console.error("\x1b[41m", "Error during search:\n", JSON.stringify(error));
+		throw new Error(`Error during search: ${error.message ? error.message : error}`);
 	}
 };
 
@@ -3593,7 +3592,7 @@ const storeTaxTransaction = async (paymentIntentId, taxAmount) => {
 		});
 		console.log(`Stored tax transaction for PaymentIntent ${paymentIntentId}`);
 	} catch (error) {
-		throw new Error(`Error storing tax transaction: ${error}`);
+		throw new Error(`Error storing tax transaction: ${error.message ? error.message : error}`);
 	}
 };
 
@@ -3640,8 +3639,7 @@ const sendEmail = async (from, to, subject, text, html = "", toUser = null) => {
 		console.log(`Email sent: ${info.messageId}`);
 		return info;
 	} catch (error) {
-		console.error(`Error sending email: ${error}`);
-		throw new Error(error);
+		throw new Error(`Error sending email: ${error.message ? error.message : error}`);
 	}
 };
 
@@ -3974,7 +3972,7 @@ app.get("/api/opensearch/manage", rateLimitRoute(opensearchRateLimiter), authent
 
 	try {
 		const { method, amount, type, part, id, data } = req.searchTerms;
-		let operation = "Failed to run any operation!";
+		let operation;
 
 		if (method === "create") {
 			if (type === "index") {
@@ -4039,6 +4037,11 @@ app.get("/api/opensearch/manage", rateLimitRoute(opensearchRateLimiter), authent
 				return res.status(400).json({ message: operation });
 			}
 			operation = "Resetting completed successfully";
+		}
+		
+		if (!operation) { // Assume no operations were able to be ran
+			operation = "Failed to run any operation!";
+			return res.status(400).json({ message: operation });
 		}
 
 		return res.status(200).json({ message: operation });
@@ -6680,4 +6683,5 @@ app.get("/api/admin/email-transactions", authenticateAdmin, routePagination, rou
 app.listen(port, () => {
 	console.log(`Server is running on port ${port}`);
 	checkApiHealth();
+	checkRedisError();
 });
