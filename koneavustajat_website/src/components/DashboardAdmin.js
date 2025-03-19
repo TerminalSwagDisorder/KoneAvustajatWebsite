@@ -2,7 +2,7 @@ import React, { useState, useEffect } from "react";
 import { Outlet, Link } from "react-router-dom";
 import { FaMagnifyingGlass } from "react-icons/fa6";
 import { LiaSchoolSolid } from "react-icons/lia";
-import { Container, Row, Col, Card, Table, Badge, ListGroup, Button, Spinner } from "react-bootstrap";
+import { Container, Row, Col, Card, Table, Badge, ListGroup, Button, Spinner, Modal, CloseButton } from "react-bootstrap";
 import { FaUsers, FaUserShield, FaTools, FaBoxOpen, FaCheckCircle, FaUsersCog } from "react-icons/fa";
 import { useAuth, useError } from "../utils/Contexts";
 
@@ -17,6 +17,7 @@ const DashboardAdmin = ({ fetchDynamicData }) => {
 	const [allocation, setAllocation] = useState([]);
 	const [counts, setCounts] = useState([]);
 	const [summary, setSummary] = useState({});
+	const [isOpen, setIsOpen] = useState(false);
 
 	const fetchData = async () => {
 		try {
@@ -46,6 +47,67 @@ const DashboardAdmin = ({ fetchDynamicData }) => {
 			setSummary(counts[0]);
 		}
 	}, [counts]);
+	
+	const openModal = () => {
+		setIsOpen(true);
+	};
+
+	const closeModal = () => {
+		setIsOpen(false);
+	};
+	
+	const partModal = () => {
+		const allowedKeys = [
+			"total_part_inventory",
+			"total_chassis",
+			"total_cpu",
+			"total_cpu_cooler",
+			"total_gpu",
+			"total_motherboard",
+			"total_memory",
+			"total_storage",
+			"total_psu"
+		];
+		const titleMapping = {
+			total_part_inventory: "Part inventory",
+			total_chassis: "Chassis",
+			total_cpu: "CPUs",
+			total_cpu_cooler: "Cpu coolers",
+			total_gpu: "GPUs",
+			total_motherboard: "Motherboards",
+			total_memory: "Memory modules",
+			total_storage: "Storage drives",
+			total_psu: "PSUs"
+		};
+		if (isOpen) {
+			return (
+			<Modal show={isOpen} onHide={closeModal} centered className="cms-modal">
+				<Modal.Header>
+					<Modal.Title>All parts</Modal.Title>
+					<CloseButton onClick={() => closeModal()} />
+				</Modal.Header>
+				<Modal.Body>
+					{summary ? (
+					<Card className="text-center shadow-sm">
+						<Card.Body>
+						<FaBoxOpen size={32} className="mb-2" />
+						{Object.entries(summary).map(([key, val]) => allowedKeys.includes(key) && (
+							<>
+								<Card.Title>Total {titleMapping[key]}</Card.Title>
+								<Card.Text>{val}</Card.Text>
+							</>
+						))}
+						</Card.Body>
+					</Card>
+					 ) : (
+						<Spinner as="span" animation="border" size="lg" role="status" aria-hidden="true" />
+					 )}
+				</Modal.Body>
+			</Modal>
+			);
+		}
+		
+	};
 	
 	const navigationLinks = () => {
 		return (
@@ -107,7 +169,7 @@ const DashboardAdmin = ({ fetchDynamicData }) => {
 					</Card>
 				</Col>
 				<Col md={3}>
-					<Card className="text-center shadow-sm">
+					<Card className="text-center shadow-sm clickable" onClick={() => openModal()}>
 						<Card.Body>
 							<FaBoxOpen size={32} className="mb-2" />
 							<Card.Title>Total Parts</Card.Title>
@@ -251,6 +313,7 @@ const DashboardAdmin = ({ fetchDynamicData }) => {
 	return (
 		<Container fluid className="mt-4">
 			{navigationLinks()}
+			{partModal()}
 			{renderSummary()}
 			{renderIndices()}
 			{renderAllocation()}
