@@ -36,54 +36,61 @@ require("dotenv").config();
 
 // Environment variables
 // Remember, secrets should not be published
-const sessionSecret = process.env.SESSION_SECRET;
-const jwtSecret = process.env.JWT_SECRET;
-const opensearch = process.env.OPENSEARCH_URL;
-const stripeSecret = process.env.STRIPE_SK;
-const stripePublish = process.env.STRIPE_PK;
-const stripeWebhookSecret = process.env.STRIPE_WEBHOOK_SECRET;
-const companyEmail = process.env.COMPANY_EMAIL;
-const companyEmailPassword = process.env.COMPANY_EMAIL_PASSWORD;
-const companyEmailHostname = process.env.COMPANY_EMAIL_HOSTNAME;
-const testEmail = process.env.TEST_EMAIL;
-const testEmailPassword = process.env.TEST_EMAIL_PASSWORD;
-const testEmailProvider = process.env.TEST_EMAIL_PROVIDER;
-const frontendUrl = process.env.FRONTEND_URL;
-const backendUrl = process.env.BACKEND_URL;
-const corsUrl = process.env.CORS;
-const redisHost = process.env.REDIS_HOST;
-const redisPort = process.env.REDIS_PORT;
-const opensearchUser = process.env.OPENSEARCH_USER;
-const opensearchPassword = process.env.OPENSEARCH_PASSWORD;
+const checkEnvVars = () => {
+	const sessionSecret = process.env.SESSION_SECRET;
+	const jwtSecret = process.env.JWT_SECRET;
+	const opensearch = process.env.OPENSEARCH_URL;
+	const stripeSecret = process.env.STRIPE_SK;
+	const stripePublish = process.env.STRIPE_PK;
+	const stripeWebhookSecret = process.env.STRIPE_WEBHOOK_SECRET;
+	const companyEmail = process.env.COMPANY_EMAIL;
+	const companyEmailPassword = process.env.COMPANY_EMAIL_PASSWORD;
+	const companyEmailHostname = process.env.COMPANY_EMAIL_HOSTNAME;
+	const testEmail = process.env.TEST_EMAIL;
+	const testEmailPassword = process.env.TEST_EMAIL_PASSWORD;
+	const testEmailProvider = process.env.TEST_EMAIL_PROVIDER;
+	const frontendUrl = process.env.FRONTEND_URL;
+	const backendUrl = process.env.BACKEND_URL;
+	const corsUrl = process.env.CORS;
+	const redisHost = process.env.REDIS_HOST;
+	const redisPort = process.env.REDIS_PORT;
+	const opensearchUser = process.env.OPENSEARCH_USER;
+	const opensearchPassword = process.env.OPENSEARCH_PASSWORD;
 
-const generatedEnvVars = { SESSION_SECRET: sessionSecret, JWT_SECRET: jwtSecret, OPENSEARCH_URL: opensearch };
-const otherEnvVars = {
-	STRIPE_SK: stripeSecret,
-	STRIPE_PK: stripePublish,
-	STRIPE_WEBHOOK_SECRET: stripeWebhookSecret,
-	COMPANY_EMAIL: companyEmail,
-	COMPANY_EMAIL_PASSWORD: companyEmailPassword,
-	COMPANY_EMAIL_PROVIDER: companyEmailHostname,
-	TEST_EMAIL: testEmail,
-	TEST_EMAIL_PASSWORD: testEmailPassword,
-	TEST_EMAIL_PROVIDER: testEmailProvider,
-	FRONTEND_URL: frontendUrl,
-	BACKEND_URL: backendUrl,
-	CORS: corsUrl,
-	REDIS_HOST: redisHost,
-	REDIS_PORT: redisPort,
-	OPENSEARCH_USER: opensearchUser,
-	OPENSEARCH_PASSWORD: opensearchPassword,
-};
+	const generatedEnvVars = { SESSION_SECRET: sessionSecret, JWT_SECRET: jwtSecret, OPENSEARCH_URL: opensearch };
+	const otherEnvVars = {
+		STRIPE_SK: stripeSecret,
+		STRIPE_PK: stripePublish,
+		STRIPE_WEBHOOK_SECRET: stripeWebhookSecret,
+		COMPANY_EMAIL: companyEmail,
+		COMPANY_EMAIL_PASSWORD: companyEmailPassword,
+		COMPANY_EMAIL_PROVIDER: companyEmailHostname,
+		TEST_EMAIL: testEmail,
+		TEST_EMAIL_PASSWORD: testEmailPassword,
+		TEST_EMAIL_PROVIDER: testEmailProvider,
+		FRONTEND_URL: frontendUrl,
+		BACKEND_URL: backendUrl,
+		CORS: corsUrl,
+		REDIS_HOST: redisHost,
+		REDIS_PORT: redisPort,
+		OPENSEARCH_USER: opensearchUser,
+		OPENSEARCH_PASSWORD: opensearchPassword,
+	};
 
-for (const vars of [generatedEnvVars, otherEnvVars]) {
-	for (const [key, val] of Object.entries(vars)) {
-		if (!val) {
-			console.error(`Missing ${key} environment variable. Exiting...${vars === generatedEnvVars ? "\nHave you run env_generator.js yet?" : ""}`);
-			process.exit(1);
+	for (const vars of [generatedEnvVars, otherEnvVars]) {
+		for (const [key, val] of Object.entries(vars)) {
+			if (!val) {
+				console.error(`Missing ${key} environment variable. Exiting...${vars === generatedEnvVars ? "\nHave you run env_generator.js yet?" : ""}`);
+				process.exit(1);
+			}
 		}
 	}
-}
+	return [sessionSecret, jwtSecret, opensearch, stripeSecret, stripePublish, stripeWebhookSecret, companyEmail, companyEmailPassword, companyEmailHostname, testEmail, testEmailPassword, testEmailProvider, frontendUrl, backendUrl, corsUrl, redisHost, redisPort, opensearchUser, opensearchPassword];
+};
+
+const [sessionSecret, jwtSecret, opensearch, stripeSecret, stripePublish, stripeWebhookSecret, companyEmail, companyEmailPassword, companyEmailHostname, testEmail, testEmailPassword, testEmailProvider, frontendUrl, backendUrl, corsUrl, redisHost, redisPort, opensearchUser, opensearchPassword] = checkEnvVars();
+
+
 
 const stripe = require("stripe")(stripeSecret);
 
