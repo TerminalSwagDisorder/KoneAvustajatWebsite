@@ -20,7 +20,7 @@ const axios = require("axios");
 const Joi = require("joi");
 const PdfPrinter = require("pdfmake");
 const nodemailer = require("nodemailer");
-const { RateLimiterRedis } = require("rate-limiter-flexible");
+const { RateLimiterRedis, RateLimiterMemory } = require("rate-limiter-flexible");
 const Redis = require("ioredis");
 const { Client } = require("@opensearch-project/opensearch");
 
@@ -160,76 +160,55 @@ transporter.verify((error, success) => {
 const redisClient = new Redis({
 	host: redisHost,
 	port: redisPort,
-	enableOfflineQueue: false // for rate limiting
+	enableOfflineQueue: false, // for rate limiting
+	retryStrategy: (options) => {
+		if (options.attempt > 3) {
+			return new Error("Retry time exhausted");
+		}
+		return 100;
+	}
 });
 
-const generalRateLimiter = new RateLimiterRedis({
-	storeClient: redisClient,
-	keyPrefix: "rlflimit-general",
-	points: 250,
-	duration: 10
-});
+const checkRedisError = () => {
+	let redisErrorMessage = null;
+	let redisErrorLast = 0;
 
-const algorithmRateLimiter = new RateLimiterRedis({
-	storeClient: redisClient,
-	keyPrefix: "rlflimit-algorithm",
-	points: 10,
-	duration: 1800,
-	blockDuration: 600
-});
+	redisClient.on("error", (err) => {
+		const now = Date.now();
+		if (err.code !== redisErrorMessage || now - redisErrorLast > 5000) {
+			redisErrorMessage = err.code;
+			redisErrorLast = now;
+			console.error("Redis connection error:", err, redisErrorMessage);
+		}
+	});
+};
 
-const criticalRateLimiter = new RateLimiterRedis({
-	storeClient: redisClient,
-	keyPrefix: "rlflimit-critical",
-	points: 5,
-	duration: 600,
-	blockDuration: 1800
-});
+checkRedisError();
 
-const loginRateLimiter = new RateLimiterRedis({
-	storeClient: redisClient,
-	keyPrefix: "rlflimit-login",
-	points: 20,
-	duration: 600
-});
 
-const loginFailsRateLimiter = new RateLimiterRedis({
-	storeClient: redisClient,
-	keyPrefix: "rlflimit-login-fails",
-	points: 10,
-	duration: 3600,
-	blockDuration: 3600
-});
+const createLimiter = (keyPrefix, points, duration, blockDuration = 0) => {
+	return new RateLimiterRedis({
+		storeClient: redisClient,
+		keyPrefix,
+		points,
+		duration,
+		inMemoryBlockOnConsumed: points,
+		inMemoryBlockDuration: duration,
+		insuranceLimiter: new RateLimiterMemory({ points, duration }),
+		rejectIfRedisNotReady: true,
+		blockDuration
+	});
+};
 
-const opensearchRateLimiter = new RateLimiterRedis({
-	storeClient: redisClient,
-	keyPrefix: "rlflimit-opensearch",
-	points: 10,
-	duration: 600
-});
-
-const dataManipulationRateLimiter = new RateLimiterRedis({
-	storeClient: redisClient,
-	keyPrefix: "rlflimit-data-manipulation",
-	points: 10,
-	duration: 300,
-	blockDuration: 600
-});
-
-const adminDataManipulationRateLimiter = new RateLimiterRedis({
-	storeClient: redisClient,
-	keyPrefix: "rlflimit-admin-data-manipulation",
-	points: 20,
-	duration: 60
-});
-
-const downloadRateLimiter = new RateLimiterRedis({
-	storeClient: redisClient,
-	keyPrefix: "rlflimit-download",
-	points: 5,
-	duration: 900,
-	blockDuration: 1800
-});
+const generalRateLimiter = createLimiter("rlflimit-general", 250, 10);
+const algorithmRateLimiter = createLimiter("rlflimit-algorithm", 10, 1800, 600);
+const criticalRateLimiter = createLimiter("rlflimit-critical", 5, 600, 1800);
+const loginRateLimiter = createLimiter("rlflimit-login", 20, 600);
+const loginFailsRateLimiter = createLimiter("rlflimit-login-fails", 10, 3600, 3600);
+const opensearchRateLimiter = createLimiter("rlflimit-opensearch", 10, 600);
+const dataManipulationRateLimiter = createLimiter("rlflimit-data-manipulation", 10, 300, 600);
+const adminDataManipulationRateLimiter = createLimiter("rlflimit-admin-data-manipulation", 20, 60);
+const downloadRateLimiter = createLimiter("rlflimit-download", 5, 900, 1800);
 
 const emailXssOptions = {
 	whiteList: {
