@@ -34,6 +34,7 @@ stripe trigger payment_intent.payment_failed
 -Admin dashboard -> add some general data (ie admin/count and similar) x
 -Nav -> add admin subitems to dashboard x
 -Email transactions -> disable link clicking x
+-Add backup to rate limiter in case redis is not online x
 
 -Add a way to dismiss payment form
 -Secure routes with sensitive data (eg. /api/orders)
