@@ -981,7 +981,7 @@ const contentSchema = Joi.object({
 	Language: Joi.string().trim().max(10).optional(),
 	Content_Text: Joi.string().trim().optional(),
 	Content_Type: Joi.string().trim().max(20).optional(),
-	Status: Joi.string().trim().max(10).optional(),
+	Status: Joi.string().trim().max(20).optional(),
 	Version: Joi.number().optional(),
 	Added_By: Joi.number().optional(),
 	Last_Edited_By: Joi.number().optional(),
@@ -5965,8 +5965,7 @@ app.get("/api/text-content", routePagination, tableSearch("content"), async (req
 		}
 	}
 
-	sql = `SELECT * FROM content ${searchQuery} LIMIT ? OFFSET ?`;
-	sqlParams.push(items, offset); // Push pagination params after search params
+	sql = `SELECT * FROM content ${searchQuery}`;
 
 	try {
 		const [content] = await promisePool.query(sql, sqlParams);
@@ -6060,6 +6059,8 @@ app.patch("/api/text-content/update/:id", rateLimitRoute(adminDataManipulationRa
 			return res.status(400).json({ message: "No valid fields provided for query!" });
 		}
 
+		updateQuery += ", Version = Version + 1 ";
+		
 		updateQuery += " WHERE ContentID = ?";
 		queryParams.push(parseInt(id));
 
@@ -6117,6 +6118,8 @@ app.patch("/api/text-content/update", rateLimitRoute(adminDataManipulationRateLi
 		if (queryParams.length === 0) {
 			return res.status(400).json({ message: "No valid fields provided for query!" });
 		}
+		
+		updateQuery += ", Version = Version + 1 ";
 
 		updateQuery += " WHERE Site_Identifier = ?";
 		queryParams.push(jsonFormFields.Site_Identifier);
@@ -6148,8 +6151,8 @@ app.post("/api/text-content/add", formFieldsValidator(contentSchema), authentica
 
 	const userId = req.user.UserID;
 	const jsonFormFields = req.validatedForm;
-	const { Site_Identifier, Main_Tag, Language, Content_Text, Content_Type } = jsonFormFields;	
-	const allowedFields = ["Site_Identifier", "Main_Tag", "Language", "Content_Text", "Content_Type"];
+	const { Site_Identifier, Main_Tag, Language, Content_Text, Content_Type, Status } = jsonFormFields;	
+	const allowedFields = ["Site_Identifier", "Main_Tag", "Language", "Content_Text", "Content_Type", "Status"];
 
 	try {
 		if (!Site_Identifier || !Content_Text) {

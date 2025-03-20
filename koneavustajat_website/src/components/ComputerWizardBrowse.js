@@ -19,8 +19,12 @@ import { addToShoppingCart, removeFromShoppingCart, clearShoppingCart } from "..
 import { addToCompletedBuild, removeFromCompletedBuild, clearCompletedBuild } from "../redux/wizardSlice";
 import { useAuth, useError } from "../utils/Contexts";
 import { FaChevronUp, FaChevronDown } from "react-icons/fa";
+import { useRenderContent } from "../utils/ContentUtils";
+
+
 
 const ComputerWizardBrowse = ({ fetchDynamicData, fetchDataAmount, updateDynamicData, deleteDynamicData, fetchSearchData }) => {
+	const renderContent = useRenderContent();
 	const { displayError } = useError();
 	const { currentUser } = useAuth();
 	const [parts, setParts] = useState([]);
@@ -291,7 +295,9 @@ const ComputerWizardBrowse = ({ fetchDynamicData, fetchDataAmount, updateDynamic
 						<div className="d-flex justify-content-end mb-3">
 							<CloseButton onClick={() => closeForm()} />
 						</div>
-						<h4 className=" mb-3">Modify part</h4>
+						<h4 className=" mb-3">
+							{renderContent("computerwizard/browse.modifypart.mainheader", "Modify part")}
+						</h4>
 						{Object.keys(selectedPart).map((key, index) => (
 							<ul key={index}>
 									<b>{key}</b>:{" "}
@@ -331,7 +337,7 @@ const ComputerWizardBrowse = ({ fetchDynamicData, fetchDataAmount, updateDynamic
 							</ul>
 						))}
 						<Button variant="primary" type="submit">
-							Modify part
+							{renderContent("computerwizard/browse.modifypart.modifysubmit", "Modify part")}
 						</Button>
 					</Form>
 				</div>
@@ -347,17 +353,17 @@ const ComputerWizardBrowse = ({ fetchDynamicData, fetchDataAmount, updateDynamic
 						<div className="d-flex justify-content-end mb-3">
 							<CloseButton onClick={() => closeForm()} />
 						</div>
-						<h4 className=" mb-3">Are you sure you want to delete this part?</h4>
+						<h4 className=" mb-3">{renderContent("computerwizard/browse.deletepart.mainheader", "Are you sure you want to delete this part?")}</h4>
 							<ul>
-								<p><b>Part type:</b> {partName.value} </p>
-								<p><b>ID:</b> {selectedPart.ID} </p>
-								<p><b>Name:</b> {selectedPart.Name} </p>
+								<p><b>{renderContent("computerwizard/browse.deletepart.labelparttype", "Part type")}:</b> {partName.value} </p>
+								<p><b>{renderContent("computerwizard/browse.deletepart.labelid", "ID")}:</b> {selectedPart.ID} </p>
+								<p><b>{renderContent("computerwizard/browse.deletepart.labelname", "Name")}:</b> {selectedPart.Name} </p>
 							</ul>
 						<Button variant="primary" type="submit">
-							Yes
+							{renderContent("computerwizard/browse.deletepart.buttonyes", "Yes")}
 						</Button>						
-						<Button variant="primary" style={{"background-color": "#990000"}} onClick={() => closeForm()}>
-							No
+						<Button variant="primary" style={{backgroundColor: "#990000"}} onClick={() => closeForm()}>
+							{renderContent("computerwizard/browse.deletepart.buttonno", "No")}
 						</Button>
 					</Form>
 				</div>
@@ -516,7 +522,7 @@ const ComputerWizardBrowse = ({ fetchDynamicData, fetchDataAmount, updateDynamic
 			return (
 				<div className="userChangePrompt">
 					<Alert>
-						<CiDesktopMouse1 /> Select a part to view or add to cart & build. {currentUser && currentUser.RoleID === 4 && ("As admin you are able to modify details.")}
+						<CiDesktopMouse1 /> {renderContent("computerwizard/browse.choicealert.selectpart", "Select a part to view or add to cart & build.")} {currentUser && currentUser.RoleID === 4 && (renderContent("computerwizard/browse.choicealert.admin", "As admin you are able to modify details."))}
 					</Alert>
 				</div>
 			);

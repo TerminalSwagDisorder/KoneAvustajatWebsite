@@ -17,7 +17,8 @@ const ContentManagementModal = ({ fetchWholeContent, fetchContentIdentifiers, ad
 		Main_Tag: "p",
 		Content_Text: "",
 		Content_Type: "site_text", 
-		Status: ""
+		Status: "",
+		Language: ""
 	});
 	const [availableIdentifiers, setAvailableIdentifiers] = useState([]);
 	const [availableLanguages, setAvailableLanguages] = useState([]);
@@ -42,6 +43,10 @@ const ContentManagementModal = ({ fetchWholeContent, fetchContentIdentifiers, ad
 		handleFormData();
 	}, [languageOverride, wholeContent, language]);
 
+	useEffect(() => {
+		handleLocationWarning();
+	}, [location]);
+
 	const fetchIdentifiers = async () => {
 		try {
 			const identifiers = await fetchContentIdentifiers();
@@ -60,6 +65,7 @@ const ContentManagementModal = ({ fetchWholeContent, fetchContentIdentifiers, ad
 			Content_Text: "",
 			Content_Type: "site_text", 
 			Status: "",
+			//Language: formFields.Language || languageOverride || language
 		});
 		setWarning("");
 	};
@@ -89,7 +95,7 @@ const ContentManagementModal = ({ fetchWholeContent, fetchContentIdentifiers, ad
 		} else {
 			setFormFields((prev) => ({
 				...prev,
-				Content_Text: "",
+				Content_Text: formFields.Content_Text, // Or Content_Text: ""
 				Language: languageOverride || language,
 			}));
 		}
@@ -139,6 +145,16 @@ const ContentManagementModal = ({ fetchWholeContent, fetchContentIdentifiers, ad
 			setWarning("");
 		}
 	};
+	
+	const handleLocationWarning = () => {
+		const identifier = formFields.Site_Identifier;
+
+		if (identifier !== "" && !identifier.startsWith(location.pathname === "/" ? "home" : location.pathname.slice(1))) {
+			setWarning("Warning: The selected identifier is outside the current page.");
+		} else {
+			setWarning("");
+		}
+	};
 
 	// Handle mode toggle
 	/*const toggleMode = () => {
@@ -172,18 +188,20 @@ const ContentManagementModal = ({ fetchWholeContent, fetchContentIdentifiers, ad
 	const handleSubmit = async () => {
 		try {
 			if (mode === "add") {
+				formFields.Language = formFields.Language || languageOverride || language;
 				const success = await addContent(formFields);
 				if (success) {
-					console.log(success.message);
-					console.log(success);
+					displayError(success.message, "success");
 					closeModal();
 					setFormFields({
-						Site_Identifier: "",
-						Identifiers: { page: "", section: "", specific: "" },
+						Site_Identifier: mode === "add" ? (location.pathname === "/" ? "home" : location.pathname.slice(1)) : "",
+						Identifiers: { page: location.pathname === "/" ? "home" : location.pathname.slice(1), section: "", specific: "" },
 						Main_Tag: "p",
 						Content_Text: "",
 						Content_Type: "site_text", 
-						Status: ""});
+						Status: "",
+						//Language: language
+						});
 				}
 			}
 
@@ -195,8 +213,8 @@ const ContentManagementModal = ({ fetchWholeContent, fetchContentIdentifiers, ad
 
 				const success = await updateContent(formFields);
 				if (success) {
-					console.log(success);
 					displayError(success.message, "success");
+					console.log(success);
 					if (identifiers[0].startsWith(location.pathname === "/" ? "home" : location.pathname.slice(1))) {
 						await fetchPageContent({ page: identifiers[0] });
 					}
@@ -211,7 +229,7 @@ const ContentManagementModal = ({ fetchWholeContent, fetchContentIdentifiers, ad
 						Status: ""})
 				}
 			}
-			
+				
 		} catch (error) {
 			console.error(error);
 			displayError(error);
@@ -258,10 +276,10 @@ const ContentManagementModal = ({ fetchWholeContent, fetchContentIdentifiers, ad
 								/>
 							</>
 						) : (
-							<Form.Select value={formFields.Site_Identifier} onChange={handleIdentifierSelect}>
-								<option value="">Select an identifier</option>
+							<Form.Select className="modal-select" value={formFields.Site_Identifier} onChange={handleIdentifierSelect}>
+								<option value="" className="modal-select-option">Select an identifier</option>
 								{availableIdentifiers.map((id) => (
-									<option key={id} value={id}>
+									<option key={id} value={id} className="modal-select-option">
 										{id}
 									</option>
 								))}
@@ -270,9 +288,9 @@ const ContentManagementModal = ({ fetchWholeContent, fetchContentIdentifiers, ad
 					</Form.Group>
 					<Form.Group className="mb-3">
 					<Form.Label>Language</Form.Label>
-					<Form.Select value={languageOverride || language} onChange={overrideLanguage}>
+					<Form.Select className="modal-select" value={languageOverride || language} onChange={overrideLanguage}>
 						{availableLanguages.map((id) => (
-							<option key={id} value={id}>
+							<option key={id} value={id} className="modal-select-option">
 								{id}
 							</option>
 						))}
@@ -289,6 +307,9 @@ const ContentManagementModal = ({ fetchWholeContent, fetchContentIdentifiers, ad
 							/>
 						</Form.Group>
 					))}
+					{mode === "update" && (
+						<p>Current version: {formFields.Version || "No version"}</p>
+					)}
 					<Form.Group className="mb-3">
 						<Form.Check
 							onChange={handleChange}
