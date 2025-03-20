@@ -115,6 +115,10 @@ const ShoppingCart = ({ postDynamicData, updateDynamicData }) => {
 		}
 	};
 	
+	const cancelPayment = () => {
+		setShowPaymentForm(false);
+	};
+	
 	const formatString = str => str.replace(/_/g, " ").replace(/([a-z])([A-Z])/g, "$1 $2").toLowerCase().replace(/^./, c => c.toUpperCase());
 
 	const renderNestedObject = (nestedObj) => {
@@ -218,6 +222,7 @@ const ShoppingCart = ({ postDynamicData, updateDynamicData }) => {
 				<PaymentForm
 					clientSecret={clientSecret}
 					onPaymentSuccess={handlePaymentSuccess}
+					onCancel={cancelPayment}
 				/>
 			)}
 			<br />

@@ -465,6 +465,7 @@ const Profile = ({ handleCredentialChange, handleSignout, fetchDynamicData, upda
 						<PaymentForm
 							clientSecret={clientSecret}
 							onPaymentSuccess={handlePaymentSuccess}
+							onCancel={cancelPayment}
 						/>
 					)}
 				</div>
@@ -708,6 +709,10 @@ const Profile = ({ handleCredentialChange, handleSignout, fetchDynamicData, upda
 		} else {
 			displayError("Payment failed");
 		}
+	};
+
+	const cancelPayment = () => {
+		setShowPaymentForm(false);
 	};
 
 	const formButtons = () => {

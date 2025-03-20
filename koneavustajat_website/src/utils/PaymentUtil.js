@@ -35,7 +35,7 @@ export const PaymentUtil = ({ children }) => {
 	if (errorMsg) {
 		return (
 			<>
-				<p>Payment methods are not loaded!</p>
+				<p className="loadelement">Payment methods are not loaded!</p>
 				{children}
 			</>
 		);
@@ -44,7 +44,7 @@ export const PaymentUtil = ({ children }) => {
 	if (isLoading) {
 		return (
 			<>
-				<p><Spinner as="span" animation="border" size="sm" role="status" aria-hidden="true" /> loading payment method...</p>
+				<p className="loadelement"><Spinner as="span" animation="border" size="sm" role="status" aria-hidden="true" /> loading payment method...</p>
 				{children}
 			</>
 			
