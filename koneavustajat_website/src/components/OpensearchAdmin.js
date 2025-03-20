@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useMemo } from "react";
 import { useLocation  } from "react-router-dom";
 import { ListGroup, Col } from "react-bootstrap";
-import { Button, Table, Form, Dropdown, CloseButton, Spinner } from "react-bootstrap";
+import { Button, Table, Form, Dropdown, Spinner } from "react-bootstrap";
 import { FaChevronUp, FaChevronDown } from "react-icons/fa";
 import { useAuth, useError } from "../utils/Contexts";
 

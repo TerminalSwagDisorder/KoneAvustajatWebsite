@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { useSelector, useDispatch } from "react-redux";
 import { addToWizard, removeFromWizard, clearWizard, addToCompletedBuild } from "../redux/wizardSlice";
-import { Form, Button, InputGroup, Dropdown, DropdownButton, Container, Row, Col, Image, CloseButton, ListGroup } from "react-bootstrap";
+import { Form, Button, InputGroup, Dropdown, DropdownButton, Container, Row, Col, Image, CloseButton, ListGroup, Alert } from "react-bootstrap";
 import { useError } from "../utils/Contexts";
 
 const ComputerWizardWizard = ({ wizardAlgorithm }) => {
@@ -290,16 +290,14 @@ const ComputerWizardWizard = ({ wizardAlgorithm }) => {
 			return (
 				<Container id="wizardForm">
 					<Form onSubmit={handleSubmit} className="wizardForm">
-						<Col>
-							<Button variant="danger" className="closeForm" onClick={() => closeForm()}>
-								x
-							</Button>
-						</Col>
+						<div className="d-flex justify-content-end mb-3">
+							<CloseButton onClick={closeForm} />
+						</div>
 						<h2>Computer Wizard</h2>
-						<p className="wizardNotice">
-							<b>Notice</b>: Depending on your wizard settings, some builds may not populate all parts. Certain combinations of preferences
-							might result in incomplete builds due to compatibility or availability limits.
-						</p>
+						<Alert variant="warning" className="wizardNotice">
+							<b>Notice</b>: Depending on your wizard settings, some builds may not populate all parts. <br />
+							Certain combinations of preferences might result in incomplete builds due to compatibility or availability limits.
+						</Alert>
 						<br />
 
 						{/* Max Price Field */}

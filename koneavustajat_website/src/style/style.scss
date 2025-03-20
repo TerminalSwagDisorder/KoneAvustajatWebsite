@@ -35,7 +35,7 @@ $light_user_select_button: #394588;
 $dark_bg_color: #586e6d; //background color
 $dark_box_text: #def5f4; //writable boxes and text inside clickable buttons
 $dark_click_button: #047a76; //clickable buttons, text inside writable boxes and clickable text
-$dark_logo_icons: #ffffff; //Logo, icons and non clickable text
+$dark_logo_icons: #ffffff; //Logo, icons and non clickable text // 
 $dark_active_elems: #697ef5; // Active elements
 $dark_activehover_elems: gray; // Active elements
 $dark_navbar: #00587a; //Navbar
@@ -446,6 +446,10 @@ $dark_user_select_button: #697ef5;
 		opacity: 1;
 	}
 	
+	.wizardNotice {
+		opacity: 1; 
+	}
+	
 	.email-content {
 		// Issue 1
 		background-color: $even_row;
@@ -472,6 +476,30 @@ $dark_user_select_button: #697ef5;
 		}
 	}
 
+	.StripeElement {
+		background-color: $text_input_bg;
+		border-radius: 0.5rem;
+		padding: 0.5rem 0.25rem;
+		border: 1px solid #ccc;
+	}
+
+	.loadelement {
+		position: fixed;
+		bottom: 20px;
+		left: 20px;
+		z-index: 1049;
+		color: $box_text;
+		background-color: $forms;
+		opacity: 0.75;
+		border-radius: 0.25rem;
+		padding: 0.2rem;
+	}
+
+	.btn-close {
+		background-color: red;
+		padding: 0.5em 1em;
+	}
+	
 } // End of mixin
 
 :root {
@@ -684,7 +712,7 @@ button {
 		height: 60px;
 		text-overflow: clip;
 		text-rendering: optimizeLegibility;
-		font-size: 90%;
+		font-size: 80%;
 	}
 
 	h3 {
