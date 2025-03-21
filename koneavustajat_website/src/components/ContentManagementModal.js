@@ -230,7 +230,7 @@ const ContentManagementModal = ({ fetchWholeContent, fetchContentIdentifiers, ad
 				}
 			}
 			
-			setLanguageOverride(language);
+			setLanguageOverride(language || "");
 				
 		} catch (error) {
 			console.error(error);
