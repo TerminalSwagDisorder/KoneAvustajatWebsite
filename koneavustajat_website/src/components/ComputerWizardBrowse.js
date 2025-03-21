@@ -387,7 +387,10 @@ const ComputerWizardBrowse = ({ fetchDynamicData, fetchDataAmount, updateDynamic
 			<>
 				<Dropdown>
 					<Dropdown.Toggle variant="success" id="dropdown-basic">
-						{partName.value + " chosen" || "Choose Part type"}
+						{renderContent(`computerwizard/browse.partdropdown.${partName.key}`, partName.value) + " " +
+							renderContent("computerwizard/browse.partdropdown.chosenpart", "chosen") 
+						 	|| renderContent("computerwizard/browse.partdropdown.nopart", "Choose part type")
+						}
 					</Dropdown.Toggle>
 
 					<Dropdown.Menu>
@@ -395,7 +398,7 @@ const ComputerWizardBrowse = ({ fetchDynamicData, fetchDataAmount, updateDynamic
 							<Dropdown.Item
 								key={key}
 								onClick={() => handlePartTypeChange({ key: key, value: partNameMapping[key] })}>
-								{partNameMapping[key]}
+								{renderContent(`computerwizard/browse.partdropdown.${key}`, partNameMapping[key])}
 							</Dropdown.Item>
 						))}
 					</Dropdown.Menu>
@@ -409,10 +412,10 @@ const ComputerWizardBrowse = ({ fetchDynamicData, fetchDataAmount, updateDynamic
 			return (
 				<>
 					<Button className="user-select-button" onClick={() => handleSelectPart(part, "delete")}>
-						Delete part
+						{renderContent("computerwizard/browse.table.buttondeletepart", "Delete part")}
 					</Button>
 					<Button className="user-select-button" onClick={() => handleSelectPart(part, "modify")}>
-						Modify part
+						{renderContent("computerwizard/browse.table.buttonmodifypart", "Modify part")}
 					</Button>
 				</>
 			);
@@ -425,21 +428,21 @@ const ComputerWizardBrowse = ({ fetchDynamicData, fetchDataAmount, updateDynamic
 			<>
 				<div className="paginationButtons">
 					<Button onClick={() => handlePageChange(1)} disabled={page === 1}>
-						First page
+						{renderContent("computerwizard/browse.pagination.firstbutton", "First page")}
 					</Button>
 
 					<Button onClick={() => handlePageChange(page - 1)} disabled={page === 1}>
-						Previous page
+						{renderContent("computerwizard/browse.pagination.previousbutton", "Previous page")}
 					</Button>
 					<h3>
 						{page} / {totalPages}
 					</h3>
 					<Button onClick={() => handlePageChange(page + 1)} disabled={page === totalPages}>
-						Next page
+						{renderContent("computerwizard/browse.pagination.nextbutton", "Next page")}
 					</Button>
 
 					<Button onClick={() => handlePageChange(totalPages)} disabled={page === totalPages}>
-						Last page
+						{renderContent("computerwizard/browse.pagination.lastbutton", "Last page")}
 					</Button>
 				</div>
 			</>
@@ -458,13 +461,13 @@ const ComputerWizardBrowse = ({ fetchDynamicData, fetchDataAmount, updateDynamic
 							<td>
 								{renderAdminButtons(part)}
 								<Button className="user-select-button" onClick={() => handleSelectPart(part, "view")}>
-									View part
+									{renderContent("computerwizard/browse.table.buttonviewpart", "View part")}
 								</Button>
 								<Button className="user-select-button" onClick={() => handleAddToCart(part)}>
-									Add to Cart
+									{renderContent("computerwizard/browse.table.buttonaddtocart", "Add to Cart")}
 								</Button>
 								<Button className="user-select-button" onClick={() => handleAddToCompletedBuild(part)}>
-									Add to Build
+									{renderContent("computerwizard/browse.table.buttonaddtobuild", "Add to Build")}
 								</Button>
 							</td>
 						</tr>
@@ -472,7 +475,7 @@ const ComputerWizardBrowse = ({ fetchDynamicData, fetchDataAmount, updateDynamic
 				</>
 			);
 		} else {
-			return <h3>No parts available</h3>;
+			return <h3>{renderContent("computerwizard/browse.table.noparts", "No parts available")}</h3>;
 		}
 	};
 
@@ -484,7 +487,7 @@ const ComputerWizardBrowse = ({ fetchDynamicData, fetchDataAmount, updateDynamic
 						<div className="d-flex justify-content-end mb-3">
 							<CloseButton onClick={() => closeForm()} />
 						</div>
-						<h4 className=" mb-3">Part details</h4>
+						<h4 className=" mb-3">{renderContent("computerwizard/browse.viewpart.mainheader", "Part details")}</h4>
 						{Object.keys(selectedPart).map((key, index) => (
 							<ul key={index}>
 								<li>
@@ -506,10 +509,10 @@ const ComputerWizardBrowse = ({ fetchDynamicData, fetchDataAmount, updateDynamic
 							</ul>
 						))}
 						<Button className="user-select-button" onClick={() => handleAddToCart(selectedPart)}>
-							Add to Cart
+							{renderContent("computerwizard/browse.viewpart.buttonaddtocart", "Add to Cart")}
 						</Button>
 						<Button className="user-select-button" onClick={() => handleAddToCompletedBuild(selectedPart)}>
-							Add to Build
+							{renderContent("computerwizard/browse.viewpart.buttonaddtobuild", "Add to Build")}
 						</Button>
 					</Form>
 				</div>
@@ -532,8 +535,8 @@ const ComputerWizardBrowse = ({ fetchDynamicData, fetchDataAmount, updateDynamic
 	const searchButton = () => {
 		return (
 			<>
-				<Button onClick={() => handleSearchRendering()}>Toggle search</Button>
-				<Button onClick={() => clearSearchTerm()}  disabled={Object.entries(searchTerm).length === 0}>Clear search</Button>
+				<Button onClick={() => handleSearchRendering()}>{renderContent("computerwizard/browse.search.togglesearch", "Toggle search")}</Button>
+				<Button onClick={() => clearSearchTerm()}  disabled={Object.entries(searchTerm).length === 0}>{renderContent("computerwizard/browse.search.clearsearch", "Clear search")}</Button>
 			</>
 		)
 	}
@@ -551,7 +554,7 @@ const ComputerWizardBrowse = ({ fetchDynamicData, fetchDataAmount, updateDynamic
 				>
 					<Dropdown>
 						<Dropdown.Toggle variant="success" id="dropdown-basic">
-							{searchKey || "Choose search type"}
+							{searchKey || renderContent("computerwizard/browse.search.nosearch", "Choose search type")}
 						</Dropdown.Toggle>
 
 						<Dropdown.Menu>
@@ -567,10 +570,10 @@ const ComputerWizardBrowse = ({ fetchDynamicData, fetchDataAmount, updateDynamic
 					</Dropdown>
 					{renderSearchInput(searchKey)}
 					<Button style={{ width: "40%" }} type="submit">
-						Search
+						{renderContent("computerwizard/browse.search.searchsubmit", "Search")}
 					</Button>
 					<Button style={{ width: "40%" }} onClick={() => clearSearchTerm()} disabled={!searchToggle}>
-					Clear
+						{renderContent("computerwizard/browse.search.searchclear", "Clear")}
 					</Button>
 				</Form>
 				<br />
@@ -596,7 +599,7 @@ const ComputerWizardBrowse = ({ fetchDynamicData, fetchDataAmount, updateDynamic
 				<Form.Group className="mb-3">
 					<Form.Check
 						type="checkbox"
-						label="Strict search"
+						label={renderContent("computerwizard/browse.search.strictsearch", "Strict search")}
 						name="strict"
 						onChange={handleSearchTerm}
 						id="strict"
@@ -606,7 +609,7 @@ const ComputerWizardBrowse = ({ fetchDynamicData, fetchDataAmount, updateDynamic
 				<Form.Group className="mb-3">
 					<Form.Check
 						type="checkbox"
-						label="Inverted search"
+						label={renderContent("computerwizard/browse.search.invertedsearch", "Inverted search")}
 						name="inverted"
 						onChange={handleSearchTerm}
 						id="inverted"
@@ -614,7 +617,7 @@ const ComputerWizardBrowse = ({ fetchDynamicData, fetchDataAmount, updateDynamic
 					/>
 				</Form.Group>
 				<Form.Group className="mb-3">
-					<Form.Label>Max price</Form.Label>
+					<Form.Label>{renderContent("computerwizard/browse.search.maxprice", "Max price")}</Form.Label>
 					<Form.Control 
 					type="number" 
 					id="priceMax"
@@ -624,7 +627,7 @@ const ComputerWizardBrowse = ({ fetchDynamicData, fetchDataAmount, updateDynamic
 					/>
 				</Form.Group>
 				<Form.Group className="mb-3">
-					<Form.Label>Min price</Form.Label>
+					<Form.Label>{renderContent("computerwizard/browse.search.minprice", "Min price")}</Form.Label>
 					<Form.Control 
 					type="number" 
 					id="priceMin"
@@ -651,10 +654,10 @@ const ComputerWizardBrowse = ({ fetchDynamicData, fetchDataAmount, updateDynamic
 			<Table responsive="md" hover bordered className="table-striped">
 				<thead>
 					<tr>
-						<th className="order-by" onClick={() => handleOrderBy("ID")}>ID {renderSortIcon("ID")}</th>
-						<th className="order-by" onClick={() => handleOrderBy("Name")}>Name {renderSortIcon("Name")}</th>
-						<th className="order-by" onClick={() => handleOrderBy("Price")}>Price {renderSortIcon("Price")}</th>
-						<th>Actions</th>
+						<th className="order-by" onClick={() => handleOrderBy("ID")}>{renderContent("computerwizard/browse.table.headerid", "ID")} {renderSortIcon("ID")}</th>
+						<th className="order-by" onClick={() => handleOrderBy("Name")}>{renderContent("computerwizard/browse.table.headername", "Name")} {renderSortIcon("Name")}</th>
+						<th className="order-by" onClick={() => handleOrderBy("Price")}>{renderContent("computerwizard/browse.table.headerprice", "Price")} {renderSortIcon("Price")}</th>
+						<th>{renderContent("computerwizard/browse.table.headeractions", "Actions")}</th>
 					</tr>
 				</thead>
 				<tbody>{renderParts()}</tbody>
