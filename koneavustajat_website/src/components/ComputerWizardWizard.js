@@ -287,6 +287,49 @@ const ComputerWizardWizard = ({ wizardAlgorithm }) => {
 
 	const renderComputerWizard = () => {
 		if (currentOperation === "wizard" || currentOperation === "wizardAdvanced") {
+			const formMapping = {
+				useCase: {
+					noPreference: "No preference",
+					gaming: "Gaming",
+					work: "Work/Office",
+					streaming: "Streaming",
+					generalUse: "General Use/Browsing",
+					editing: "Video/Photo editing",
+					workstation: "Workstation"
+				},
+				performancePreference: {
+					noPreference: "No preference",
+					maxGpu: "Maximum graphics power",
+					maxCpu: "Maximum processing power",
+					maxRamAmount: "Maximum RAM amount",
+					maxRamSpeed: "Maximum RAM speed",
+					maxStorageAmount: "Maximum storage amount",
+					maxEfficiency: "Maximum efficiency"
+				},
+				formFactor: {
+					noPreference: "No preference",
+					smallest: "Smallest possible/HTPC sized",
+					small: "Smaller ITX sized",
+					medium: "Regular ATX sized",
+					large: "Larger E-ATX sized",
+					largest: "No upper limit"
+				},
+				colorPreference: {
+					noPreference: "No preference",
+					black: "Black",
+					white: "White",
+					red: "Red",
+					blue: "Blue",
+					other: "Other"
+				},
+				rgbPreference: {
+					noPreference: "No preference",
+					noRgb: "No RGB if possible",
+					minimumRgb: "Small amount of RGB",
+					largeRgb: "Large amount of RGB",
+					maximumRgb: "Maximum amount of RGB"
+				},
+			}
 			return (
 				<Container id="wizardForm">
 					<Form onSubmit={handleSubmit} className="wizardForm">
@@ -324,13 +367,10 @@ const ComputerWizardWizard = ({ wizardAlgorithm }) => {
 								name="useCase"
 								value={formFields.useCase}
 								onChange={handleInputChange}>
-								<option value="noPreference">No preference</option>
-								<option value="gaming">Gaming</option>
-								<option value="work">Work/Office</option>
-								<option value="streaming">Streaming</option>
-								<option value="generalUse">General Use/Browsing</option>
-								<option value="editing">Video/Photo editing</option>
-								<option value="workstation">Workstation</option>
+								{(Object.entries(formMapping.useCase).map(([key, value]) =>
+									<option value={key}>{value}</option>
+							 		)
+								)}
 							</Form.Control>
 						</Form.Group>
 						<br />
@@ -343,13 +383,10 @@ const ComputerWizardWizard = ({ wizardAlgorithm }) => {
 								name="performancePreference"
 								value={formFields.performancePreference}
 								onChange={handleInputChange}>
-								<option value="noPreference">No preference</option>
-								<option value="maxGpu">Maximum graphics power</option>
-								<option value="maxCpu">Maximum processing power</option>
-								<option value="maxRamAmount">Maximum RAM amount</option>
-								<option value="maxRamSpeed">Maximum RAM speed</option>
-								<option value="maxStorageAmount">Maximum storage amount</option>
-								<option value="maxEfficiency">Maximum efficiency</option>
+								{(Object.entries(formMapping.performancePreference).map(([key, value]) =>
+									<option value={key}>{value}</option>
+							 		)
+								)}
 							</Form.Control>
 						</Form.Group>
 						<br />
@@ -362,12 +399,10 @@ const ComputerWizardWizard = ({ wizardAlgorithm }) => {
 								name="formFactor"
 								value={formFields.formFactor}
 								onChange={handleInputChange}>
-								<option value="noPreference">No preference</option>
-								<option value="smallest">Smallest possible/HTPC sized</option>
-								<option value="small">Smaller ITX sized</option>
-								<option value="medium">Regular ATX sized</option>
-								<option value="large">Larger E-ATX sized</option>
-								<option value="largest">No upper limit</option>
+								{(Object.entries(formMapping.formFactor).map(([key, value]) =>
+									<option value={key}>{value}</option>
+							 		)
+								)}
 							</Form.Control>
 						</Form.Group>
 						<br />
@@ -380,12 +415,10 @@ const ComputerWizardWizard = ({ wizardAlgorithm }) => {
 								name="colorPreference"
 								value={formFields.colorPreference}
 								onChange={handleInputChange}>
-								<option value="noPreference">No preference</option>
-								<option value="black">Black</option>
-								<option value="white">White</option>
-								<option value="red">Red</option>
-								<option value="blue">Blue</option>
-								<option value="other">Other</option>
+								{(Object.entries(formMapping.colorPreference).map(([key, value]) =>
+									<option value={key}>{value}</option>
+							 		)
+								)}
 							</Form.Control>
 							<br />
 							<Form.Control
@@ -407,11 +440,10 @@ const ComputerWizardWizard = ({ wizardAlgorithm }) => {
 								name="rgbPreference"
 								value={formFields.rgbPreference}
 								onChange={handleInputChange}>
-								<option value="noPreference">No preference</option>
-								<option value="noRgb">No RGB if possible</option>
-								<option value="minimumRgb">Small amount of RGB</option>
-								<option value="largeRgb">Large amount of RGB</option>
-								<option value="maximumRgb">Maximum amount of RGB</option>
+								{(Object.entries(formMapping.rgbPreference).map(([key, value]) =>
+									<option value={key}>{value}</option>
+							 		)
+								)}
 							</Form.Control>
 						</Form.Group>
 						<br />
@@ -441,6 +473,41 @@ const ComputerWizardWizard = ({ wizardAlgorithm }) => {
 
 	const renderAdvancedComputerWizard = () => {
 		if (currentOperation === "wizardAdvanced") {
+			const formMapping = {
+				cpuManufacturer: {
+					noPreference: "No preference",
+					amdPreference: "AMD",
+					intelPreference: "Intel"
+				},
+				gpuManufacturer: {
+					noPreference: "No preference",
+					amdPreference: "AMD",
+					nvidiaPreference: "NVIDIA",
+					intelPreference: "Intel"
+				},
+				psuBias: {
+					noPreference: "No preference",
+					bestEfficiency: "Better efficiency/Lower wattage",
+					balanced: "Balanced efficiency & wattage",
+					highWattage: "Higher wattage/Worse efficiency"
+				},
+				storageBias: {
+					noPreference: "No preference",
+					onlyM2: "Only M.2 SSDs",
+					onlySsd: "Only SSDs",
+					bootSsd: "Boot SSD with any mixture of storage",
+					balanced: "Any mixture of storage",
+					onlyHdd: "Only HDDs"
+				},
+				additionalStorage: {
+					noPreference: "No preference",
+					noAdded: "No additional storage",
+					oneAdded: "1 extra storage drive",
+					twoAdded: "2 extra storage drives",
+					threeAdded: "3 extra storage drive",
+					maxAdded: "As many as I can get"
+				}
+			}
 			return (
 				<div>
 					<Form.Group controlId="cpuManufacturer">
@@ -450,9 +517,10 @@ const ComputerWizardWizard = ({ wizardAlgorithm }) => {
 							name="cpuManufacturer"
 							value={formFields.cpuManufacturer}
 							onChange={handleInputChange}>
-							<option value="noPreference">No preference</option>
-							<option value="amdPreference">AMD</option>
-							<option value="intelPreference">Intel</option>
+							{(Object.entries(formMapping.cpuManufacturer).map(([key, value]) =>
+								<option value={key}>{value}</option>
+								)
+							)}
 						</Form.Control>
 					</Form.Group>
 					<br />
@@ -464,10 +532,10 @@ const ComputerWizardWizard = ({ wizardAlgorithm }) => {
 							name="gpuManufacturer"
 							value={formFields.gpuManufacturer}
 							onChange={handleInputChange}>
-							<option value="noPreference">No preference</option>
-							<option value="amdPreference">AMD</option>
-							<option value="nvidiaPreference">NVIDIA</option>
-							<option value="intelPreference">Intel</option>
+							{(Object.entries(formMapping.gpuManufacturer).map(([key, value]) =>
+								<option value={key}>{value}</option>
+								)
+							)}
 						</Form.Control>
 					</Form.Group>
 					<br />
@@ -479,10 +547,10 @@ const ComputerWizardWizard = ({ wizardAlgorithm }) => {
 							name="psuBias"
 							value={formFields.psuBias}
 							onChange={handleInputChange}>
-							<option value="noPreference">No preference</option>
-							<option value="bestEfficiency">Better efficiency/Lower wattage</option>
-							<option value="balanced">Balanced efficiency & wattage</option>
-							<option value="highWattage">Higher wattage/Worse efficiency</option>
+							{(Object.entries(formMapping.psuBias).map(([key, value]) =>
+								<option value={key}>{value}</option>
+								)
+							)}
 						</Form.Control>
 					</Form.Group>
 					<br />
@@ -494,32 +562,42 @@ const ComputerWizardWizard = ({ wizardAlgorithm }) => {
 							name="storageBias"
 							value={formFields.storageBias}
 							onChange={handleInputChange}>
-							<option value="noPreference">No preference</option>
-							<option value="onlyM2">Only M.2 SSDs</option>
-							<option value="onlySsd">Only SSDs</option>
-							<option value="bootSsd">Boot SSD with any mixture of storage</option>
-							<option value="balanced">Any mixture of storage</option>
-							<option value="onlyHdd">Only HDDs</option>
+							{(Object.entries(formMapping.storageBias).map(([key, value]) =>
+								<option value={key}>{value}</option>
+								)
+							)}
 						</Form.Control>
 					</Form.Group>
 					<br />
 
-					<Form.Group controlId="additionalStorage">
+					<Form.Group>
 						<Form.Label>Additional storage:</Form.Label>
-						<Form.Control
-							as="select"
-							name="additionalStorage"
-							value={formFields.additionalStorage}
-							onChange={handleInputChange}>
-							<option value="noPreference">No preference</option>
-							<option value="noAdded">No additional storage</option>
-							<option value="oneAdded">1 extra storage drive</option>
-							<option value="twoAdded">2 extra storage drives</option>
-							<option value="threeAdded">3 extra storage drives</option>
-							<option value="maxAdded">As many as I can get</option>
-						</Form.Control>
+							<Form.Control
+								type="text"
+								value=""
+								placeholder="Soon to be added"
+								disabled
+								readOnly>
+							</Form.Control>
 					</Form.Group>
-					<br />
+					{false && ( // Hide until it is actually used3
+					 	<>
+						<Form.Group controlId="additionalStorage">
+							<Form.Label>Additional storage:</Form.Label>
+							<Form.Control
+								as="select"
+								name="additionalStorage"
+								value={formFields.additionalStorage}
+								onChange={handleInputChange}>
+								{(Object.entries(formMapping.additionalStorage).map(([key, value]) =>
+									<option value={key}>{value}</option>
+									)
+								)}
+							</Form.Control>
+						</Form.Group>
+						<br />
+						</>
+					)}
 				</div>
 			);
 		}
