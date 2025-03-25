@@ -506,6 +506,20 @@ $dark_user_select_button: #697ef5;
 		padding: 0.5em 1em;
 	}
 	
+	.pagination-override {
+		width: 2em; 
+		padding: 0 0.15em;
+		text-align: "center";
+		appearance: textfield;
+		-moz-appearance: textfield;
+
+		&::-webkit-outer-spin-button,
+		&::-webkit-inner-spin-button {
+			-webkit-appearance: none;
+			margin: 0;
+		}
+	}
+	
 } // End of mixin
 
 :root {

@@ -105,6 +105,18 @@ const ComputerWizardBrowse = ({ fetchDynamicData, fetchDataAmount, updateDynamic
 		setPage(newPage);
 	};
 
+	const handlePageOverride = (event) => {
+		let pageNum = parseInt(event.target.value, 10);
+
+		if (pageNum < 1) {
+			pageNum = totalPages;
+		}
+		if (pageNum > totalPages) {
+			pageNum = 1;
+		}
+		setPage(pageNum);
+	};
+
 	const handlePartTypeChange = (value) => {
 		setPartName(value);
 		setPage(1);
@@ -422,7 +434,7 @@ const ComputerWizardBrowse = ({ fetchDynamicData, fetchDataAmount, updateDynamic
 	};
 
 
-	const renderPagination = (page, totalPages) => {
+	const renderPagination = () => {
 		return (
 			<>
 				<div className="paginationButtons">
@@ -434,7 +446,15 @@ const ComputerWizardBrowse = ({ fetchDynamicData, fetchDataAmount, updateDynamic
 						<FaAngleLeft />
 					</Button>
 					<h3>
-						{page} / {totalPages}
+						<input
+								type="number"
+								step="1"
+								min="1"
+								max={totalPages}
+								value={page}
+								onChange={handlePageOverride}
+								className="pagination-override"
+							/> / {totalPages}
 					</h3>
 					<Button onClick={() => handlePageChange(page + 1)} disabled={page === totalPages}>
 						<FaAngleRight />
@@ -649,7 +669,7 @@ const ComputerWizardBrowse = ({ fetchDynamicData, fetchDataAmount, updateDynamic
 			{renderPartDeletion()}
 			{searchButton()}
 			{renderSearch()}
-			{renderPagination(page, totalPages)}
+			{renderPagination()}
 			<Table responsive="md" hover bordered className="table-striped">
 				<thead>
 					<tr>

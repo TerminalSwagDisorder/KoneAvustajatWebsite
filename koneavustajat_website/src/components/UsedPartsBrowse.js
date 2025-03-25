@@ -125,6 +125,18 @@ const UsedPartsBrowse = ({ fetchDynamicData, fetchDataAmount, postDynamicData, u
 		setPage(newPage);
 	};
 
+	const handlePageOverride = (event) => {
+		let pageNum = parseInt(event.target.value, 10);
+
+		if (pageNum < 1) {
+			pageNum = totalPages;
+		}
+		if (pageNum > totalPages) {
+			pageNum = 1;
+		}
+		setPage(pageNum);
+	};
+
 	const handleSelectPart = (part, operation) => {
 		setFormFields({});
 		setCurrentOperation(operation);
@@ -711,20 +723,38 @@ const renderAddForm = () => {
 	}
 };
 
-	const renderPagination = (page, totalPages) => {
+	const renderPagination = () => {
 		return (
 			<>
-			<div className="paginationButtons">
-				<Button onClick={() => handlePageChange(1)} disabled={page === 1}><FaAngleDoubleLeft /></Button>
+				<div className="paginationButtons">
+					<Button onClick={() => handlePageChange(1)} disabled={page === 1}>
+						<FaAngleDoubleLeft />
+					</Button>
 
-				<Button onClick={() => handlePageChange(page - 1)} disabled={page === 1}><FaAngleLeft /></Button>
-				<h3>{page} / {totalPages}</h3>
-				<Button onClick={() => handlePageChange(page + 1)} disabled={page === totalPages}><FaAngleRight /></Button>
+					<Button onClick={() => handlePageChange(page - 1)} disabled={page === 1}>
+						<FaAngleLeft />
+					</Button>
+					<h3>
+						<input
+								type="number"
+								step="1"
+								min="1"
+								max={totalPages}
+								value={page}
+								onChange={handlePageOverride}
+								className="pagination-override"
+							/> / {totalPages}
+					</h3>
+					<Button onClick={() => handlePageChange(page + 1)} disabled={page === totalPages}>
+						<FaAngleRight />
+					</Button>
 
-				<Button onClick={() => handlePageChange(totalPages)} disabled={page === totalPages}><FaAngleDoubleRight /></Button>
-			</div>
+					<Button onClick={() => handlePageChange(totalPages)} disabled={page === totalPages}>
+						<FaAngleDoubleRight />
+					</Button>
+				</div>
 			</>
-		)
+		);
 	};
 
 	const renderParts = () => {
@@ -765,7 +795,7 @@ const renderAddForm = () => {
 		{renderAddForm()}
 		{searchButton()}
 		{renderSearch()}
-		{renderPagination(page, totalPages)}
+		{renderPagination()}
 		<Table responsive="md" hover bordered className="table-striped">
 			<thead>
 				<tr>

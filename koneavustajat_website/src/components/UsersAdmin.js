@@ -83,6 +83,18 @@ const UsersAdmin = ({ fetchDynamicData, fetchDataAmount, fetchSearchData, update
 		setPage(newPage);
 	};
 
+	const handlePageOverride = (event) => {
+		let pageNum = parseInt(event.target.value, 10);
+
+		if (pageNum < 1) {
+			pageNum = totalPages;
+		}
+		if (pageNum > totalPages) {
+			pageNum = 1;
+		}
+		setPage(pageNum);
+	};
+
 	// Use useEffect to fetch data on component mount
 	useEffect(() => {
 		fetchData();
@@ -251,7 +263,7 @@ const UsersAdmin = ({ fetchDynamicData, fetchDataAmount, fetchSearchData, update
 		}
 	};
 
-	const renderPagination = (page, totalPages) => {
+	const renderPagination = () => {
 		return (
 			<>
 				<div className="paginationButtons">
@@ -263,7 +275,15 @@ const UsersAdmin = ({ fetchDynamicData, fetchDataAmount, fetchSearchData, update
 						<FaAngleLeft />
 					</Button>
 					<h3>
-						{page} / {totalPages}
+						<input
+								type="number"
+								step="1"
+								min="1"
+								max={totalPages}
+								value={page}
+								onChange={handlePageOverride}
+								className="pagination-override"
+							/> / {totalPages}
 					</h3>
 					<Button onClick={() => handlePageChange(page + 1)} disabled={page === totalPages}>
 						<FaAngleRight />
@@ -710,7 +730,7 @@ const UsersAdmin = ({ fetchDynamicData, fetchDataAmount, fetchSearchData, update
 			{renderAddUserForm()}
 			{renderConfirmation()}
 			{renderUserModification()}
-			{renderPagination(page, totalPages)}
+			{renderPagination()}
 			<h1>Manage Users</h1>
 			<Table responsive="md" hover bordered className="table-striped">
 				<thead>
