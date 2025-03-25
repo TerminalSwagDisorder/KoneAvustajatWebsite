@@ -13,7 +13,7 @@ import {
 	Tooltip,
 	Image
 } from "react-bootstrap";
-import { FaChevronUp, FaChevronDown } from "react-icons/fa";
+import { FaChevronUp, FaChevronDown, FaAngleDoubleLeft, FaAngleDoubleRight, FaAngleLeft, FaAngleRight } from "react-icons/fa";
 import { useAuth, useError } from "../utils/Contexts";
 import DOMPurify from "dompurify";
 
@@ -359,21 +359,21 @@ const EmailTransactionsAdmin = ({ fetchDynamicData, fetchDataAmount, fetchSearch
 			<>
 				<div className="paginationButtons">
 					<Button onClick={() => handlePageChange(1)} disabled={page === 1}>
-						First page
+						<FaAngleDoubleLeft />
 					</Button>
 
 					<Button onClick={() => handlePageChange(page - 1)} disabled={page === 1}>
-						Previous page
+						<FaAngleLeft />
 					</Button>
 					<h3>
 						{page} / {totalPages}
 					</h3>
 					<Button onClick={() => handlePageChange(page + 1)} disabled={page === totalPages}>
-						Next page
+						<FaAngleRight />
 					</Button>
 
 					<Button onClick={() => handlePageChange(totalPages)} disabled={page === totalPages}>
-						Last page
+						<FaAngleDoubleRight />
 					</Button>
 				</div>
 			</>

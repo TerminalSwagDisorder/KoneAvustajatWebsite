@@ -6,7 +6,7 @@ import { useSelector, useDispatch } from "react-redux";
 import { addToShoppingCart, removeFromShoppingCart, clearShoppingCart } from "../redux/shoppingCartSlice";
 import { addToCompletedBuild, removeFromCompletedBuild, clearCompletedBuild } from "../redux/wizardSlice";
 import { useAuth, useError } from "../utils/Contexts";
-import { FaChevronUp, FaChevronDown } from "react-icons/fa";
+import { FaChevronUp, FaChevronDown, FaAngleDoubleLeft, FaAngleDoubleRight, FaAngleLeft, FaAngleRight } from "react-icons/fa";
 
 const UsedPartsBrowse = ({ fetchDynamicData, fetchDataAmount, postDynamicData, updateDynamicData, fetchSearchData, deleteDynamicData }) => {
     const { displayError } = useError();
@@ -715,13 +715,13 @@ const renderAddForm = () => {
 		return (
 			<>
 			<div className="paginationButtons">
-				<Button onClick={() => handlePageChange(1)} disabled={page === 1}>First page</Button>
+				<Button onClick={() => handlePageChange(1)} disabled={page === 1}><FaAngleDoubleLeft /></Button>
 
-				<Button onClick={() => handlePageChange(page - 1)} disabled={page === 1}>Previous page</Button>
+				<Button onClick={() => handlePageChange(page - 1)} disabled={page === 1}><FaAngleLeft /></Button>
 				<h3>{page} / {totalPages}</h3>
-				<Button onClick={() => handlePageChange(page + 1)} disabled={page === totalPages}>Next page</Button>
+				<Button onClick={() => handlePageChange(page + 1)} disabled={page === totalPages}><FaAngleRight /></Button>
 
-				<Button onClick={() => handlePageChange(totalPages)} disabled={page === totalPages}>Last page</Button>
+				<Button onClick={() => handlePageChange(totalPages)} disabled={page === totalPages}><FaAngleDoubleRight /></Button>
 			</div>
 			</>
 		)
