@@ -36,10 +36,12 @@ stripe trigger payment_intent.payment_failed
 -Email transactions -> disable link clicking x
 -Add backup to rate limiter in case redis is not online x
 -Add a way to dismiss payment form, also look at the form color scheme x
+-Add a manual pagination input x
 
 -Secure routes with sensitive data (eg. /api/orders)
 -Set up CMS texts
 -Clean up react warnings
+-Add contact & about us page
 -Separate server functions from server routes (optional, later)
 -Redis caching (optional, later)
 -Externalize some functions (Handleinputchange, handlesubmit, fetchdata etc) (optional, later)
