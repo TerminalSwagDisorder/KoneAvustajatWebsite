@@ -6007,10 +6007,11 @@ app.get("/api/text-content/identifiers", async (req, res) => {
 app.patch("/api/text-content/delete/:id", rateLimitRoute(adminDataManipulationRateLimiter), idValidator, authenticateAdmin, async (req, res) => {
 	console.log("API delete content accessed");
 	
+	const userId = req.user.UserID;
 	const id = req.validatedId;
-	const sql = `UPDATE content SET Status = 'deleted' WHERE ContentID = ?`;
+	const sql = `UPDATE content SET Status = ?, Last_Edited_By = ? WHERE ContentID = ?`;
 	try {
-		const [content] = await promisePool.query(sql, [id]);
+		const [content] = await promisePool.query(sql, ["deleted", parseInt(userId), id]);
 		if (content.affectedRows === 0) {
 			return res.status(404).json({ message: "Content not found" });
 		}
@@ -6024,6 +6025,7 @@ app.patch("/api/text-content/delete/:id", rateLimitRoute(adminDataManipulationRa
 
 app.patch("/api/text-content/update/:id", rateLimitRoute(adminDataManipulationRateLimiter), authenticateAdmin, idValidator, formFieldsValidator(contentSchema), async (req, res) => {
 	console.log("API patch content accessed");
+	const userId = req.user.UserID;
 	const id = req.validatedId;
 	const jsonFormFields = req.validatedForm;
 	const allowedFieldsSql = `SELECT DISTINCT column_name FROM information_schema.columns WHERE table_name IN ('content') AND table_schema = '${process.env.DB_NAME}';`;
@@ -6060,6 +6062,10 @@ app.patch("/api/text-content/update/:id", rateLimitRoute(adminDataManipulationRa
 		}
 
 		updateQuery += ", Version = Version + 1 ";
+
+		updateQuery += ", Last_Edited_By = ? ";
+		queryParams.push(parseInt(userId));
+
 		
 		updateQuery += " WHERE ContentID = ?";
 		queryParams.push(parseInt(id));
@@ -6079,6 +6085,7 @@ app.patch("/api/text-content/update/:id", rateLimitRoute(adminDataManipulationRa
 
 app.patch("/api/text-content/update", rateLimitRoute(adminDataManipulationRateLimiter), authenticateAdmin, formFieldsValidator(contentSchema), async (req, res) => {
 	console.log("API patch content accessed");
+	const userId = req.user.UserID;
 	const jsonFormFields = req.validatedForm;
 	const allowedFieldsSql = `SELECT DISTINCT column_name FROM information_schema.columns WHERE table_name IN ('content') AND table_schema = '${process.env.DB_NAME}';`;
 	const searchKeys = ["Site_Identifier", "Language", "Version"];
@@ -6120,6 +6127,9 @@ app.patch("/api/text-content/update", rateLimitRoute(adminDataManipulationRateLi
 		}
 		
 		updateQuery += ", Version = Version + 1 ";
+
+		updateQuery += ", Last_Edited_By = ? ";
+		queryParams.push(parseInt(userId));
 
 		updateQuery += " WHERE Site_Identifier = ?";
 		queryParams.push(jsonFormFields.Site_Identifier);
