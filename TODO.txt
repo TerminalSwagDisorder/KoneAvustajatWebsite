@@ -40,6 +40,8 @@ stripe trigger payment_intent.payment_failed
 
 -Secure routes with sensitive data (eg. /api/orders)
 -Set up CMS texts
+-computerwizard/wizard -> add loading when fetching build
+-Set up custom confirmation prompts (could use error handler) (use in eg computerwizard/wizard)
 -Clean up react warnings
 -Add contact & about us page
 -Separate server functions from server routes (optional, later)
