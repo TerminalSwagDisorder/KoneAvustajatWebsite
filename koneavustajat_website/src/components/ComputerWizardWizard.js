@@ -2,9 +2,12 @@ import React, { useState, useEffect } from "react";
 import { useSelector, useDispatch } from "react-redux";
 import { addToWizard, removeFromWizard, clearWizard, addToCompletedBuild } from "../redux/wizardSlice";
 import { Form, Button, InputGroup, Dropdown, DropdownButton, Container, Row, Col, Image, CloseButton, ListGroup, Alert } from "react-bootstrap";
+import { FaChevronDown, FaChevronUp } from "react-icons/fa";
 import { useError } from "../utils/Contexts";
+import { useRenderContent } from "../utils/ContentUtils";
 
 const ComputerWizardWizard = ({ wizardAlgorithm }) => {
+	const renderContent = useRenderContent();
 	const { displayError } = useError();
 	const [currentOperation, setCurrentOperation] = useState("wizard");
 	const [formFields, setFormFields] = useState({
@@ -61,7 +64,7 @@ const ComputerWizardWizard = ({ wizardAlgorithm }) => {
 	};
 
     const handleAddToCompletedBuild = () => {
-		if (window.confirm("Are you sure, this will overwrite your existing build!") == false) {
+		if (window.confirm(renderContent("computerwizard/wizard.prompt.confirmation", "Are you sure, this will overwrite your existing build!")) == false) {
 			return false;
 		} 
 		console.log("wizardEntries", wizardEntries);
@@ -81,7 +84,7 @@ const ComputerWizardWizard = ({ wizardAlgorithm }) => {
     };
 	
 	const fetchRandomizedBuild = async (formFields) => {
-		if (window.confirm("Are you sure, this will overwrite your existing build!") == false) {
+		if (window.confirm(renderContent("computerwizard/wizard.prompt.confirmation", "Are you sure, this will overwrite your existing build!")) == false) {
 			return false;
 		} 
 		const randomBuild = await wizardAlgorithm(formFields);
@@ -183,7 +186,7 @@ const ComputerWizardWizard = ({ wizardAlgorithm }) => {
 	const clearWizardButton = () => {
 		if (wizardEntries && wizardEntries.length > 0) {
 			return (
-				<Button onClick={() => handleClearWizard()}>Clear</Button>
+				<Button onClick={() => handleClearWizard()}>{renderContent("computerwizard/wizard.clear.buttonclear", "Clear")}</Button>
 			)
 			
 		}
@@ -193,7 +196,7 @@ const ComputerWizardWizard = ({ wizardAlgorithm }) => {
     	if (wizardEntries && wizardEntries.length > 0) {
     		return (
     			<ListGroup className="wizard-details">
-    				<h3>Wizard build</h3>
+    				<h3>{renderContent("computerwizard/wizard.wizardbuild.title", "Wizard build")}</h3>
     				{wizardEntries.map(([wizardKey, wizardVal]) => (
     					<ListGroup.Item key={wizardKey}>
     						<p>
@@ -203,22 +206,22 @@ const ComputerWizardWizard = ({ wizardAlgorithm }) => {
 										<ListGroup.Item
 											onClick={() => toggleChoosePart(wizardVal[key].Name)}
 											key={key}>
-											{key}: {wizardVal[key].Name || "None"}
+											{renderContent(`computerwizard/wizard.wizardbuild.${key}`, `${key}:`)} {wizardVal[key].Name || "None"}
 											{renderAdditionalInfo(wizardVal[key])}
 										</ListGroup.Item>
     							))}
 								<ListGroup.Item>
-									Total price: {wizardVal.totalPrice}€
+									{renderContent("computerwizard/wizard.wizardbuild.totalprice", "Total price:")} {wizardVal.totalPrice}€
 								</ListGroup.Item>
     							<Button
     								className="user-select-button"
     								onClick={() => handleRemoveFromWizard(wizardKey)}>
-    								<span>Remove</span>
+    								<span>{renderContent("computerwizard/wizard.wizardbuild.buttonremove", "Remove")}</span>
     							</Button>
     							<Button
     								className="user-select-button"
     								onClick={() => handleAddToCompletedBuild(wizardKey)}>
-    								<span>Add to build (This will overwrite any existing build)</span>
+    								<span>{renderContent("computerwizard/wizard.wizardbuild.buttonaddtobuild", "Add to build (This will overwrite any existing build)")}</span>
     							</Button>
     						</p>
     					</ListGroup.Item>
@@ -266,23 +269,14 @@ const ComputerWizardWizard = ({ wizardAlgorithm }) => {
     };
 
 	const renderAdvancedButton = () => {
-		if (currentOperation === "wizardAdvanced") {
-			return (
-				<div>
-					<Button className="setWizardAdvanced" onClick={() => handleComputerWizardForm("wizard")}>
-						Advanced ▲
-					</Button>
-				</div>
-			);
-		} else {
-			return (
-				<div>
-					<Button className="setWizardAdvanced" onClick={() => handleComputerWizardForm("wizardAdvanced")}>
-						Advanced ▼
-					</Button>
-				</div>
-			);
-		}
+		return (
+			<div>
+				<Button className="setWizardAdvanced" onClick={() => handleComputerWizardForm(currentOperation === "wizardAdvanced" ? "wizard" : "wizardAdvanced")}>
+					{renderContent("computerwizard/wizard.wizard.buttonadvanced", "Advanced")} {currentOperation === "wizardAdvanced" ? <FaChevronUp /> : <FaChevronDown />}
+				</Button>
+			</div>
+		);
+
 	};
 
 	const renderComputerWizard = () => {
@@ -336,16 +330,16 @@ const ComputerWizardWizard = ({ wizardAlgorithm }) => {
 						<div className="d-flex justify-content-end mb-3">
 							<CloseButton onClick={closeForm} />
 						</div>
-						<h2>Computer Wizard</h2>
+						<h2>{renderContent("computerwizard/wizard.wizard.title", "Computer Wizard")}</h2>
 						<Alert variant="warning" className="wizardNotice">
-							<b>Notice</b>: Depending on your wizard settings, some builds may not populate all parts. <br />
-							Certain combinations of preferences might result in incomplete builds due to compatibility or availability limits.
+							<b>{renderContent("computerwizard/wizard.wizard.notice", "Notice:")}</b> {renderContent("computerwizard/wizard.wizard.noticetext1", "Depending on your wizard settings, some builds may not populate all parts.")} <br />
+							{renderContent("computerwizard/wizard.wizard.noticetext2", "Certain combinations of preferences might result in incomplete builds due to compatibility or availability limits.")}
 						</Alert>
 						<br />
 
 						{/* Max Price Field */}
 						<Form.Group controlId="price">
-							<Form.Label>Max price (500-5000):</Form.Label>
+							<Form.Label>{renderContent("computerwizard/wizard.wizard.maxprice", "Max price (500-5000):")}</Form.Label>
 							<Form.Control
 								type="number"
 								name="price"
@@ -361,14 +355,14 @@ const ComputerWizardWizard = ({ wizardAlgorithm }) => {
 
 						{/* Use Case Field */}
 						<Form.Group controlId="useCase">
-							<Form.Label>Use case:</Form.Label>
+							<Form.Label>{renderContent("computerwizard/wizard.wizard.usecase", "Use case:")}</Form.Label>
 							<Form.Control
 								as="select"
 								name="useCase"
 								value={formFields.useCase}
 								onChange={handleInputChange}>
 								{(Object.entries(formMapping.useCase).map(([key, value]) =>
-									<option value={key}>{value}</option>
+									<option value={key}>{renderContent(`computerwizard/wizard.wizard.choiceuseCase_${key}`, value)}</option>
 							 		)
 								)}
 							</Form.Control>
@@ -377,14 +371,14 @@ const ComputerWizardWizard = ({ wizardAlgorithm }) => {
 
 						{/* Performance Preference */}
 						<Form.Group controlId="performancePreference">
-							<Form.Label>Performance preference:</Form.Label>
+							<Form.Label>{renderContent("computerwizard/wizard.wizard.performancepreference", "Performance preference:")}</Form.Label>
 							<Form.Control
 								as="select"
 								name="performancePreference"
 								value={formFields.performancePreference}
 								onChange={handleInputChange}>
 								{(Object.entries(formMapping.performancePreference).map(([key, value]) =>
-									<option value={key}>{value}</option>
+									<option value={key}>{renderContent(`computerwizard/wizard.wizard.choiceperformancePreference_${key}`, value)}</option>
 							 		)
 								)}
 							</Form.Control>
@@ -393,14 +387,14 @@ const ComputerWizardWizard = ({ wizardAlgorithm }) => {
 
 						{/* Form Factor */}
 						<Form.Group controlId="formFactor">
-							<Form.Label>Size preference:</Form.Label>
+							<Form.Label>{renderContent("computerwizard/wizard.wizard.sizepreference", "Size preference:")}</Form.Label>
 							<Form.Control
 								as="select"
 								name="formFactor"
 								value={formFields.formFactor}
 								onChange={handleInputChange}>
 								{(Object.entries(formMapping.formFactor).map(([key, value]) =>
-									<option value={key}>{value}</option>
+									<option value={key}>{renderContent(`computerwizard/wizard.wizard.choiceformFactor_${key}`, value)}</option>
 							 		)
 								)}
 							</Form.Control>
@@ -409,14 +403,14 @@ const ComputerWizardWizard = ({ wizardAlgorithm }) => {
 
 						{/* Color Preference */}
 						<Form.Group controlId="colorPreference">
-							<Form.Label>Color preference:</Form.Label>
+							<Form.Label>{renderContent("computerwizard/wizard.wizard.colorpreference", "Color preference:")}</Form.Label>
 							<Form.Control
 								as="select"
 								name="colorPreference"
 								value={formFields.colorPreference}
 								onChange={handleInputChange}>
 								{(Object.entries(formMapping.colorPreference).map(([key, value]) =>
-									<option value={key}>{value}</option>
+									<option value={key}>{renderContent(`computerwizard/wizard.wizard.choicecolorPreference_${key}`, value)}</option>
 							 		)
 								)}
 							</Form.Control>
@@ -424,7 +418,7 @@ const ComputerWizardWizard = ({ wizardAlgorithm }) => {
 							<Form.Control
 								type="text"
 								name="otherColor"
-								placeholder="Choose any other color"
+								placeholder={renderContent("computerwizard/wizard.wizard.inputchoosecolor", "Choose any other color")}
 								value={formFields.otherColor}
 								onChange={handleInputChange}
 								disabled={formFields.colorPreference !== "other"}
@@ -434,14 +428,14 @@ const ComputerWizardWizard = ({ wizardAlgorithm }) => {
 
 						{/* RGB Preference */}
 						<Form.Group controlId="rgbPreference">
-							<Form.Label>RGB lighting preference:</Form.Label>
+							<Form.Label>{renderContent("computerwizard/wizard.wizard.rgbpreference", "RGB lighting preference:")}</Form.Label>
 							<Form.Control
 								as="select"
 								name="rgbPreference"
 								value={formFields.rgbPreference}
 								onChange={handleInputChange}>
 								{(Object.entries(formMapping.rgbPreference).map(([key, value]) =>
-									<option value={key}>{value}</option>
+									<option value={key}>{renderContent(`computerwizard/wizard.wizard.choicergbPreference_${key}`, value)}</option>
 							 		)
 								)}
 							</Form.Control>
@@ -454,10 +448,10 @@ const ComputerWizardWizard = ({ wizardAlgorithm }) => {
 						<br />
 
 						<Button variant="primary" type="submit">
-							Build computer!
+							{renderContent("computerwizard/wizard.wizard.buttonbuildcomputer", "Build computer!")}
 						</Button>
 						<Button variant="primary" onClick={() => clearForm()}>
-							Clear settings
+							{renderContent("computerwizard/wizard.wizard.buttonclear", "Clear settings")}
 						</Button>
 					</Form>
 				</Container>
@@ -465,7 +459,7 @@ const ComputerWizardWizard = ({ wizardAlgorithm }) => {
 		} else {
 			return (
 				<Container className="userCredentialChange">
-					<Button onClick={() => handleComputerWizardForm("wizard")}>Start to build a computer!</Button>
+					<Button onClick={() => handleComputerWizardForm("wizard")}>{renderContent("computerwizard/wizard.start.buttonstart", "Start to build a computer!")}</Button>
 				</Container>
 			);
 		}
@@ -511,14 +505,14 @@ const ComputerWizardWizard = ({ wizardAlgorithm }) => {
 			return (
 				<div>
 					<Form.Group controlId="cpuManufacturer">
-						<Form.Label>CPU Manufacturer:</Form.Label>
+						<Form.Label>{renderContent("computerwizard/wizard.wizard.cpupreference", "CPU Manufacturer:")}</Form.Label>
 						<Form.Control
 							as="select"
 							name="cpuManufacturer"
 							value={formFields.cpuManufacturer}
 							onChange={handleInputChange}>
 							{(Object.entries(formMapping.cpuManufacturer).map(([key, value]) =>
-								<option value={key}>{value}</option>
+								<option value={key}>{renderContent(`computerwizard/wizard.wizard.choicecpuManufacturer_${key}`, value)}</option>
 								)
 							)}
 						</Form.Control>
@@ -526,14 +520,14 @@ const ComputerWizardWizard = ({ wizardAlgorithm }) => {
 					<br />
 
 					<Form.Group controlId="gpuManufacturer">
-						<Form.Label>GPU Manufacturer:</Form.Label>
+						<Form.Label>{renderContent("computerwizard/wizard.wizard.gpupreference", "GPU Manufacturer:")}</Form.Label>
 						<Form.Control
 							as="select"
 							name="gpuManufacturer"
 							value={formFields.gpuManufacturer}
 							onChange={handleInputChange}>
 							{(Object.entries(formMapping.gpuManufacturer).map(([key, value]) =>
-								<option value={key}>{value}</option>
+								<option value={key}>{renderContent(`computerwizard/wizard.wizard.choicegpuManufacturer_${key}`, value)}</option>
 								)
 							)}
 						</Form.Control>
@@ -541,14 +535,14 @@ const ComputerWizardWizard = ({ wizardAlgorithm }) => {
 					<br />
 
 					<Form.Group controlId="psuBias">
-						<Form.Label>Power supply bias:</Form.Label>
+						<Form.Label>{renderContent("computerwizard/wizard.wizard.psupreference", "Power supply bias:")}</Form.Label>
 						<Form.Control
 							as="select"
 							name="psuBias"
 							value={formFields.psuBias}
 							onChange={handleInputChange}>
 							{(Object.entries(formMapping.psuBias).map(([key, value]) =>
-								<option value={key}>{value}</option>
+								<option value={key}>{renderContent(`computerwizard/wizard.wizard.choicepsuBias_${key}`, value)}</option>
 								)
 							)}
 						</Form.Control>
@@ -556,14 +550,14 @@ const ComputerWizardWizard = ({ wizardAlgorithm }) => {
 					<br />
 
 					<Form.Group controlId="storageBias">
-						<Form.Label>Storage bias:</Form.Label>
+						<Form.Label>{renderContent("computerwizard/wizard.wizard.storagepreference", "Storage bias:")}</Form.Label>
 						<Form.Control
 							as="select"
 							name="storageBias"
 							value={formFields.storageBias}
 							onChange={handleInputChange}>
 							{(Object.entries(formMapping.storageBias).map(([key, value]) =>
-								<option value={key}>{value}</option>
+								<option value={key}>{renderContent(`computerwizard/wizard.wizard.choicestorageBias_${key}`, value)}</option>
 								)
 							)}
 						</Form.Control>
@@ -571,26 +565,26 @@ const ComputerWizardWizard = ({ wizardAlgorithm }) => {
 					<br />
 
 					<Form.Group>
-						<Form.Label>Additional storage:</Form.Label>
+						<Form.Label>{renderContent("computerwizard/wizard.wizard.additionalstorage", "Additional storage:")}</Form.Label>
 							<Form.Control
 								type="text"
 								value=""
-								placeholder="Soon to be added"
+								placeholder={renderContent("computerwizard/wizard.wizard.placeholdersoonadded", "Soon to be added")}
 								disabled
 								readOnly>
 							</Form.Control>
 					</Form.Group>
-					{false && ( // Hide until it is actually used3
+					{false && ( // Hide until it is actually used
 					 	<>
 						<Form.Group controlId="additionalStorage">
-							<Form.Label>Additional storage:</Form.Label>
+							<Form.Label>{renderContent("computerwizard/wizard.wizard.additionalstorage", "Additional storage:")}</Form.Label>
 							<Form.Control
 								as="select"
 								name="additionalStorage"
 								value={formFields.additionalStorage}
 								onChange={handleInputChange}>
 								{(Object.entries(formMapping.additionalStorage).map(([key, value]) =>
-									<option value={key}>{value}</option>
+									<option value={key}>{renderContent(`computerwizard/wizard.wizard.choiceadditionalStorage_${key}`, value)}</option>
 									)
 								)}
 							</Form.Control>
