@@ -462,14 +462,16 @@ export const fetchWholeContent = async (identifiers) => {
 
 		const data = await response.json();
 
-		if (data.contentMap && data.content) {
-			data.content.forEach((item) => {
+		const checkPublish = data.content.some((item) => item.Status !== "published");
+
+		if (data.contentMap && data.content && checkPublish) {
+			for (const item of data.content) {
 				if (item.Status !== "published") {
 					if (data.contentMap[item.Site_Identifier]) {
 						data.contentMap[item.Site_Identifier][item.Language] = "Content is not published";
 					}
 				}
-			});
+			}
 		}
 		
 		const sanitizedData = sanitizeData(data);

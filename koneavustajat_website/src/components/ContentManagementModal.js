@@ -192,16 +192,6 @@ const ContentManagementModal = ({ fetchWholeContent, fetchContentIdentifiers, ad
 				const success = await addContent(formFields);
 				if (success) {
 					displayError(success.message, "success");
-					closeModal();
-					setFormFields({
-						Site_Identifier: mode === "add" ? (location.pathname === "/" ? "home" : location.pathname.slice(1)) : "",
-						Identifiers: { page: location.pathname === "/" ? "home" : location.pathname.slice(1), section: "", specific: "" },
-						Main_Tag: "p",
-						Content_Text: "",
-						Content_Type: "site_text", 
-						Status: "",
-						//Language: language
-						});
 				}
 			}
 
@@ -214,23 +204,26 @@ const ContentManagementModal = ({ fetchWholeContent, fetchContentIdentifiers, ad
 				const success = await updateContent(formFields);
 				if (success) {
 					displayError(success.message, "success");
-					console.log(success);
-					if (identifiers[0].startsWith(location.pathname === "/" ? "home" : location.pathname.slice(1))) {
-						await fetchPageContent({ page: identifiers[0] });
-					}
+				}
+				if (success && identifiers[0].startsWith(location.pathname === "/" ? "home" : location.pathname.slice(1))) {
+					await fetchPageContent({ page: identifiers[0] }); // Fetch content to be rendered
 
-					closeModal();
-					setFormFields({
-						Site_Identifier: "",
-						Identifiers: { page: "", section: "", specific: "" },
-						Main_Tag: "p",
-						Content_Text: "",
-						Content_Type: "site_text", 
-						Status: ""});
+					const data = await fetchWholeContent({ page: identifiers[0], section: identifiers[1], specific: identifiers[2] }); // Fetch content for updated item, in modal
+					if (Array.isArray(data)) setWholeContent(data);
 				}
 			}
-			
+
+			closeModal();
 			setLanguageOverride(language || "");
+			setFormFields({
+				Site_Identifier: mode === "add" ? (location.pathname === "/" ? "home" : location.pathname.slice(1)) : "",
+				Identifiers: { page: location.pathname === "/" ? "home" : location.pathname.slice(1), section: "", specific: "" },
+				Main_Tag: "p",
+				Content_Text: "",
+				Content_Type: "site_text", 
+				Status: "",
+				//Language: language
+				});
 				
 		} catch (error) {
 			console.error(error);
