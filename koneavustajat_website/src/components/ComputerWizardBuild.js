@@ -4,8 +4,10 @@ import { Container, Button, Image, CloseButton, ListGroup } from "react-bootstra
 import { addToWizard, removeFromWizard, clearWizard, addToCompletedBuild, removeFromCompletedBuild, clearCompletedBuild } from "../redux/wizardSlice";
 import { addToShoppingCart } from "../redux/shoppingCartSlice";
 import { useError } from "../utils/Contexts";
+import { useRenderContent } from "../utils/ContentUtils";
 
 const ComputerWizardBuild = () => {
+	const renderContent = useRenderContent();
 	const { displayError } = useError();
     const wizard = useSelector((state) => state.wizard.wizard);
     const completedBuild = useSelector((state) => state.wizard.completedBuild);
@@ -122,9 +124,9 @@ const ComputerWizardBuild = () => {
                     {completedBuildEntries.map(([partKey, partVal]) => validParts.includes(partKey) && (
                         <ListGroup.Item onClick={() => toggleChoosePart(partVal.Name)} key={partKey}>
                             <p>
-                                {partKey}: <b>{partVal.Name}</b> | <b>{parseFloat(partVal.Price).toFixed(2)}</b> €
+                                {renderContent(`computerwizard/build.table.${partKey}`, partKey)} <b>{partVal.Name}</b> | <b>{parseFloat(partVal.Price).toFixed(2)}</b> €
                                 <Button className="user-select-button" onClick={() => handleRemoveFromCompletedBuild(partKey)}>
-                                    <span>Remove</span>
+                                    <span>{renderContent("computerwizard/build.table.buttonremove", "Remove")}</span>
                                 </Button>
                                 {renderAdditionalInfo(partVal)}
                             </p>
@@ -133,10 +135,10 @@ const ComputerWizardBuild = () => {
                     <ListGroup.Item>
                         {(totalPrice && totalPrice > 0) ? (
                             <p>
-                                Total price: <b>{totalPrice}</b> €
+                                {renderContent("computerwizard/build.table.totalprice", "Total price:")} <b>{totalPrice}</b> €
                             </p>
                         ) : (
-                            <p>No price could be calculated!</p>
+                            <p>{renderContent("computerwizard/build.table.noprice", "No price could be calculated!")}</p>
                         )}
                     </ListGroup.Item>
                 </ListGroup>
@@ -145,7 +147,7 @@ const ComputerWizardBuild = () => {
             return (
             <ListGroup className="completedBuild-details">
                 <ListGroup.Item>
-                    <p>No parts chosen!</p>
+                    <p>{renderContent("computerwizard/build.table.noparts", "No parts chosen!")}</p>
                 </ListGroup.Item>
             </ListGroup>
             );
@@ -154,12 +156,12 @@ const ComputerWizardBuild = () => {
 
     return (
         <div>
-            <h3>Computer build</h3>
+            <h3>{renderContent("computerwizard/build.body.title", "Computer build")}</h3>
             <Button className="user-select-button" onClick={() => handleClearCompletedBuild()}>
-                Clear Build
+                {renderContent("computerwizard/build.body.buttonclear", "Clear Build")}
             </Button>
             <Button className="user-select-button" onClick={() => handleAddToCart()}>
-                Add to cart
+                {renderContent("computerwizard/build.body.buttonaddtocart", "Add to cart")}
             </Button>
             <br />
             <br />
