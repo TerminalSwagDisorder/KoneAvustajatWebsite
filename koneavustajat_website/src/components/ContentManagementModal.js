@@ -191,6 +191,7 @@ const ContentManagementModal = ({ fetchWholeContent, fetchContentIdentifiers, ad
 				formFields.Language = formFields.Language || languageOverride || language;
 				const success = await addContent(formFields);
 				if (success) {
+					closeModal();
 					displayError(success.message, "success");
 				}
 			}
@@ -203,6 +204,7 @@ const ContentManagementModal = ({ fetchWholeContent, fetchContentIdentifiers, ad
 
 				const success = await updateContent(formFields);
 				if (success) {
+					closeModal();
 					displayError(success.message, "success");
 				}
 				if (success && identifiers[0].startsWith(location.pathname === "/" ? "home" : location.pathname.slice(1))) {
@@ -213,7 +215,6 @@ const ContentManagementModal = ({ fetchWholeContent, fetchContentIdentifiers, ad
 				}
 			}
 
-			closeModal();
 			setLanguageOverride(language || "");
 			setFormFields({
 				Site_Identifier: mode === "add" ? (location.pathname === "/" ? "home" : location.pathname.slice(1)) : "",
