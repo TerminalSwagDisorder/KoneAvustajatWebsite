@@ -37,8 +37,9 @@ stripe trigger payment_intent.payment_failed
 -Add backup to rate limiter in case redis is not online x
 -Add a way to dismiss payment form, also look at the form color scheme x
 -Add a manual pagination input x
+-integrity test -> add a new entry to text-content that has the same uniqueness as another entry, except a different version -> if fucks up see to change uniqueness to only S_I + Lang x
 
--integrity test -> add a new entry to text-content that has the same uniqueness as another entry, except a different version -> if fucks up see to change uniqueness to only S_I + Lang
+-Add true versioning to cms
 -Secure routes with sensitive data (eg. /api/orders)
 -Set up CMS texts
 -computerwizard/wizard -> add loading when fetching build
@@ -48,6 +49,7 @@ stripe trigger payment_intent.payment_failed
 -Separate server functions from server routes (optional, later)
 -Redis caching (optional, later)
 -Externalize some functions (Handleinputchange, handlesubmit, fetchdata etc) (optional, later)
+-Utilize cms true versioning somehow, in modal or some admin page (optional, later)
 
 
 Condensed: Finish admin pages, finish up cms, qol & bug fixes
