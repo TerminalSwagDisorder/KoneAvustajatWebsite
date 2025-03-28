@@ -81,8 +81,6 @@ export const fetchDynamicData = async (page, tableName, partName = "", orderBy =
 
 		const query = await buildQuery(correctSearchTerms, true);
 		
-		console.log("query", query)
-		
 		const response = await fetch(`${apiUrl}/api/${tableName}?${query}`, {
 			method: "GET",
 			credentials: "include", // Important, because we're using cookies
@@ -560,12 +558,12 @@ export const updateContent = async (formFields) => {
 		};
 		console.log("Submitting form:", formFields);
 		if (formFields.Site_Identifier === "" || formFields.Language === "") throw new Error("Identifier fields not populated!");
-		await checkAllowedTableNames(["patchroutes"], "text-content/update");
+		await checkAllowedTableNames(["postroutes"], "text-content/update");
 
 		if (formFields && typeof formFields === "object" && !Array.isArray(formFields)) formFields = JSON.stringify(formFields);
 		// api call to register a new user
 		const response = await fetch(`${apiUrl}/api/text-content/update`, {
-			method: "PATCH",
+			method: "POST",
 			headers: {
 				"Content-Type": "application/json"
 			},

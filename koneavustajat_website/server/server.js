@@ -3,7 +3,8 @@
 // Auth: Terminal Swag Disorder
 // Desc: File containing code for server-side, including express-session, jwt & mysql
 
-/*jshint scripturl:true*/
+/* jshint scripturl: true */
+/* globals structuredClone: true */
 
 // General exports
 const express = require("express");
@@ -5956,6 +5957,66 @@ app.get("/api/text-content", routePagination, tableSearch("content"), async (req
 	for (let [column, value] of Object.entries(searchTerms)) {
 		if (!ignoreColumns.includes(column)) {
 			if (searchTerms.strict && searchTerms.strict === true) {
+				searchQuery += ` AND c.${column} ${notOperator}= ?`;
+			} else {
+				value = `%${value}%`;
+				searchQuery += ` AND c.${column} ${notOperator}LIKE ?`;
+			}
+			sqlParams.push(value); // Push values to sqlParams array
+		}
+	}
+
+	sql = `SELECT c.*
+		FROM content c
+		JOIN (
+		  SELECT Site_Identifier, Language, MAX(Version) AS max_version
+		  FROM content
+		  GROUP BY Site_Identifier, Language
+		) AS latest
+		  ON c.Site_Identifier = latest.Site_Identifier
+		  AND c.Language = latest.Language
+		  AND c.Version = latest.max_version
+		  ${searchQuery}
+		`;
+
+	try {
+		const [content] = await promisePool.query(sql, sqlParams);
+
+        const contentMap = {};
+		for (const row of content) {
+			if (!contentMap[row.Site_Identifier]) {
+				contentMap[row.Site_Identifier] = {};
+			}
+			contentMap[row.Site_Identifier][row.Language] = row.Content_Text;
+		}
+
+		return res.status(200).json({content: content, contentMap: contentMap});
+	} catch (error) {
+		const [status, message] = handleServerError(error);
+		return res.status(status).json({ message: message });
+	}
+});
+
+app.get("/api/text-content/all", routePagination, tableSearch("content"), async (req, res) => {
+	console.log("API content accessed");
+
+	const { items, offset } = req.pagination;
+	const searchTerms = req.searchTerms;
+	let sql;
+	let notOperator = "";
+	let sqlParams = [];
+
+	let searchQuery = " WHERE 1=1";
+	
+	if (searchTerms.inverted) {
+		notOperator = searchTerms.strict === true ? "!" : "NOT ";
+	}
+
+	const ignoreColumns = ["orderBy", "strict", "inverted"];
+
+	for (let [column, value] of Object.entries(searchTerms)) {
+		if (!ignoreColumns.includes(column)) {
+			if (searchTerms.strict && searchTerms.strict === true) {
 				searchQuery += ` AND ${column} ${notOperator}= ?`;
 			} else {
 				value = `%${value}%`;
@@ -5966,6 +6027,7 @@ app.get("/api/text-content", routePagination, tableSearch("content"), async (req
 	}
 
 	sql = `SELECT * FROM content ${searchQuery}`;
+
 
 	try {
 		const [content] = await promisePool.query(sql, sqlParams);
@@ -6023,7 +6085,7 @@ app.patch("/api/text-content/delete/:id", rateLimitRoute(adminDataManipulationRa
 	}
 });
 
-app.patch("/api/text-content/update/:id", rateLimitRoute(adminDataManipulationRateLimiter), authenticateAdmin, idValidator, formFieldsValidator(contentSchema), async (req, res) => {
+app.post("/api/text-content/update/:id", rateLimitRoute(adminDataManipulationRateLimiter), authenticateAdmin, idValidator, formFieldsValidator(contentSchema), async (req, res) => {
 	console.log("API patch content accessed");
 	const userId = req.user.UserID;
 	const id = req.validatedId;
@@ -6031,24 +6093,48 @@ app.patch("/api/text-content/update/:id", rateLimitRoute(adminDataManipulationRa
 	const allowedFieldsSql = `SELECT DISTINCT column_name FROM information_schema.columns WHERE table_name IN ('content') AND table_schema = '${process.env.DB_NAME}';`;
 
 	try {
+		const previousVersionSql = `SELECT *
+			FROM content
+			WHERE ContentID = ?
+			ORDER BY Version DESC
+			LIMIT 1`;
+		const [[previousVersion]] = await promisePool.query(previousVersionSql, [parseInt(id)]);
+		
+		if (!previousVersion) {
+			return res.status(404).json({ message: "No content found with specified identifiers!" });
+		}
+		
+		const {
+			ContentID,
+			Site_Identifier,
+			Language,
+			Version,
+			Last_Edited_By,
+			Created_At,
+			Modified_At,
+			...previous
+		} = previousVersion;
+
 		const [allowedColumns] = await promisePool.query(allowedFieldsSql);
 		const allowedFields = allowedColumns.map(item => item.column_name);
 
 		// SQL query to update part data
 		// updateQuery allows for multiple fields to be updated simultaneously
-		let updateQuery = `UPDATE content SET `;
+		let updateQuery = `INSERT INTO content SET `;
 		let queryParams = [];
 
 		// More dynamic way of updating content
 		for (const key in jsonFormFields) {
-			console.log(key);
-			if (allowedFields.includes(key)) {
-				if (jsonFormFields.hasOwnProperty(key)) {
-					if (jsonFormFields[key] !== "") {
-						updateQuery += key.charAt(0).toUpperCase() + key.slice(1) + " = ?, "; // Since the first letters are capitalized in the db
-						queryParams.push(jsonFormFields[key]);
-					}
-				}
+			if (allowedFields.includes(key) && jsonFormFields.hasOwnProperty(key) && jsonFormFields[key] !== "") {
+				updateQuery += key.charAt(0).toUpperCase() + key.slice(1) + " = ?, "; // Since the first letters are capitalized in the db
+				queryParams.push(jsonFormFields[key]);
+			}
+		}
+		
+		for (const key in previous) {
+			if (!jsonFormFields[key]) {
+				updateQuery += `${key} = ?, `;
+				queryParams.push(previous[key]);
 			}
 		}
 
@@ -6061,14 +6147,9 @@ app.patch("/api/text-content/update/:id", rateLimitRoute(adminDataManipulationRa
 			return res.status(400).json({ message: "No valid fields provided for query!" });
 		}
 
-		updateQuery += ", Version = Version + 1 ";
-
-		updateQuery += ", Last_Edited_By = ? ";
+		updateQuery += ",  Version = ?, Last_Edited_By = ? ";
+		queryParams.push(parseInt(Version + 1));
 		queryParams.push(parseInt(userId));
-
-		
-		updateQuery += " WHERE ContentID = ?";
-		queryParams.push(parseInt(id));
 
 		const [result] = await promisePool.query(updateQuery, queryParams);
 		if (result.affectedRows === 0) {
@@ -6083,7 +6164,7 @@ app.patch("/api/text-content/update/:id", rateLimitRoute(adminDataManipulationRa
 	}
 });
 
-app.patch("/api/text-content/update", rateLimitRoute(adminDataManipulationRateLimiter), authenticateAdmin, formFieldsValidator(contentSchema), async (req, res) => {
+app.post("/api/text-content/update", rateLimitRoute(adminDataManipulationRateLimiter), authenticateAdmin, formFieldsValidator(contentSchema), async (req, res) => {
 	console.log("API patch content accessed");
 	const userId = req.user.UserID;
 	const jsonFormFields = req.validatedForm;
@@ -6091,9 +6172,30 @@ app.patch("/api/text-content/update", rateLimitRoute(adminDataManipulationRateLi
 	const searchKeys = ["Site_Identifier", "Language", "Version"];
 
 	try {
-		if (jsonFormFields.Site_Identifier === "" || jsonFormFields.Language === "") {
+		if (!jsonFormFields.Site_Identifier || !jsonFormFields.Language) {
 			return res.status(400).json({ message: "All identifier fields are not filled" });
 		}
+		
+		const previousVersionSql = `SELECT *
+			FROM content
+			WHERE Site_Identifier = ?
+			  AND Language = ?
+			ORDER BY Version DESC
+			LIMIT 1`;
+		const [[previousVersion]] = await promisePool.query(previousVersionSql, [jsonFormFields.Site_Identifier, jsonFormFields.Language]);
+		
+		if (!previousVersion) {
+			return res.status(404).json({ message: "No content found with specified identifiers!" });
+		}
+
+		const {
+			ContentID,
+			Version,
+			Last_Edited_By,
+			Created_At,
+			Modified_At,
+			...previous
+		} = previousVersion;
 
 		const [allowedColumns] = await promisePool.query(allowedFieldsSql);
 		//const allowedFields = allowedColumns.map(item => item.column_name);
@@ -6101,19 +6203,22 @@ app.patch("/api/text-content/update", rateLimitRoute(adminDataManipulationRateLi
 
 		// SQL query to update part data
 		// updateQuery allows for multiple fields to be updated simultaneously
-		let updateQuery = `UPDATE content SET `;
+		let updateQuery = `INSERT INTO content SET `;
 		let queryParams = [];
 
 		// More dynamic way of updating content
 		for (const key in jsonFormFields) {
-			console.log(key);
-			if (allowedFields.includes(key)) {
-				if (jsonFormFields.hasOwnProperty(key)) {
-					if (jsonFormFields[key] !== "") {
-						updateQuery += key.charAt(0).toUpperCase() + key.slice(1) + " = ?, "; // Since the first letters are capitalized in the db
-						queryParams.push(jsonFormFields[key]);
-					}
-				}
+			if (allowedFields.includes(key) && jsonFormFields.hasOwnProperty(key) && jsonFormFields[key] !== "") {
+				updateQuery += key.charAt(0).toUpperCase() + key.slice(1) + " = ?, "; // Since the first letters are capitalized in the db
+				queryParams.push(jsonFormFields[key]);
+			}
+		}
+		
+		const { Site_Identifier, Language, ...rest } = jsonFormFields;
+		for (const key in previous) {
+			if (!rest[key]) {
+				updateQuery += `${key} = ?, `;
+				queryParams.push(previous[key]);
 			}
 		}
 
@@ -6125,22 +6230,10 @@ app.patch("/api/text-content/update", rateLimitRoute(adminDataManipulationRateLi
 		if (queryParams.length === 0) {
 			return res.status(400).json({ message: "No valid fields provided for query!" });
 		}
-		
-		updateQuery += ", Version = Version + 1 ";
 
-		updateQuery += ", Last_Edited_By = ? ";
+		updateQuery += ",  Version = ?, Last_Edited_By = ? ";
+		queryParams.push(parseInt(Version + 1));
 		queryParams.push(parseInt(userId));
-
-		updateQuery += " WHERE Site_Identifier = ?";
-		queryParams.push(jsonFormFields.Site_Identifier);
-
-		updateQuery += " AND Language = ?";
-		queryParams.push(jsonFormFields.Language);
-
-		if (jsonFormFields.Version !== "") {
-			updateQuery += " AND Version = ?";
-			queryParams.push(jsonFormFields.Version);
-		}
 
 		const [result] = await promisePool.query(updateQuery, queryParams);
 		if (result.affectedRows === 0) {
@@ -6155,7 +6248,6 @@ app.patch("/api/text-content/update", rateLimitRoute(adminDataManipulationRateLi
 	}
 });
 
-// Similar way to update, worse than the other way
 app.post("/api/text-content/add", formFieldsValidator(contentSchema), authenticateAdmin, async (req, res) => {
 	console.log("API add content accessed");
 
