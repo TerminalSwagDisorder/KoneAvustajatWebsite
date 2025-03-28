@@ -5936,7 +5936,6 @@ app.patch("/api/users/customers/addresses/update", rateLimitRoute(dataManipulati
 	}
 });
 
-
 app.get("/api/text-content", routePagination, tableSearch("content"), async (req, res) => {
 	console.log("API content accessed");
 
@@ -6066,14 +6065,45 @@ app.get("/api/text-content/identifiers", async (req, res) => {
 	}
 });
 
-app.patch("/api/text-content/delete/:id", rateLimitRoute(adminDataManipulationRateLimiter), idValidator, authenticateAdmin, async (req, res) => {
+app.post("/api/text-content/delete/:id", rateLimitRoute(adminDataManipulationRateLimiter), idValidator, authenticateAdmin, async (req, res) => {
 	console.log("API delete content accessed");
-	
 	const userId = req.user.UserID;
 	const id = req.validatedId;
-	const sql = `UPDATE content SET Status = ?, Last_Edited_By = ? WHERE ContentID = ?`;
+
 	try {
-		const [content] = await promisePool.query(sql, ["deleted", parseInt(userId), id]);
+		const previousVersionSql = `SELECT *
+			FROM content
+			WHERE ContentID = ?
+			ORDER BY Version DESC
+			LIMIT 1`;
+		const [[previousVersion]] = await promisePool.query(previousVersionSql, [parseInt(id)]);
+
+		if (!previousVersion) {
+			return res.status(404).json({ message: "No content found with specified id!" });
+		}
+
+		let updateQuery = `INSERT INTO content SET `;
+		let queryParams = [];
+
+		const {
+			ContentID,
+			Version,
+			Last_Edited_By,
+			Created_At,
+			Modified_At,
+			Status,
+			...previous
+		} = previousVersion;
+
+		for (const key in previous) {
+			updateQuery += ` ${key} = ?, `;
+			queryParams.push(previous[key]);
+		}
+
+		updateQuery += ", Status = ?, Last_Edited_By = ?, Version = ? ";
+		queryParams.push("deleted", parseInt(userId), parseInt(Version + 1));
+
+		const [content] = await promisePool.query(updateQuery, queryParams);
 		if (content.affectedRows === 0) {
 			return res.status(404).json({ message: "Content not found" });
 		}
@@ -6106,8 +6136,6 @@ app.post("/api/text-content/update/:id", rateLimitRoute(adminDataManipulationRat
 		
 		const {
 			ContentID,
-			Site_Identifier,
-			Language,
 			Version,
 			Last_Edited_By,
 			Created_At,
@@ -6131,9 +6159,10 @@ app.post("/api/text-content/update/:id", rateLimitRoute(adminDataManipulationRat
 			}
 		}
 		
+		const { Site_Identifier, Language, ...rest } = jsonFormFields;
 		for (const key in previous) {
-			if (!jsonFormFields[key]) {
-				updateQuery += `${key} = ?, `;
+			if (!rest[key]) {
+				updateQuery += ` ${key} = ?, `;
 				queryParams.push(previous[key]);
 			}
 		}
@@ -6147,9 +6176,8 @@ app.post("/api/text-content/update/:id", rateLimitRoute(adminDataManipulationRat
 			return res.status(400).json({ message: "No valid fields provided for query!" });
 		}
 
-		updateQuery += ",  Version = ?, Last_Edited_By = ? ";
-		queryParams.push(parseInt(Version + 1));
-		queryParams.push(parseInt(userId));
+		updateQuery += ", Version = ?, Last_Edited_By = ? ";
+		queryParams.push(parseInt(Version + 1), parseInt(userId));
 
 		const [result] = await promisePool.query(updateQuery, queryParams);
 		if (result.affectedRows === 0) {
@@ -6217,7 +6245,7 @@ app.post("/api/text-content/update", rateLimitRoute(adminDataManipulationRateLim
 		const { Site_Identifier, Language, ...rest } = jsonFormFields;
 		for (const key in previous) {
 			if (!rest[key]) {
-				updateQuery += `${key} = ?, `;
+				updateQuery += ` ${key} = ?, `;
 				queryParams.push(previous[key]);
 			}
 		}
@@ -6232,8 +6260,7 @@ app.post("/api/text-content/update", rateLimitRoute(adminDataManipulationRateLim
 		}
 
 		updateQuery += ",  Version = ?, Last_Edited_By = ? ";
-		queryParams.push(parseInt(Version + 1));
-		queryParams.push(parseInt(userId));
+		queryParams.push(parseInt(Version + 1), parseInt(userId));
 
 		const [result] = await promisePool.query(updateQuery, queryParams);
 		if (result.affectedRows === 0) {
