@@ -38,8 +38,8 @@ stripe trigger payment_intent.payment_failed
 -Add a way to dismiss payment form, also look at the form color scheme x
 -Add a manual pagination input x
 -integrity test -> add a new entry to text-content that has the same uniqueness as another entry, except a different version -> if fucks up see to change uniqueness to only S_I + Lang x
+-Add true versioning to cms x
 
--Add true versioning to cms
 -Secure routes with sensitive data (eg. /api/orders)
 -Set up CMS texts
 -computerwizard/wizard -> add loading when fetching build
