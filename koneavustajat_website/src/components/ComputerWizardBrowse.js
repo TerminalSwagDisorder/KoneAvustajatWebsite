@@ -20,8 +20,6 @@ import { useAuth, useError } from "../utils/Contexts";
 import { FaUserEdit, FaChevronUp, FaChevronDown, FaAngleDoubleLeft, FaAngleDoubleRight, FaAngleLeft, FaAngleRight } from "react-icons/fa";
 import { useRenderContent } from "../utils/ContentUtils";
 
-
-
 const ComputerWizardBrowse = ({ fetchDynamicData, fetchDataAmount, updateDynamicData, deleteDynamicData, fetchSearchData }) => {
 	const renderContent = useRenderContent();
 	const { displayError } = useError();

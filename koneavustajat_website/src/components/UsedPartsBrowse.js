@@ -7,8 +7,10 @@ import { addToShoppingCart, removeFromShoppingCart, clearShoppingCart } from "..
 import { addToCompletedBuild, removeFromCompletedBuild, clearCompletedBuild } from "../redux/wizardSlice";
 import { useAuth, useError } from "../utils/Contexts";
 import { FaChevronUp, FaChevronDown, FaAngleDoubleLeft, FaAngleDoubleRight, FaAngleLeft, FaAngleRight } from "react-icons/fa";
+import { useRenderContent } from "../utils/ContentUtils";
 
 const UsedPartsBrowse = ({ fetchDynamicData, fetchDataAmount, postDynamicData, updateDynamicData, fetchSearchData, deleteDynamicData }) => {
+	const renderContent = useRenderContent();
     const { displayError } = useError();
 	const { currentUser } = useAuth();
 	const formFieldsDefault = {
@@ -387,7 +389,7 @@ const UsedPartsBrowse = ({ fetchDynamicData, fetchDataAmount, postDynamicData, u
 														key={k}
 														value={k}
 													>
-														{partTypeMapping[k]}
+														{renderContent(`usedparts.table.parttype${k}`, partTypeMapping[k])}
 													</option>
 												))}
 											</Form.Select>
@@ -416,7 +418,7 @@ const UsedPartsBrowse = ({ fetchDynamicData, fetchDataAmount, postDynamicData, u
 							</ul>
 						))}
 						<Button variant="primary" type="submit">
-							Modify part
+							{renderContent("usedparts.table.buttonmodifypart", "Modify part")}
 						</Button>
 					</Form>
 				</div>
@@ -432,18 +434,18 @@ const UsedPartsBrowse = ({ fetchDynamicData, fetchDataAmount, postDynamicData, u
 						<div className="d-flex justify-content-end mb-3">
 							<CloseButton onClick={() => closeForm()} />
 						</div>
-						<h4 className=" mb-3">Are you sure you want to delete this part from the inventory?</h4>
+						<h4 className=" mb-3">{renderContent("usedparts.deletepart.title", "Are you sure you want to delete this part from the inventory?")}</h4>
 							<ul>
-								<p><b>Part type:</b> {partName.value} </p>
+								<p><b>Part type:</b> {partTypeMapping[selectedPart.PartTypeID]} </p>
 								<p><b>ID:</b> {selectedPart.PartID} </p>
 								<p><b>Name:</b> {selectedPart.Name} </p>
-								<p><b>Name:</b> {selectedPart.SerialNumber} </p>
+								<p><b>Serial number:</b> {selectedPart.SerialNumber} </p>
 							</ul>
 						<Button variant="primary" type="submit">
-							Yes
+							{renderContent("usedparts.deletepart.buttonyes", "Yes")}
 						</Button>						
 						<Button variant="primary" style={{"background-color": "#990000"}} onClick={() => closeForm()}>
-							No
+							{renderContent("usedparts.deletepart.buttonno", "No")}
 						</Button>
 					</Form>
 				</div>
@@ -469,7 +471,7 @@ const UsedPartsBrowse = ({ fetchDynamicData, fetchDataAmount, postDynamicData, u
 							</ul>
 						))}
 						<Button className="user-select-button" onClick={() => handleAddToCart(selectedPart)}>
-							Add to Cart
+							{renderContent("usedparts.table.buttonaddtocart", "Add to Cart")}
 						</Button>
 					</Form>
 				</div>
@@ -482,7 +484,7 @@ const UsedPartsBrowse = ({ fetchDynamicData, fetchDataAmount, postDynamicData, u
 			return (
 				<div className="userChangePrompt">
 					<Alert>
-						<CiDesktopMouse1 /> Select a part to view or add to cart. {currentUser && currentUser.RoleID === 4 && ("As admin you are able to modify details.")}
+						<CiDesktopMouse1 /> {renderContent("usedparts.choicealert.selectpart", "Select a part to view or add to cart.")} {currentUser && currentUser.RoleID === 4 && (renderContent("usedparts.choicealert.admin", "As admin you are able to modify details."))}
 					</Alert>
 				</div>
 			);
@@ -494,10 +496,10 @@ const UsedPartsBrowse = ({ fetchDynamicData, fetchDataAmount, postDynamicData, u
 			return (
 				<>
 					<Button className="user-select-button" onClick={() => handleSelectPart(part, "delete")}>
-						Delete part
+						{renderContent("usedparts.table.buttondeletepart", "Delete part")}
 					</Button>
 					<Button className="user-select-button" onClick={() => handleSelectPart(part, "modify")}>
-						Modify part
+						{renderContent("usedparts.table.buttonmodifypart", "Modify part")}
 					</Button>
 				</>
 			);
@@ -508,8 +510,8 @@ const UsedPartsBrowse = ({ fetchDynamicData, fetchDataAmount, postDynamicData, u
 	const searchButton = () => {
 		return (
 			<>
-				<Button onClick={() => handleSearchRendering()}>Toggle search</Button>
-				<Button onClick={() => clearSearchTerm()} disabled={Object.entries(searchTerm).length === 0}>Clear search</Button>
+				<Button onClick={() => handleSearchRendering()}>{renderContent("usedparts.search.togglesearch", "Toggle search")}</Button>
+				<Button onClick={() => clearSearchTerm()}  disabled={Object.entries(searchTerm).length === 0}>{renderContent("usedparts.search.clearsearch", "Clear search")}</Button>
 			</>
 		)
 	}
@@ -527,7 +529,7 @@ const UsedPartsBrowse = ({ fetchDynamicData, fetchDataAmount, postDynamicData, u
 				>
 					<Dropdown>
 						<Dropdown.Toggle variant="success" id="dropdown-basic">
-							{searchKey || "Choose search type"}
+							{searchKey || renderContent("usedparts.search.nosearch", "Choose search type")}
 						</Dropdown.Toggle>
 
 						<Dropdown.Menu>
@@ -543,10 +545,10 @@ const UsedPartsBrowse = ({ fetchDynamicData, fetchDataAmount, postDynamicData, u
 					</Dropdown>
 					{renderSearchInput(searchKey)}
 					<Button style={{ width: "40%" }} type="submit">
-						Search
+						{renderContent("usedparts.search.searchsubmit", "Search")}
 					</Button>
 					<Button style={{ width: "40%" }} onClick={() => clearSearchTerm()} disabled={!searchToggle}>
-					Clear
+						{renderContent("usedparts.search.searchclear", "Clear")}
 					</Button>
 				</Form>
 				<br />
@@ -598,7 +600,7 @@ const UsedPartsBrowse = ({ fetchDynamicData, fetchDataAmount, postDynamicData, u
 				<Form.Group className="mb-3">
 					<Form.Check
 						type="checkbox"
-						label="Strict search"
+						label={renderContent("usedparts.search.strictsearch", "Strict search")}
 						name="strict"
 						onChange={handleSearchTerm}
 						id="strict"
@@ -608,7 +610,7 @@ const UsedPartsBrowse = ({ fetchDynamicData, fetchDataAmount, postDynamicData, u
 				<Form.Group className="mb-3">
 					<Form.Check
 						type="checkbox"
-						label="Inverted search"
+						label={renderContent("usedparts.search.invertedsearch", "Inverted search")}
 						name="inverted"
 						onChange={handleSearchTerm}
 						id="inverted"
@@ -616,7 +618,7 @@ const UsedPartsBrowse = ({ fetchDynamicData, fetchDataAmount, postDynamicData, u
 					/>
 				</Form.Group>
 				<Form.Group className="mb-3">
-					<Form.Label>Max price</Form.Label>
+					<Form.Label>{renderContent("usedparts.search.maxprice", "Max price")}</Form.Label>
 					<Form.Control 
 					type="number" 
 					id="priceMax"
@@ -626,7 +628,7 @@ const UsedPartsBrowse = ({ fetchDynamicData, fetchDataAmount, postDynamicData, u
 					/>
 				</Form.Group>
 				<Form.Group className="mb-3">
-					<Form.Label>Min price</Form.Label>
+					<Form.Label>{renderContent("usedparts.search.minprice", "Min price")}</Form.Label>
 					<Form.Control 
 					type="number" 
 					id="priceMin"
@@ -683,7 +685,7 @@ const renderAddForm = () => {
 								{partTypeIDMapping && Object.keys(partTypeIDMapping).length > 0 ? (
 									Object.entries(partTypeIDMapping).map(([k, v]) => (
 										<option key={k} value={k}>
-											{formatString(v)}
+											{renderContent(`usedparts.table.parttype${k}`, partTypeMapping[k])}
 										</option>
 									))
 								) : (
@@ -715,7 +717,7 @@ const renderAddForm = () => {
 					   )}
 						
 					<Button variant="primary" type="submit">
-						Add part to inventory
+						{renderContent("usedparts.body.buttonaddnewpart", "Add part to inventory")}
 					</Button>
 				</Form>
 			</div>
@@ -766,14 +768,14 @@ const renderAddForm = () => {
 							<td> {part.PartID}</td>
 							<td> {part.Name || "Unknown Name"}</td>
 							<td> {part.Price || "N/A"} €</td>
-							<td> {partTypeMapping[part.PartTypeID]  || "Unknown Type"}</td> 
+							<td> {renderContent(`usedparts.table.parttype${part.PartTypeID}`, "Unknown type")}</td> 
 							<td>
 								{renderAdminButtons(part)}
 								<Button className="user-select-button" onClick={() => handleSelectPart(part, "view")}>
-									View part
+									{renderContent("usedparts.table.buttonviewpart", "View part")}
 								</Button>
 								<Button className="user-select-button" onClick={() => handleAddToCart(part)}>
-									Add to Cart
+									{renderContent("usedparts.table.buttonaddtocart", "Add to Cart")}
 								</Button>
 							</td>
 						</tr>
@@ -799,11 +801,12 @@ const renderAddForm = () => {
 		<Table responsive="md" hover bordered className="table-striped">
 			<thead>
 				<tr>
-					<th className="order-by" onClick={() => handleOrderBy("ID")}>ID {renderSortIcon("ID")}</th>
-					<th className="order-by" onClick={() => handleOrderBy("Name")}>Name {renderSortIcon("Name")}</th>
-					<th className="order-by" onClick={() => handleOrderBy("Price")}>Price {renderSortIcon("Price")}</th>
-					<th className="order-by" onClick={() => handleOrderBy("PartTypeID")}>Part Type {renderSortIcon("PartTypeID")}</th>
-					<th>Actions</th> 
+					<th className="order-by" onClick={() => handleOrderBy("ID")}>{renderContent("usedparts.table.headerid", "ID")} {renderSortIcon("ID")}</th>
+					<th className="order-by" onClick={() => handleOrderBy("Name")}>{renderContent("usedparts.table.headername", "Name")} {renderSortIcon("Name")}</th>
+					<th className="order-by" onClick={() => handleOrderBy("Price")}>{renderContent("usedparts.table.headerprice", "Price")} {renderSortIcon("Price")}</th>
+					<th className="order-by" onClick={() => handleOrderBy("PartTypeID")}>{renderContent("usedparts.table.headerparttype", "Part Type")} {renderSortIcon("PartTypeID")}</th>
+					<th>{renderContent("usedparts.table.headeractions", "Actions")}</th>
+ 
 
 				</tr>
 			</thead>
