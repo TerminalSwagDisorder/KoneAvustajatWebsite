@@ -4230,7 +4230,7 @@ app.post("/api/algorithm", rateLimitRoute(algorithmRateLimiter), routePagination
 		const chosenBuild = await chooseRandomBuild(randomBuilds, scoring);
 
 		if (!chosenBuild) {
-			return res.status(404).json({ message: "No suitable build found with the given preferences." });
+			return res.status(422).json({ message: "No suitable build found with the given preferences." });
 		}
 
 		// Query for acutal data in database
