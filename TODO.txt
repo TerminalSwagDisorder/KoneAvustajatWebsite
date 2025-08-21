@@ -55,3 +55,33 @@ stripe trigger payment_intent.payment_failed
 
 Condensed: Finish admin pages, finish up cms, qol & bug fixes
 
+Rendercontent checklist:
+	Activate.js
+	Admin.js
+	ComputerWizard.js
+	ComputerWizardBrowse.js
+	ComputerWizardBuild.js
+	ComputerWizardWizard.js
+	ContentManagementModal.js
+	DashboardAdmin.js
+	EmailTransactionsAdmin.js
+	ErrorModule.js
+	Home.js
+	InvitedUser.js
+	Nav.js
+	OpensearchAdmin.js
+	OrdersAdmin.js
+	PartsDisplay.js
+	PasswordForgot.js
+	PasswordReset.js
+	PaymentForm.js
+	Profile.js
+	ShoppingCart.js
+	Signin.js
+	Signup.js
+	UsedParts.js
+	UsedPartsBrowse.js
+	UsedPartsBuild.js
+	UsedPartsModify.js
+	UsedPartsPurchase.js
+	UsersAdmin.js
