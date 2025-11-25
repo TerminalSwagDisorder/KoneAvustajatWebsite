@@ -4423,7 +4423,7 @@ app.patch("/api/users/activate", unloggedOnly, async (req, res) => {
 
 		const hashedToken = hashToken(activationToken);
 		
-		const tokenSql = "SELECT * FROM tokens WHERE Token = ? AND TokenTypeID = ?";
+		const tokenSql = "SELECT * FROM tokens WHERE Token = ? AND TokenTypeID = ? LIMIT 1";
 		const [[token]] = await promisePool.query(tokenSql, [hashedToken, 1]);
 		if (!token) {
 			return res.status(400).json({ message: "Invalid or expired activation token" });
@@ -4469,7 +4469,7 @@ app.patch("/api/users/invite", rateLimitRoute(criticalRateLimiter), unloggedOnly
 
 		const hashedUserToken = hashToken(inviteToken);
 		
-		const tokenSql = "SELECT * FROM tokens WHERE Token = ? AND TokenTypeID = ?";
+		const tokenSql = "SELECT * FROM tokens WHERE Token = ? AND TokenTypeID = ? LIMIT 1";
 		const [[token]] = await promisePool.query(tokenSql, [hashedUserToken, 3]); // TokenTypeID 3 = admin_added_user / invite
 		if (!token) {
 			return res.status(400).json({ message: "Invalid or expired invite token" });
@@ -4618,7 +4618,7 @@ app.post("/api/users/resetpassword", rateLimitRoute(criticalRateLimiter), unlogg
 		
 		const hashedToken = hashToken(passwordResetToken);
 		
-		const tokenSql = "SELECT * FROM tokens WHERE Token = ? AND TokenTypeID = ?";
+		const tokenSql = "SELECT * FROM tokens WHERE Token = ? AND TokenTypeID = ? LIMIT 1";
 		const [[token]] = await promisePool.query(tokenSql, [hashedToken, 2]);
 		if (!token) {
 			return res.status(400).json({ message: "Invalid password reset token" });

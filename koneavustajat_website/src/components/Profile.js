@@ -656,6 +656,7 @@ const Profile = ({ handleCredentialChange, handleSignout, fetchDynamicData, upda
 			const currentAddressLength = currentAddress.find(
 				(item) => item.AddressTypeID === currentAddressType
 			);
+			
 
 			// Check if any field is filled
 			if (fieldsToChange.length === 0) {
@@ -665,6 +666,10 @@ const Profile = ({ handleCredentialChange, handleSignout, fetchDynamicData, upda
 
 			if (!formFields.currentPassword) {
 				displayError("You must enter your current password!");
+			}
+
+			if (!dataToSubmit.AddressTypeID) {
+				dataToSubmit.AddressTypeID = currentAddressType;
 			}
 
 			try {
