@@ -51,7 +51,11 @@ stripe trigger payment_intent.payment_failed
 -Redis caching (optional, later)
 -Externalize some functions (Handleinputchange, handlesubmit, fetchdata etc) (optional, later)
 -Utilize cms true versioning somehow, in modal or some admin page (optional, later)
-
+-Add addressess to orders
+-Add a normalized order_items table to try to migrate from orders.Items
+-Add a way to revoke tokens, check autofixari flow
+-Change users.activated to statuses, check autofixari
+-Fix used parts additional details
 
 Condensed: Finish admin pages, finish up cms, qol & bug fixes
 
