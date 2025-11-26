@@ -56,6 +56,8 @@ stripe trigger payment_intent.payment_failed
 -Add a way to revoke tokens, check autofixari flow
 -Change users.activated to statuses, check autofixari
 -Fix used parts additional details
+-Clear product search after changing part type
+-HTTP error 500: Unknown column 'ID' in 'order clause'; in usedparts 
 
 Condensed: Finish admin pages, finish up cms, qol & bug fixes
 
