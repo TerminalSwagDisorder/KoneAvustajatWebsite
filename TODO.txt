@@ -58,6 +58,7 @@ stripe trigger payment_intent.payment_failed
 -Fix used parts additional details
 -Clear product search after changing part type
 -HTTP error 500: Unknown column 'ID' in 'order clause'; in usedparts 
+-Create a receipt file even when failed payment
 
 Condensed: Finish admin pages, finish up cms, qol & bug fixes
 
