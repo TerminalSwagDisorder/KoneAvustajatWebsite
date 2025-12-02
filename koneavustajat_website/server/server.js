@@ -3402,13 +3402,15 @@ const generateReceipt = async (result, customer, items, calculatedPrice, payment
 				style: "rightAlign"
 			},
 			{
-				text: [{ text: "Maksettu:", bold: true }, ` ${paidStatus}`, { text: "\nMaksutapa: ", bold: true }, "Kortti", { text: "\nMaksupäivämäärä: ", bold: true }, `${paidDate}\n`],
+				// text: [{ text: "Maksettu: ", bold: true }, `${paidStatus}`, { text: "\nMaksutapa: ", bold: true }, "Kortti", { text: "\nMaksupäivämäärä: ", bold: true }, `${paidDate}\n`],
+				text: [{ text: "Maksettu: ", bold: true }, `Ei`, { text: "\nMaksutapa: ", bold: true }, "", { text: "\nMaksupäivämäärä: ", bold: true }, ``],
 				style: "rightAlign"
 			},
 			{ text: "Takuuehdot:", style: "subheader", pageBreak: "before" },
 			{ 
 				text: [
 					"1kk täysi takuu (paitsi SSD & PSU) & 3kk ilmainen korjaus & 6kk tukea. ",
+					"Joillakin uusilla tuotteilla on lisäksi valmistajan oma takuu, joka hoidetaan suoraan valmistajan tai maahantuojan kautta. Emme vastaa valmistajan takuun ehdoista tai päätöksistä, mutta voimme tarvittaessa auttaa takuuprosessin käynnistämisessä. ",
 					"Takuu kattaa valmistusvirheet ja normaalin käytön aiheuttamat viat. ",
 					"Takuu ei kata fyysisiä vaurioita tai virheellisesti asennettujen osien aiheuttamia ongelmia.\n\n",
 					"Tämä kuitti toimii virallisena todisteena ostosta. Takuu- ja tukipalvelut ovat voimassa vain esittämällä tämän kuitin.\n\n"
@@ -3417,6 +3419,7 @@ const generateReceipt = async (result, customer, items, calculatedPrice, payment
 			{ text: "Takuu ei kata:", style: "listHeader" },
 			{
 				ul: [
+					"Data ja varmuuskopiot: asiakas vastaa omien tiedostojen ja tietojen varmuuskopioinnista ennen laitteen luovuttamista. Emme vastaa mahdollisesta tiedon menetyksestä.",
 					"SSD ja PSU",
 					"Fyysiset vauriot",
 					"Asiakkaan aiheuttamat virheet asennuksessa tai käytössä"
@@ -3428,17 +3431,45 @@ const generateReceipt = async (result, customer, items, calculatedPrice, payment
 					{ text: "\nIlmainen korjaus", bold: true }, " koskee valmistusvirheistä johtuvia vikoja ja muita ongelmia, ",
 					"jotka ilmenevät normaalissa käytössä kolmen (3) kuukauden sisällä ostopäivästä. ",
 					"Ilmainen korjaus koskee vain alkuperäisiä komponentteja ja alkuperäistä kokoonpanoa.\n\n",
-					{ text: "Tuki", bold: true }, " sisältää teknistä apua ja neuvontaa kuuden (6) kuukauden ajan ostopäivästä.\n\n"
+					{ text: "Tuki", bold: true }, " sisältää teknistä apua ja neuvontaa kuuden (6) kuukauden ajan ostopäivästä. ",
+					"Tuki ei sisällä laajempia tukipalveluita tai muita erikseen laskutettavia palveluita, nämä kuuluvat erillisiin huoltopalveluihin. \n\n"
 				]
 			},
-			{ text: "Huoltopalvelut:", style: "listHeader" },
+			{ text: "Osien korvaaminen ja vastaavat komponentit:", style: "listHeader" },
+			{ text: "Pidätämme oikeuden korvata tilausvahvistuksessa tai tarjouksessa mainitun tuotteen vähintään vastaavalla tai teknisesti vähintään yhtä hyvällä tuotteella, jos:", style: "subListHeader" },
+			{
+				ul: [
+					"alkuperäinen tuote on tilapäisesti loppu, poistunut valikoimasta tai sen arvioitu toimitusaika on kohtuuttoman pitkä (esimerkiksi useita viikkoja), tai",
+					"ilmenee muu perusteltu syy, kuten yhteensopivuusongelma, todettu hinta-, laatu- tai luotettavuusongelma tai merkittävä viivästys."
+				],
+				margin: [20, 5, 0, 10]
+			},
+			{ text: "Mikäli korvaavan tuotteen hinta poikkeaa alkuperäisestä tuotteesta:", style: "subListHeader" },
+			{
+				ul: [
+					"jos korvaava tuote on kalliimpi, voimme periä hintaeron, mikäli tästä on ilmoitettu asiakkaalle etukäteen ja asiakas ei ole perunut tai muokannut tilausta, tai",
+					"jos korvaava tuote on edullisempi, hintaero voidaan asiakkaan pyynnöstä joko hyvittää, alentaa tilauksen kokonaishintaa tai sopia muusta hyvitystavasta."
+				],
+				margin: [20, 5, 0, 10]
+			},
+			{ 
+				text: [
+					"Korvaavan tuotteen tulee olla vähintään alkuperäistä tuotetta vastaavaa laatua ja/tai suorituskykyä. ",
+					"Ilmoitamme asiakkaalle olennaisista muutoksista.\n",
+					"Korvaavat tuotteet kuuluvat takuuehtojen piiriin vähintään samalla tasolla kuin alkuperäiseksi suunniteltu tuote, ellei kirjallisesti toisin sovita (SSD- ja PSU-poikkeukset voimassa yllä kuvattujen takuuehtojen mukaisesti).\n\n"
+				]
+			},
+			
+			{ text: "Huoltopalvelut:", style: "listHeader"},
 			{ 
 				text: [
 					"Tarjoamme myös erillisiä huoltopalveluita, jotka ovat erillisiä laitteen oston yhteydessä tarjottavista korjauspalveluista. ",
 					"Huoltopalvelut eivät sisälly takuuseen ja niistä peritään erillinen maksu. ",
 					"Emme vastaa korjausten aikana mahdollisesti syntyneistä vahingoista. ",
+					"Mikäli korjauksen aikana ilmenee tarve lisätöille, ilmoitamme asiakkaalle uusilla kustannusarvioilla. Vaikka asiakas kieltäytyy lisätöistä, jo tehdystä työstä voidaan veloittaa käytetyn ajan ja jo asennettujen osien osalta. ",
 					"Kaikki huoltopalvelut suoritetaan asiakkaan omalla vastuulla. ",
-					"Mikäli huoltopalvelun aikana ilmenee lisävaurioita tai komponenttien rikkoutumisia, emme ole velvollisia korvaamaan näitä vahinkoja.\n\n"
+					"Vianmäärityksestä ja kustannusarvion tekemisestä voidaan veloittaa erillinen maksu, vaikka asiakas kieltäytyisi korjauksista. ",
+					"Mikäli huoltopalvelun aikana ilmenee lisävaurioita tai komponenttien rikkoutumisia, emme ole velvollisia korvaamaan näitä vahinkoja, ellei vahinko johdu tahallisesta tai törkeästä huolimattomuudesta.\n\n"
 				]
 			},
 			{ text: "Nouto:", style: "listHeader" },
@@ -3448,12 +3479,31 @@ const generateReceipt = async (result, customer, items, calculatedPrice, payment
 					"asiakasta ilmoitetaan joko tekstiviestillä tai sähköpostilla laitteen noutoa varten. ",
 					"Asiakkaan tulee noutaa laite mahdollisimman pian ilmoituksen saatuaan. ",
 					"Säilytämme laitteita kaksi viikkoa siitä, kun asiakasta on ilmoitettu laitteen olevan noudettavissa, ",
-					"ellei asiakas ole etukäteen ilmoittanut pidemmästä säilytysajasta.\n\n"
+					"ellei asiakas ole etukäteen ilmoittanut pidemmästä säilytysajasta. ",
+					"Mikäli laitetta ei noudeta yhden kuukauden kuluessa, laite voidaan katsoa hylätyksi ja se voidaan hävittää asianmukaisella tavalla. Tässä tapauksessa emme ole velvollisia korvaamaan laitteen arvoa.\n\n"
 				]
 			},
+			{ text: "Käytetyt ja kunnostetut komponentit:", style: "listHeader" },
+			{ 
+				text: [
+					"Osa tarjoamamme tuotteista voi olla käytettyjä tai kunnostettuja. Kaikki tällaiset tuotteet on erikseen merkitty tuotetiedoissa (ks. sivu 'käytetyt osat'/'used parts' verkkokaupassamme). ",
+					"Käytetyille tai kunnostetuille tuotteille sovelletaan yllä kuvattuja takuuehtoja.\n\n"
+				]
+			},
+			{ text: "Asiakkaan omat komponentit:", style: "listHeader" },
+			{ 
+				text: [
+					"Asiakkaan itse toimittamien komponenttien kuntoa tai toimivuutta ei taata. ",
+					"Emme vastaa piilevistä vioista, yhteensopivuusongelmista tai vioista, jotka johtuvat asiakkaan toimittamien komponenttien rakenteesta, iästä tai aiemmasta käytöstä. ",
+					"Mikäli asiakkaan toimittama komponentti rikkoutuu normaalin vianmäärityksen tai asennustyön yhteydessä, emme ole velvollisia korvaamaan komponenttia, ellei vahinko johdu selkeästä huolimattomuudesta.\n\n",
+				]
+			},			
 			{ text: "Lisätietoja:", style: "listHeader" },
 			{ 
 				text: [
+					"Emme vastaa välillisistä tai epäsuorista vahingoista, kuten tulonmenetyksestä, liiketoiminnan keskeytymisestä tai tietojen menetyksestä, ellei vahinko johdu tahallisesta tai törkeästä huolimattomuudesta. ",
+					"Takuu- ja muut ehdot eivät rajoita kuluttajansuojalain mukaista virhevastuuta tai muita pakottavia kuluttajaoikeuksia. ",
+					"Kaikki yllä kuvatut ehdot ovat voimassa, ellei kirjallisesti toisin sovita. ",
 					"Mikäli tarvitsette lisätietoja takuusta, teknisestä tuesta tai huollosta, ottakaa yhteyttä KoneAvustajien asiakaspalveluun.\n\n"
 				]
 			},
@@ -3480,6 +3530,12 @@ const generateReceipt = async (result, customer, items, calculatedPrice, payment
 			listHeader: {
 				fontSize: 12,
 				bold: true,
+				margin: [0, 10, 0, 5],
+				font: "Roboto"
+			},
+			subListHeader: {
+				fontSize: 12,
+				bold: false,
 				margin: [0, 10, 0, 5],
 				font: "Roboto"
 			},
