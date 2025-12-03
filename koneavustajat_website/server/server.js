@@ -3497,7 +3497,7 @@ const generateReceipt = async (result, customer, items, calculatedPrice, payment
 				]
 			},
 			
-			{ text: "Huoltopalvelut:", style: "listHeader", pageBreak: "before"},
+			{ text: "Huoltopalvelut:", style: "listHeader"},
 			{ 
 				text: [
 					"Tarjoamme myös erillisiä huoltopalveluita, jotka ovat erillisiä laitteen oston yhteydessä tarjottavista korjauspalveluista. ",
@@ -3536,7 +3536,7 @@ const generateReceipt = async (result, customer, items, calculatedPrice, payment
 					"Mikäli asiakkaan toimittama komponentti rikkoutuu normaalin vianmäärityksen tai asennustyön yhteydessä, emme ole velvollisia korvaamaan komponenttia.\n\n",
 				]
 			},
-			{ text: "Lisätiedot:", style: "listHeader" },
+			{ text: "Lisätiedot:", style: "listHeader", pageBreak: "before" },
 			{ 
 				text: [
 					"Mikäli tarvitsette lisätietoja takuusta, teknisestä tuesta tai huollosta, ottakaa yhteyttä KoneAvustajien asiakaspalveluun.\n\n"
