@@ -61,6 +61,7 @@ stripe trigger payment_intent.payment_failed
 -Create a receipt file even when failed payment
 -HTTP error 400: "RoleID" must be less than or equal to 1
 -Show the labour cost separately in the receipt
+-in cart, remove stuff like Table + ID (eg. Cpu 126) and neat up the expanded view
 
 Condensed: Finish admin pages, finish up cms, qol & bug fixes
 
