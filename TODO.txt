@@ -60,6 +60,7 @@ stripe trigger payment_intent.payment_failed
 -HTTP error 500: Unknown column 'ID' in 'order clause'; in usedparts 
 -Create a receipt file even when failed payment
 -HTTP error 400: "RoleID" must be less than or equal to 1
+-Show the labour cost separately in the receipt
 
 Condensed: Finish admin pages, finish up cms, qol & bug fixes
 
