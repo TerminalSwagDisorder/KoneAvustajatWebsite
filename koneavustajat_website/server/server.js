@@ -3402,14 +3402,23 @@ const generateReceipt = async (result, customer, items, calculatedPrice, payment
 				style: "rightAlign"
 			},
 			{
-				// text: [{ text: "Maksettu: ", bold: true }, `${paidStatus}`, { text: "\nMaksutapa: ", bold: true }, "Kortti", { text: "\nMaksupäivämäärä: ", bold: true }, `${paidDate}\n`],
-				text: [{ text: "Maksettu: ", bold: true }, `Ei`, { text: "\nMaksutapa: ", bold: true }, "", { text: "\nMaksupäivämäärä: ", bold: true }, ``],
+				//text: [{ text: "Maksettu: ", bold: true }, `Ei`, { text: "\nMaksutapa: ", bold: true }, "", { text: "\nMaksupäivämäärä: ", bold: true }, ``],
+				text: [{ text: "Maksettu: ", bold: true }, `${paidStatus}`, { text: "\nMaksutapa: ", bold: true }, "Kortti", { text: "\nMaksupäivämäärä: ", bold: true }, `${paidDate}\n`],
 				style: "rightAlign"
 			},
 			{ text: "Takuuehdot:", style: "subheader", pageBreak: "before" },
+			{ text: "Myönnämme:", style: "listHeader" },
+			{
+				ul: [
+					"1 kk täysi takuu (ei koske SSD- ja virtalähdekomponentteja)",
+					"3 kk ilmainen korjaus (valmistus- ja materiaalivirheistä)",
+					"6 kk tekninen tuki (ei sisällä huoltopalveluja)"
+				],
+				margin: [20, 5, 0, 10]
+			},
 			{ 
 				text: [
-					"1kk täysi takuu (paitsi SSD & PSU) & 3kk ilmainen korjaus & 6kk tukea. ",
+					"Takuu on myöntämämme lisäetu, joka ei rajoita kuluttajansuojalain mukaista virhevastuuta. Myyjän virhevastuu on voimassa lain mukaisesti myös takuuajan jälkeen ja vaikka myöntämämme takuu ei kattaisi tiettyä vikaa tai tuotetta. ",
 					"Joillakin uusilla tuotteilla on lisäksi valmistajan oma takuu, joka hoidetaan suoraan valmistajan tai maahantuojan kautta. Emme vastaa valmistajan takuun ehdoista tai päätöksistä, mutta voimme tarvittaessa auttaa takuuprosessin käynnistämisessä. ",
 					"Takuu kattaa valmistusvirheet ja normaalin käytön aiheuttamat viat. ",
 					"Takuu ei kata fyysisiä vaurioita tai virheellisesti asennettujen osien aiheuttamia ongelmia.\n\n",
@@ -3419,7 +3428,7 @@ const generateReceipt = async (result, customer, items, calculatedPrice, payment
 			{ text: "Takuu ei kata:", style: "listHeader" },
 			{
 				ul: [
-					"Data ja varmuuskopiot: asiakas vastaa omien tiedostojen ja tietojen varmuuskopioinnista ennen laitteen luovuttamista. Emme vastaa mahdollisesta tiedon menetyksestä tai tietojen/ohjelmien vioittumisesta.",
+					"Data, tiedot ja varmuuskopiot",
 					"SSD ja PSU",
 					"Fyysiset vauriot",
 					"Asiakkaan aiheuttamat virheet asennuksessa tai käytössä"
@@ -3428,22 +3437,38 @@ const generateReceipt = async (result, customer, items, calculatedPrice, payment
 			},
 			{ 
 				text: [
+					{ text: "\nData, tiedot ja varmuuskopiot", bold: true }, ", asiakas vastaa omien tiedostojen ja tietojen varmuuskopioinnista ennen laitteen luovuttamista. Emme vastaa mahdollisesta tiedon menetyksestä tai tietojen/ohjelmien vioittumisesta.\n ",
 					{ text: "\nIlmainen korjaus", bold: true }, " koskee valmistusvirheistä johtuvia vikoja ja muita ongelmia, ",
-					"jotka ilmenevät normaalissa käytössä kolmen (3) kuukauden sisällä ostopäivästä. ",
-					"Ilmainen korjaus koskee vain alkuperäisiä komponentteja ja alkuperäistä kokoonpanoa.\n\n",
-					{ text: "Tuki", bold: true }, " sisältää teknistä apua ja neuvontaa kuuden (6) kuukauden ajan ostopäivästä. ",
-					"Tuki ei sisällä laajempia tukipalveluita tai muita erikseen laskutettavia palveluita, nämä kuuluvat erillisiin huoltopalveluihin. \n\n"
+					"jotka ilmenevät normaalissa käytössä kolmen kuukauden sisällä ostopäivästä. ",
+					"Ilmainen korjaus koskee vain alkuperäisiä komponentteja ja alkuperäistä kokoonpanoa.\n",
+					{ text: "\nTuki", bold: true }, " sisältää teknistä apua ja neuvontaa sähköpostitse tai/ja etätukena kuuden kuukauden ajan ostopäivästä. ",
+					"Tuki ei sisällä laajempia tukipalveluita tai muita erikseen laskutettavia palveluita, nämä kuuluvat erillisiin huoltopalveluihin.\n\n"
 				]
 			},
-			{ text: "Palautukset, peruutus ja työ- ja käsittelymaksu:", style: "listHeader" },
+			{ text: "Vastuu ja laki:", style: "listHeader" },
+			{ 
+				text: [
+					"Takuu- ja muut ehdot eivät rajoita kuluttajansuojalain mukaista virhevastuuta tai muita pakottavia kuluttajaoikeuksia. ",
+					"Mikäli jokin palvelu on todistetusti suoritettu tahallisella tai törkeällä huolimattomuudella tai virheellisesti, niin myönnämme täyden vastuun siitä. ",
+					"Emme vastaa välillisistä tai epäsuorista vahingoista, kuten tulonmenetyksestä, liiketoiminnan keskeytymisestä tai tietojen menetyksestä.\n\n"
+				]
+			},
+			{ text: "Palautukset, peruutus ja työ- ja käsittelymaksu:", style: "listHeader", pageBreak: "before" },
 			{
 				text: [
-					"Verkkokaupasta ostetuilla tuotteilla ei ole lain mukaista peruuttamisoikeutta laajempaa automaattista vaihto-, hyvitys- tai palautusoikeutta. Palautuksista ja peruutuksista tulee aina olla yhteydessä asiakaspalveluun. ",
+					"Kuluttajalla on kuluttajansuojalain mukainen 14 päivän peruuttamisoikeus etämyynnissä. Peruuttamisaika alkaa tuotteen vastaanottamisesta. ",
+					"Verkkokaupasta ostetuilla tuotteilla ei ole lain mukaista peruuttamisoikeutta laajempaa (14 pvä) automaattista vaihto-, hyvitys- tai palautusoikeutta. Palautuksista ja peruutuksista tulee olla yhteydessä asiakaspalveluun. ",
 					"Mikäli tuote on toimitettu lähettämällä ja asiakas haluaa peruuttaa tai palauttaa tuotteen, niin asiakas vastaa tuotteen palauttamisesta meille ja palautuksesta aiheutuvista toimitus- ja pakkauskuluista. ",
-					"Jos palautus perustuu tuotteessa todettuun virheeseen tai muuhun kuluttajansuojalain mukaiseen reklamaatioon, noudatamme lakia ja kohtuulliset palautuskulut voidaan korvata, mikäli virhe vahvistuu. ",
+					"Jos palautus perustuu tuotteessa todettuun virheeseen tai muuhun kuluttajansuojalain mukaiseen reklamaatioon, noudatamme lakia ja kohtuulliset palautuskulut korvataan, mikäli virhe vahvistuu. ",
 					"Palautettavan tuotteen tulee olla asianmukaisesti pakattu ja suojattu kuljetusta varten. Asiakas vastaa puutteellisesta pakkauksesta tai väärin tehdystä lähetyksestä aiheutuvista vahingoista. ",
-					"Jos tuotteen kasaus, huolto, vianmääritys tai muu työ on aloitettu asiakkaan tilauksen perusteella, asiakas on velvollinen maksamaan työmaksusta ja aiheutuneista kustannuksista, vaikka asiakas myöhemmin peruuttaa tilauksen, jättää tuotteen lunastamatta tai päättää olla teettämättä mitään muuta palvelua loppuun. ",
-					"Työ- ja käsittelymaksu on tällä hetkellä 10 % tilauksen kokonaissummasta, kun tilauksen arvo on alle 1000€, tai kiinteä 100€, kun tilauksen arvo on vähintään 1000€. Työ- ja käsittelymaksu ei ole palautuskelpoinen, koska se kattaa tehdyn työn ja varatun ajan. ",
+					"Mikäli tuotteella oli alkuperäispakkaus, pyydämme että tuote lähetetään alkuperäispakkauksessaan ja että pakkaus on kohtuullisessa kunnossa. ",
+					"Alkuperäispakkauksen puuttuminen ei estä lain mukaisen peruuttamisoikeuden käyttämistä, mutta se voidaan ottaa huomioon tavaran mahdollisena arvonalennuksena. ",
+					"Tuotteen on oltava tunnistettavissa samaksi tuotteeksi, joka on ostettu meiltä (esimerkiksi sarjanumeron tai takuutarran perusteella). ",
+					"Jos tunnistetiedot on poistettu, peitetty tai niitä on muutettu niin, ettei alkuperää voida kohtuudella todentaa, emme ole velvollisia käsittelemään asiaa takuu- tai virhevastuuasiana ennen riittävää selvitystä tuotteen alkuperästä (esimerkiksi kuitti, verkkokaupan tilin tapahtuma tai muu luotettava selvitys). ",
+					"Etämyynnin 14 päivän peruuttamisoikeus säilyy, mutta tällainen käsittely voidaan ottaa huomioon tavaran arvon alentumisena, jolloin palautettavaa summaa voidaan kohtuudella alentaa, jopa tuotteen myyntihintaan asti. ",
+					"Jos tuotteen kasaus, huolto, vianmääritys tai muu työ on aloitettu asiakkaan tilauksen perusteella, asiakas on velvollinen maksamaan työmaksusta tehdyn työn määräisesti ja aiheutuneista kustannuksista, vaikka asiakas myöhemmin peruuttaa tilauksen, jättää tuotteen lunastamatta tai päättää olla teettämättä mitään muuta palvelua loppuun. ",
+					"Jos asiakas käyttää kuluttajansuojalain mukaista 14 päivän peruuttamisoikeutta palveluun, veloitamme vain suhteellisen osuuden jo suoritetusta työstä ja sopimuksen kokonaishinnasta. ",
+					"Työ- ja käsittelymaksu on tällä hetkellä 10 % tilauksen kokonaissummasta, kun tilauksen arvo on alle 2000€, tai kiinteä 200€, kun tilauksen arvo on vähintään 2000€. Työ- ja käsittelymaksu ei ole palautuskelpoinen, koska se kattaa tehdyn työn ja varatun ajan. ",
 					"Etä- ja kotimyyntisopimuksissa, joissa sovelletaan 14 päivän peruuttamisoikeutta, veloitus tehdään kuluttajansuojalain mukaisesti suhteellisena osuutena jo suoritetusta palvelusta ja sopimuksen kokonaishinnasta.\n\n "
 				]
 			},
@@ -3466,39 +3491,40 @@ const generateReceipt = async (result, customer, items, calculatedPrice, payment
 			},
 			{ 
 				text: [
-					"Korvaavan tuotteen tulee olla vähintään alkuperäistä tuotetta vastaavaa laatua ja/tai suorituskykyä. ",
+					"Korvaavan tuotteen tulee olla vähintään alkuperäistä tuotetta vastaavaa laatua tai suorituskykyä. ",
 					"Ilmoitamme asiakkaalle olennaisista muutoksista.\n",
-					"Korvaavat tuotteet kuuluvat takuuehtojen piiriin vähintään samalla tasolla kuin alkuperäiseksi suunniteltu tuote, ellei kirjallisesti toisin sovita (SSD- ja PSU-poikkeukset voimassa yllä kuvattujen takuuehtojen mukaisesti).\n\n"
+					"Korvaavat tuotteet kuuluvat takuuehtojen piiriin vähintään samalla tasolla kuin alkuperäiseksi suunniteltu tuote (SSD- ja PSU-poikkeukset voimassa yllä kuvattujen takuuehtojen mukaisesti).\n\n"
 				]
 			},
 			
-			{ text: "Huoltopalvelut:", style: "listHeader"},
+			{ text: "Huoltopalvelut:", style: "listHeader", pageBreak: "before"},
 			{ 
 				text: [
 					"Tarjoamme myös erillisiä huoltopalveluita, jotka ovat erillisiä laitteen oston yhteydessä tarjottavista korjauspalveluista. ",
 					"Huoltopalvelut eivät sisälly takuuseen ja niistä peritään erillinen maksu. ",
+					"Kaikki huoltopalvelut suoritetaan asiakkaan omalla vastuulla. ",
 					"Emme vastaa korjausten aikana mahdollisesti syntyneistä vahingoista. ",
 					"Mikäli korjauksen aikana ilmenee tarve lisätöille, ilmoitamme asiakkaalle uusilla kustannusarvioilla. Vaikka asiakas kieltäytyy lisätöistä, jo tehdystä työstä voidaan veloittaa käytetyn ajan ja jo asennettujen osien osalta. ",
-					"Kaikki huoltopalvelut suoritetaan asiakkaan omalla vastuulla. ",
 					"Vianmäärityksestä ja kustannusarvion tekemisestä voidaan veloittaa erillinen maksu, vaikka asiakas kieltäytyisi korjauksista. ",
-					"Mikäli huoltopalvelun aikana ilmenee lisävaurioita tai komponenttien rikkoutumisia, emme ole velvollisia korvaamaan näitä vahinkoja, ellei vahinko johdu tahallisesta tai törkeästä huolimattomuudesta.\n\n"
+					"Mikäli huoltopalvelun aikana ilmenee lisävaurioita tai komponenttien rikkoutumisia, emme ole velvollisia korvaamaan näitä vahinkoja.\n\n"
 				]
 			},
 			{ text: "Nouto:", style: "listHeader" },
 			{ 
 				text: [
 					"Kun laite on valmis (sekä oston että huoltopalveluiden osalta) tai todetaan korjauskelvottomaksi, ",
-					"asiakasta ilmoitetaan joko tekstiviestillä tai sähköpostilla laitteen noutoa varten. ",
+					"asiakasta ilmoitetaan joko tekstiviestillä tai sähköpostilla laitteen noutoa varten, lähetämme myös muistutuksia noudosta. ",
 					"Asiakkaan tulee noutaa laite mahdollisimman pian ilmoituksen saatuaan. ",
-					"Säilytämme laitteita kaksi viikkoa siitä, kun asiakasta on ilmoitettu laitteen olevan noudettavissa, ",
+					"Säilytämme laitteita kaksi kuukautta siitä, kun asiakasta on ilmoitettu laitteen olevan noudettavissa, ",
 					"ellei asiakas ole etukäteen ilmoittanut pidemmästä säilytysajasta. ",
-					"Mikäli laitetta ei noudeta yhden kuukauden kuluessa, laite voidaan katsoa hylätyksi ja se voidaan hävittää asianmukaisella tavalla. Tässä tapauksessa emme ole velvollisia korvaamaan laitteen arvoa.\n\n"
+					"Mikäli laitetta ei noudeta kahden kuukauden kuluessa muistutuksista huolimatta, perimme säilytysmaksun (100€). Mikäli laitetta ei ole noudettu kohtuulliseen aikaan, niin laite voidaan katsoa hylätyksi ja se voidaan myydä tai hävittää asianmukaisella tavalla. Myynnistä saadulla tuotolla voidaan kattaa erääntyneet työ-, säilytys- ja muut kulut. Mahdollinen ylimääräinen osuus on asiakkaan pyynnöstä palautettavissa.\n\n"
 				]
 			},
 			{ text: "Käytetyt ja kunnostetut komponentit:", style: "listHeader" },
 			{ 
 				text: [
 					"Osa tarjoamamme tuotteista voi olla käytettyjä tai kunnostettuja. Kaikki tällaiset tuotteet on erikseen merkitty tuotetiedoissa (ks. sivu 'käytetyt osat'/'used parts' verkkokaupassamme). ",
+					"Käytetyissä ja kunnostetuissa osissa voi olla ulkoisia jälkiä, pieniä vaurioita, tai muita iän ja käytön myötä tulleita ongelmia. Lisää tietoa tietyistä tuotteista voi kysyä asiakaspalvelulta. ",
 					"Käytetyille tai kunnostetuille tuotteille sovelletaan yllä kuvattuja takuuehtoja.\n\n"
 				]
 			},
@@ -3507,21 +3533,19 @@ const generateReceipt = async (result, customer, items, calculatedPrice, payment
 				text: [
 					"Asiakkaan itse toimittamien komponenttien kuntoa tai toimivuutta ei taata. ",
 					"Emme vastaa piilevistä vioista, yhteensopivuusongelmista tai vioista, jotka johtuvat asiakkaan toimittamien komponenttien rakenteesta, iästä tai aiemmasta käytöstä. ",
-					"Mikäli asiakkaan toimittama komponentti rikkoutuu normaalin vianmäärityksen tai asennustyön yhteydessä, emme ole velvollisia korvaamaan komponenttia, ellei vahinko johdu selkeästä huolimattomuudesta.\n\n",
+					"Mikäli asiakkaan toimittama komponentti rikkoutuu normaalin vianmäärityksen tai asennustyön yhteydessä, emme ole velvollisia korvaamaan komponenttia.\n\n",
 				]
-			},			
-			{ text: "Lisätietoja:", style: "listHeader" },
+			},
+			{ text: "Lisätiedot:", style: "listHeader" },
 			{ 
 				text: [
-					"Emme vastaa välillisistä tai epäsuorista vahingoista, kuten tulonmenetyksestä, liiketoiminnan keskeytymisestä tai tietojen menetyksestä, ellei vahinko johdu tahallisesta tai törkeästä huolimattomuudesta. ",
-					"Takuu- ja muut ehdot eivät rajoita kuluttajansuojalain mukaista virhevastuuta tai muita pakottavia kuluttajaoikeuksia. ",
-					"Kaikki yllä kuvatut ehdot ovat voimassa, ellei kirjallisesti toisin sovita. ",
 					"Mikäli tarvitsette lisätietoja takuusta, teknisestä tuesta tai huollosta, ottakaa yhteyttä KoneAvustajien asiakaspalveluun.\n\n"
 				]
 			},
 			{ text: "Huomio:", style: "listHeader" },
 			{ 
 				text: [
+					"Kaikki yllä kuvatut ehdot ovat voimassa, ellei kirjallisesti toisin sovita.\n\n",
 					"Tämä kuitti toimii virallisena ostotodistuksena ja takuuehtojen vahvistuksena. Säilyttäkää kuitti turvallisessa paikassa.\n\n"
 				]
 			},
