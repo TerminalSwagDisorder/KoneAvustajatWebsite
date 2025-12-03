@@ -3419,7 +3419,7 @@ const generateReceipt = async (result, customer, items, calculatedPrice, payment
 			{ text: "Takuu ei kata:", style: "listHeader" },
 			{
 				ul: [
-					"Data ja varmuuskopiot: asiakas vastaa omien tiedostojen ja tietojen varmuuskopioinnista ennen laitteen luovuttamista. Emme vastaa mahdollisesta tiedon menetyksestä.",
+					"Data ja varmuuskopiot: asiakas vastaa omien tiedostojen ja tietojen varmuuskopioinnista ennen laitteen luovuttamista. Emme vastaa mahdollisesta tiedon menetyksestä tai tietojen/ohjelmien vioittumisesta.",
 					"SSD ja PSU",
 					"Fyysiset vauriot",
 					"Asiakkaan aiheuttamat virheet asennuksessa tai käytössä"
@@ -3435,6 +3435,18 @@ const generateReceipt = async (result, customer, items, calculatedPrice, payment
 					"Tuki ei sisällä laajempia tukipalveluita tai muita erikseen laskutettavia palveluita, nämä kuuluvat erillisiin huoltopalveluihin. \n\n"
 				]
 			},
+			{ text: "Palautukset, peruutus ja työ- ja käsittelymaksu:", style: "listHeader" },
+			{
+				text: [
+					"Verkkokaupasta ostetuilla tuotteilla ei ole lain mukaista peruuttamisoikeutta laajempaa automaattista vaihto-, hyvitys- tai palautusoikeutta. Palautuksista ja peruutuksista tulee aina olla yhteydessä asiakaspalveluun. ",
+					"Mikäli tuote on toimitettu lähettämällä ja asiakas haluaa peruuttaa tai palauttaa tuotteen, niin asiakas vastaa tuotteen palauttamisesta meille ja palautuksesta aiheutuvista toimitus- ja pakkauskuluista. ",
+					"Jos palautus perustuu tuotteessa todettuun virheeseen tai muuhun kuluttajansuojalain mukaiseen reklamaatioon, noudatamme lakia ja kohtuulliset palautuskulut voidaan korvata, mikäli virhe vahvistuu. ",
+					"Palautettavan tuotteen tulee olla asianmukaisesti pakattu ja suojattu kuljetusta varten. Asiakas vastaa puutteellisesta pakkauksesta tai väärin tehdystä lähetyksestä aiheutuvista vahingoista. ",
+					"Jos tuotteen kasaus, huolto, vianmääritys tai muu työ on aloitettu asiakkaan tilauksen perusteella, asiakas on velvollinen maksamaan työmaksusta ja aiheutuneista kustannuksista, vaikka asiakas myöhemmin peruuttaa tilauksen, jättää tuotteen lunastamatta tai päättää olla teettämättä mitään muuta palvelua loppuun. ",
+					"Työ- ja käsittelymaksu on tällä hetkellä 10 % tilauksen kokonaissummasta, kun tilauksen arvo on alle 1000€, tai kiinteä 100€, kun tilauksen arvo on vähintään 1000€. Työ- ja käsittelymaksu ei ole palautuskelpoinen, koska se kattaa tehdyn työn ja varatun ajan. ",
+					"Etä- ja kotimyyntisopimuksissa, joissa sovelletaan 14 päivän peruuttamisoikeutta, veloitus tehdään kuluttajansuojalain mukaisesti suhteellisena osuutena jo suoritetusta palvelusta ja sopimuksen kokonaishinnasta.\n\n "
+				]
+			},
 			{ text: "Osien korvaaminen ja vastaavat komponentit:", style: "listHeader" },
 			{ text: "Pidätämme oikeuden korvata tilausvahvistuksessa tai tarjouksessa mainitun tuotteen vähintään vastaavalla tai teknisesti vähintään yhtä hyvällä tuotteella, jos:", style: "subListHeader" },
 			{
@@ -3447,7 +3459,7 @@ const generateReceipt = async (result, customer, items, calculatedPrice, payment
 			{ text: "Mikäli korvaavan tuotteen hinta poikkeaa alkuperäisestä tuotteesta:", style: "subListHeader" },
 			{
 				ul: [
-					"jos korvaava tuote on kalliimpi, voimme periä hintaeron, mikäli tästä on ilmoitettu asiakkaalle etukäteen ja asiakas ei ole perunut tai muokannut tilausta, tai",
+					"jos korvaava tuote on kalliimpi, voimme periä hintaeron, mikäli tästä on ilmoitettu asiakkaalle etukäteen ja asiakas ei ole peruuttanut tai muokannut tilausta, tai",
 					"jos korvaava tuote on edullisempi, hintaero voidaan asiakkaan pyynnöstä joko hyvittää, alentaa tilauksen kokonaishintaa tai sopia muusta hyvitystavasta."
 				],
 				margin: [20, 5, 0, 10]
