@@ -62,6 +62,7 @@ stripe trigger payment_intent.payment_failed
 -HTTP error 400: "RoleID" must be less than or equal to 1
 -Show the labour cost separately in the receipt
 -in cart, remove stuff like Table + ID (eg. Cpu 126) and neat up the expanded view
+-For b2b, add order-level (not register-level) business info. Are you ordering of a business, bname, y-tunnus, separate b-billingaddr, (add to db either in the order table isbusinesscustomer, bname, y-t or a separate table)
 
 Condensed: Finish admin pages, finish up cms, qol & bug fixes
 

@@ -3440,7 +3440,7 @@ const generateReceipt = async (result, customer, items, calculatedPrice, payment
 					{ text: "\nData, tiedot ja varmuuskopiot", bold: true }, ", asiakas vastaa omien tiedostojen ja tietojen varmuuskopioinnista ennen laitteen luovuttamista. Emme vastaa mahdollisesta tiedon menetyksestä tai tietojen/ohjelmien vioittumisesta.\n ",
 					{ text: "\nIlmainen korjaus", bold: true }, " koskee valmistusvirheistä johtuvia vikoja ja muita ongelmia, ",
 					"jotka ilmenevät normaalissa käytössä kolmen kuukauden sisällä ostopäivästä. ",
-					"Ilmainen korjaus koskee vain alkuperäisiä komponentteja ja alkuperäistä kokoonpanoa.\n",
+					"Ilmainen korjaus koskee vain alkuperäisiä tuotteita ja alkuperäistä kokoonpanoa.\n",
 					{ text: "\nTuki", bold: true }, " sisältää teknistä apua ja neuvontaa sähköpostitse tai/ja etätukena kuuden kuukauden ajan ostopäivästä. ",
 					"Tuki ei sisällä laajempia tukipalveluita tai muita erikseen laskutettavia palveluita, nämä kuuluvat erillisiin huoltopalveluihin.\n\n"
 				]
@@ -3465,14 +3465,14 @@ const generateReceipt = async (result, customer, items, calculatedPrice, payment
 					"Alkuperäispakkauksen puuttuminen ei estä lain mukaisen peruuttamisoikeuden käyttämistä, mutta se voidaan ottaa huomioon tavaran mahdollisena arvonalennuksena. ",
 					"Tuotteen on oltava tunnistettavissa samaksi tuotteeksi, joka on ostettu meiltä (esimerkiksi sarjanumeron tai takuutarran perusteella). ",
 					"Jos tunnistetiedot on poistettu, peitetty tai niitä on muutettu niin, ettei alkuperää voida kohtuudella todentaa, emme ole velvollisia käsittelemään asiaa takuu- tai virhevastuuasiana ennen riittävää selvitystä tuotteen alkuperästä (esimerkiksi kuitti, verkkokaupan tilin tapahtuma tai muu luotettava selvitys). ",
-					"Etämyynnin 14 päivän peruuttamisoikeus säilyy, mutta tällainen käsittely voidaan ottaa huomioon tavaran arvon alentumisena, jolloin palautettavaa summaa voidaan kohtuudella alentaa, jopa tuotteen myyntihintaan asti. ",
+					"Etämyynnin 14 päivän peruuttamisoikeus säilyy, mutta tällainen käsittely voidaan ottaa huomioon tavaran arvon alentumisena, jolloin palautettavaa summaa voidaan kohtuudella alentaa arvonalennusta vastaavasti, tarvittaessa jopa tuotteen myyntihintaan asti. ",
 					"Jos tuotteen kasaus, huolto, vianmääritys tai muu työ on aloitettu asiakkaan tilauksen perusteella, asiakas on velvollinen maksamaan työmaksusta tehdyn työn määräisesti ja aiheutuneista kustannuksista, vaikka asiakas myöhemmin peruuttaa tilauksen, jättää tuotteen lunastamatta tai päättää olla teettämättä mitään muuta palvelua loppuun. ",
-					"Jos asiakas käyttää kuluttajansuojalain mukaista 14 päivän peruuttamisoikeutta palveluun, veloitamme vain suhteellisen osuuden jo suoritetusta työstä ja sopimuksen kokonaishinnasta. ",
-					"Työ- ja käsittelymaksu on tällä hetkellä 10 % tilauksen kokonaissummasta, kun tilauksen arvo on alle 2000€, tai kiinteä 200€, kun tilauksen arvo on vähintään 2000€. Työ- ja käsittelymaksu ei ole palautuskelpoinen, koska se kattaa tehdyn työn ja varatun ajan. ",
+					"Työ- ja käsittelymaksu on tällä hetkellä 10 % tilauksen kokonaissummasta, kun tilauksen arvo on alle 2000€, tai kiinteä 200€, kun tilauksen arvo on vähintään 2000€. Työ- ja käsittelymaksu ei ole palautuskelpoinen normaaleissa tilanteissa, koska se kattaa tehdyn työn ja varatun ajan. ",
+					"Jos asiakas käyttää kuluttajansuojalain mukaista 14 päivän peruuttamisoikeutta palveluun, veloitamme vain suhteellisen osuuden jo suoritetusta työstä ja sopimuksen kokonaishinnasta, emmekä meidän tavallista työmaksua. ",
 					"Etä- ja kotimyyntisopimuksissa, joissa sovelletaan 14 päivän peruuttamisoikeutta, veloitus tehdään kuluttajansuojalain mukaisesti suhteellisena osuutena jo suoritetusta palvelusta ja sopimuksen kokonaishinnasta.\n\n "
 				]
 			},
-			{ text: "Osien korvaaminen ja vastaavat komponentit:", style: "listHeader" },
+			{ text: "Osien korvaaminen ja vastaavat tuotteet:", style: "listHeader" },
 			{ text: "Pidätämme oikeuden korvata tilausvahvistuksessa tai tarjouksessa mainitun tuotteen vähintään vastaavalla tai teknisesti vähintään yhtä hyvällä tuotteella, jos:", style: "subListHeader" },
 			{
 				ul: [
@@ -3520,12 +3520,16 @@ const generateReceipt = async (result, customer, items, calculatedPrice, payment
 					"Mikäli laitetta ei noudeta kahden kuukauden kuluessa muistutuksista huolimatta, perimme säilytysmaksun (100€). Mikäli laitetta ei ole noudettu kohtuulliseen aikaan, niin laite voidaan katsoa hylätyksi ja se voidaan myydä tai hävittää asianmukaisella tavalla. Myynnistä saadulla tuotolla voidaan kattaa erääntyneet työ-, säilytys- ja muut kulut. Mahdollinen ylimääräinen osuus on asiakkaan pyynnöstä palautettavissa.\n\n"
 				]
 			},
-			{ text: "Käytetyt ja kunnostetut komponentit:", style: "listHeader" },
+			{ text: "Käytetyt-, kunnostetut- ja perustuotteet:", style: "listHeader" },
 			{ 
 				text: [
 					"Osa tarjoamamme tuotteista voi olla käytettyjä tai kunnostettuja. Kaikki tällaiset tuotteet on erikseen merkitty tuotetiedoissa (ks. sivu 'käytetyt osat'/'used parts' verkkokaupassamme). ",
 					"Käytetyissä ja kunnostetuissa osissa voi olla ulkoisia jälkiä, pieniä vaurioita, tai muita iän ja käytön myötä tulleita ongelmia. Lisää tietoa tietyistä tuotteista voi kysyä asiakaspalvelulta. ",
-					"Käytetyille tai kunnostetuille tuotteille sovelletaan yllä kuvattuja takuuehtoja.\n\n"
+					"Käytetyille tai kunnostetuille tuotteille sovelletaan yllä kuvattuja takuuehtoja. ",
+					"Osaa tuotteista, pääosin käytettyjä tuotteita, myydään yleisnimellä tai luokkina (esimerkiksi 'perus Z170 -emolevy'). Tällaiset tuotteet kuuluvat ilmoitettuun luokkaan, mutta tarkka merkki ja malli voivat vaihdella varastotilanteen mukaan. ",
+					"Ilmoitettu hinta on tuotteen myyntihinta, vaikka se poikkeaisi markkinahinnasta. Pelkkä merkki- tai malliero ei ole virhe, jos tuote vastaa luokan kuvattuja ominaisuuksia ja on käyttötarkoitukseensa nähden yhteensopiva muun tilauksen tai palvelun kanssa. ",
+					"Mikäli asiakas haluaa tietyn valmistajan tai mallin, se tulee tilata erikseen nimettynä tuotteena. ",
+					"Jos tuote ei täytä luokan vähimmäisvaatimuksia, kyse on virheestä ja noudatamme normaaleja virhevastuusääntöjä. Perustuotteisiin sovelletaan muutoin samoja ehtoja kuin muihin käytettyihin ja kunnostettuihin tuotteisiin, ellei erikseen toisin mainita.\n\n"
 				]
 			},
 			{ text: "Asiakkaan omat komponentit:", style: "listHeader" },
@@ -3536,7 +3540,18 @@ const generateReceipt = async (result, customer, items, calculatedPrice, payment
 					"Mikäli asiakkaan toimittama komponentti rikkoutuu normaalin vianmäärityksen tai asennustyön yhteydessä, emme ole velvollisia korvaamaan komponenttia.\n\n",
 				]
 			},
-			{ text: "Lisätiedot:", style: "listHeader", pageBreak: "before" },
+			{ text: "Yritysasiakkaat (B2B):", style: "listHeader" },
+			{ 
+				text: [
+					"Jos tilaat tuotteen tai palvelun yrityksen puolesta, merkitse tilausvaiheessa itsesi yritysasiakkaaksi ja täytä asiaankuuluvat yritystiedot (täytettävät tiedot tulevat näkyviin, kun merkitset itsesi yritysasiakkaaksi). ",
+					"Yritysasiakkaalla tarkoitetaan asiakasta, joka tilaa tuotteen tai palvelun elinkeinotoimintaansa varten (esimerkiksi Y-tunnuksella tai yrityksen tietoja käyttäen). ",
+					"Kuluttajansuojalakia sovelletaan vain kuluttaja-asiakkaiden ja elinkeinonharjoittajien välisiin sopimuksiin, joten yritysasiakkaiden kanssa tehtäviin sopimuksiin sitä ei sovelleta. ",
+					"Yritysasiakkaiden ja KoneAvustajien välisissä sopimuksissa noudatetaan ensisijaisesti näitä sopimusehtoja, kauppalakia (355/1987) sekä yleistä sopimus- ja vahingonkorvausoikeutta. ",
+					"Kuluttajansuojalain mukainen 14 päivän peruuttamisoikeus ei koske yritysasiakkaita. Yritysasiakkaiden mahdollisista palautuksista, peruutuksista ja hyvityksistä sovitaan aina erikseen tapauskohtaisesti, ellei kirjallisesti ole muuta sovittu. ",
+					"Ellei toisin kirjallisesti sovita, yritysasiakkaiden tilauksiin sovelletaan muutoin samoja takuu-, huolto- ja toimitusehtoja kuin edellä on kuvattu, siltä osin kuin ne eivät perustu nimenomaan kuluttajansuojalakiin.\n\n"
+				]
+			},
+			{ text: "Lisätiedot:", style: "listHeader" },
 			{ 
 				text: [
 					"Mikäli tarvitsette lisätietoja takuusta, teknisestä tuesta tai huollosta, ottakaa yhteyttä KoneAvustajien asiakaspalveluun.\n\n"
