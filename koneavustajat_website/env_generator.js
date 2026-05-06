@@ -1,8 +1,8 @@
 // Never run this in actual production
 
 const crypto = require("crypto");
-const fs = require("fs");
-const readline = require("readline");
+const fs = require("node:fs");
+const readline = require("node:readline");
 
 const rl = readline.createInterface({
     input: process.stdin,
