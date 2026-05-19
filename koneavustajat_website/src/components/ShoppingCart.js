@@ -9,10 +9,12 @@ import {
 } from "../redux/shoppingCartSlice";
 import PaymentForm from "./PaymentForm.js";
 import { usePayment, useError } from "../utils/Contexts";
+import { useRenderContent } from "../utils/ContentUtils";
 import { Navigate } from "react-router-dom";
 
 
 const ShoppingCart = ({ postDynamicData, updateDynamicData }) => {
+	const renderContent = useRenderContent();
     const { displayError } = useError();
     const { clientSecret, setClientSecret } = usePayment();
 	const shoppingCart = useSelector((state) => state.shoppingCart.shoppingCart);
@@ -174,36 +176,36 @@ const ShoppingCart = ({ postDynamicData, updateDynamicData }) => {
 							))}
 							{partKey !== "completedBuild" && (
 								<Button className="user-select-button" onClick={() => handleRemoveOneFromCart(partKey)}>
-									Remove 1 "{formatString(partKey)}" from cart
+									{renderContent("shoppingcart.button.remove_one", "Remove 1 item from cart")}
 								</Button>
 							)}
 							<Button className="user-select-button" onClick={() => handleRemoveFromCart(partKey)}>
-								Remove all "{formatString(partKey)}" from cart
+								{renderContent("shoppingcart.button.remove_all", "Remove all items from cart")}
 							</Button>
 						</ListGroup>
 					))}
                     <ListGroup.Item>
                         {(totalPrice && totalPrice > 0) ? (
                             <p>
-                                Processing fee: <b>{(processingFee).toFixed(2)}</b>€
+                                {renderContent("shoppingcart.label.processing_fee", "Processing fee:")} <b>{(processingFee).toFixed(2)}</b>€
                             </p>
                         ) : (
-                            <p>No price could be calculated!</p>
+                            <p>{renderContent("shoppingcart.message.no_price", "No price could be calculated!")}</p>
                         )}
                     </ListGroup.Item>
                     <ListGroup.Item>
                         {(totalPrice && totalPrice > 0) ? (
                             <p>
-                                Total price: <b>{(vatPrice+processingFee).toFixed(2)}</b>€ (Incl. VAT 25.5%)
+                                {renderContent("shoppingcart.label.total_price", "Total price:")} <b>{(vatPrice+processingFee).toFixed(2)}</b>€ (Incl. VAT 25.5%)
                             </p>
                         ) : (
-                            <p>No price could be calculated!</p>
+                            <p>{renderContent("shoppingcart.message.no_price", "No price could be calculated!")}</p>
                         )}
                     </ListGroup.Item>
 				</ListGroup>
 			);
 		} else {
-			return <p>Something went wrong!</p>;
+			return <p>{renderContent("shoppingcart.message.error", "Something went wrong!")}</p>;
 		}
 	};
 
@@ -211,11 +213,11 @@ const ShoppingCart = ({ postDynamicData, updateDynamicData }) => {
 	return (
 		<div>
 			<Button className="user-select-button" onClick={() => handleClearCart()}>
-				Clear Cart
+				{renderContent("shoppingcart.button.clear_cart", "Clear Cart")}
 			</Button>
 			{allCurrentItems && (
 				<Button className="user-select-button" onClick={() => handleSubmit()}>
-					Proceed with order
+					{renderContent("shoppingcart.button.proceed", "Proceed with order")}
 				</Button>
 			)}
 			{showPaymentForm && clientSecret && (

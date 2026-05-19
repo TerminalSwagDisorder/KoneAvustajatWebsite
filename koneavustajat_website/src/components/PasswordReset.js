@@ -2,8 +2,10 @@ import React, { useState, useEffect, useCallback, useRef } from "react";
 import { Container, Button, Form, Spinner, OverlayTrigger, Tooltip } from "react-bootstrap";
 import { Navigate, useLocation, useNavigate } from "react-router-dom";
 import { useError } from "../utils/Contexts";
+import { useRenderContent } from "../utils/ContentUtils";
 
 const PasswordReset = ({ postDynamicData }) => {
+	const renderContent = useRenderContent();
 	const { displayError } = useError();
 	const navigate = useNavigate();
 	const location = useLocation();
@@ -75,14 +77,14 @@ const PasswordReset = ({ postDynamicData }) => {
 						boxShadow: "0 4px 8px rgba(0,0,0,0.1)"
 					}}>
 					<Form style={{ textAlign: "left" }} onSubmit={handlePasswordReset}>
-						<h1>Reset password</h1>
+						<h1>{renderContent("passwordreset.title", "Reset password")}</h1>
 
 						<Form.Group className="mb-3" controlId="formBasicPassword">
-							<Form.Label>Password</Form.Label>
+							<Form.Label>{renderContent("passwordreset.label.password", "Password")}</Form.Label>
 							<OverlayTrigger placement="right" delay={{ hide: 400 }} overlay={renderTooltip}>
 								<Form.Control
 									type="Password"
-									placeholder="Enter new Password"
+									placeholder={renderContent("passwordreset.placeholder.password", "Enter new Password")}
 									required
 									name="Password"
 									value={formFields.Password}
@@ -93,7 +95,7 @@ const PasswordReset = ({ postDynamicData }) => {
 						</Form.Group>
 
 						<Button type="submit" style={{ width: "100%" }}>
-							Change password
+							{renderContent("passwordreset.button.change_password", "Change password")}
 						</Button>
 					</Form>
 				</div>

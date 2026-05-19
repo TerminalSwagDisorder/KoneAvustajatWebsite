@@ -4,10 +4,13 @@ import { Nav, Navbar, NavDropdown, Button, Image, Spinner } from "react-bootstra
 import { Link } from "react-router-dom";
 import { AiOutlineShoppingCart } from "react-icons/ai";
 import { useSelector, useDispatch } from "react-redux";
-import { useTheme, useLanguage, useModal, useAuth, useError } from "../utils/Contexts";
+import { useTheme, useLanguage, useModal, useAuth, useError, useContent } from "../utils/Contexts";
+import { useRenderContent, fetchPageContent } from "../utils/ContentUtils";
 import { useLocation } from "react-router-dom";
 
 const NavBar = ({ handleSignout }) => {
+	const renderContent = useRenderContent();
+	const { fetchPageContentOverride } = useContent();
 	const { displayError } = useError();
 	const location = useLocation();
 	const [scrolled, setScrolled] = useState(false);
@@ -23,7 +26,8 @@ const NavBar = ({ handleSignout }) => {
   	const totalCartItems = cartItems.reduce((total, item) => total + (item.quantity || 1), 0);
 
 	useEffect(() => {
-		console.log("location: ", location.pathname);
+		fetchPageContentOverride({page: "nav"});
+		
 		const onScroll = () => {
 			if (window.scrollY > 50) {
 				setScrolled(true);
@@ -40,8 +44,8 @@ const NavBar = ({ handleSignout }) => {
 	const handleOpenModal = () => {
 		openModal(
 			<div>
-				<h3>Manage Content</h3>
-				<p>Edit or update your content from here.</p>
+				<h3>{renderContent("nav.manage_content_modal.title", "Manage Content")}</h3>
+				<p>{renderContent("nav.manage_content_modal.description", "Edit or update your content from here.")}</p>
 			</div>
 		);
 	};
@@ -72,7 +76,7 @@ const NavBar = ({ handleSignout }) => {
 		if (totalCartItems || totalCartItems > 0) {
 			return (
 				<Nav.Link as={Link} to="/shoppingcart" className={location.pathname === "/shoppingcart" ? "active-navbar-link" : "navbar-link"}>
-					View Cart <AiOutlineShoppingCart /> {totalCartItems}
+					{renderContent("nav.cart.view", "View Cart")} <AiOutlineShoppingCart /> {totalCartItems}
 				</Nav.Link>
 			);
 		}
@@ -89,7 +93,7 @@ const NavBar = ({ handleSignout }) => {
 						title={
 							<Link
 								to="/admin/dashboard">
-								Admin dashboard
+								{renderContent("nav.admin_dashboard", "Admin dashboard")}
 							</Link>
 						}
 						className={
@@ -114,7 +118,7 @@ const NavBar = ({ handleSignout }) => {
 							className={
 								location.pathname === "/admin/users" ? "active-navbar-link" : "navbar-link"
 							}>
-							Manage users
+							{renderContent("nav.manage_users", "Manage users")}
 						</NavDropdown.Item>
 						<NavDropdown.Item
 							as={Link}
@@ -122,7 +126,7 @@ const NavBar = ({ handleSignout }) => {
 							className={
 								location.pathname === "/admin/orders" ? "active-navbar-link" : "navbar-link"
 							}>
-							Manage orders
+							{renderContent("nav.manage_orders", "Manage orders")}
 						</NavDropdown.Item>
 						<NavDropdown.Item
 							as={Link}
@@ -130,7 +134,7 @@ const NavBar = ({ handleSignout }) => {
 							className={
 								location.pathname === "/admin/email-transactions" ? "active-navbar-link" : "navbar-link"
 							}>
-							View email transactions
+							{renderContent("nav.view_email_transactions", "View email transactions")}
 						</NavDropdown.Item>
 						<NavDropdown.Item
 							as={Link}
@@ -138,7 +142,7 @@ const NavBar = ({ handleSignout }) => {
 							className={
 								location.pathname === "/admin/opensearch" ? "active-navbar-link" : "navbar-link"
 							}>
-							Manage opensearch
+							{renderContent("nav.manage_opensearch", "Manage opensearch")}
 						</NavDropdown.Item>
 					</NavDropdown>
 				</>
@@ -153,7 +157,7 @@ const NavBar = ({ handleSignout }) => {
 					<Nav.Link as={Link} to="/" onClick={isLoggingOut ? "" : handleLogout}>
 						{isLoggingOut ?
 						 <Spinner as="span" animation="border" size="sm" role="status" aria-hidden="true" /> : (
-						 "Log out"
+						 renderContent("nav.button.logout", "Log out")
 						 )}
 					</Nav.Link>
 				</>
@@ -163,10 +167,10 @@ const NavBar = ({ handleSignout }) => {
 				// If false do this
 				<>
 					<Nav.Link as={Link} to="/signin" className={location.pathname === "/signin" ? "active-navbar-link" : "navbar-link"}>
-						Not signed in
+						{renderContent("nav.status.not_signed_in", "Not signed in")}
 					</Nav.Link>
 					<Nav.Link as={Link} to="/signup" className={location.pathname === "/signup" ? "active-navbar-link" : "navbar-link"}>
-						Signup
+						{renderContent("nav.button.signup", "Signup")}
 					</Nav.Link>
 				</>
 			);
@@ -183,17 +187,17 @@ const NavBar = ({ handleSignout }) => {
 		<Navbar expand="md" className={scrolled ? "scrolled" : ""}>
 			<Container>
 				<Navbar.Brand as={Link} to="/">
-					KoneAvustajat
+					{renderContent("nav.brand", "KoneAvustajat")}
 				</Navbar.Brand>
 				<Button className="themeSwitcher" onClick={toggleTheme}>
-					Switch to {theme === "light" ? "Dark" : "Light"} Mode
+					{renderContent("nav.theme_switch", "Switch theme")}
 				</Button>
 				<Button className="languageSwitcher" onClick={() => changeLanguage(language === "en" ? "fi" : "en")}>
-					Lang: {language}
+					{renderContent("nav.language_switch", "Lang:")} {language}
 				</Button>
 				{currentUser && currentUser.RoleID === 4 && (
 					<Button variant="primary" onClick={handleOpenModal}>
-						Manage Content
+						{renderContent("nav.button.manage_content", "Manage Content")} 
 					</Button>
  				)}
 				<Navbar.Toggle aria-controls="basic-navbar-nav">
@@ -205,14 +209,14 @@ const NavBar = ({ handleSignout }) => {
 							as={Link}
 							to="/"
 							className={location.pathname === "/" ? "active-navbar-link" : "navbar-link"}>
-							Home
+							{renderContent("nav.menu.home", "Home")}
 						</Nav.Link>
 
 						<NavDropdown
 							title={
 								<Link
 									to="/computerwizard/browse">
-									Computer Wizard
+									{renderContent("nav.menu.computer_wizard", "Computer Wizard")}
 								</Link>
 							}
 							className={
@@ -236,7 +240,7 @@ const NavBar = ({ handleSignout }) => {
 								className={
 									location.pathname === "/computerwizard/browse" ? "active-navbar-link" : "navbar-link"
 								}>
-								Browse
+								{renderContent("nav.menu.browse", "Browse")}
 							</NavDropdown.Item>
 							<NavDropdown.Item
 								as={Link}
@@ -244,7 +248,7 @@ const NavBar = ({ handleSignout }) => {
 								className={
 									location.pathname === "/computerwizard/wizard" ? "active-navbar-link" : "navbar-link"
 								}>
-								Wizard
+								{renderContent("nav.menu.wizard", "Wizard")}
 							</NavDropdown.Item>
 							<NavDropdown.Item
 								as={Link}
@@ -252,14 +256,14 @@ const NavBar = ({ handleSignout }) => {
 								className={
 									location.pathname === "/computerwizard/build" ? "active-navbar-link" : "navbar-link"
 								}>
-								Build
+								{renderContent("nav.menu.build", "Build")}
 							</NavDropdown.Item>
 						</NavDropdown>
 						<Nav.Link
 							as={Link}
 							to="/usedparts"
 							className={location.pathname === "/usedparts" ? "active-navbar-link" : "navbar-link"}>
-							Used parts
+							{renderContent("nav.menu.used_parts", "Used parts")}
 						</Nav.Link>
 					</Nav>
 					<Nav className="ml-auto">{userNavbar()}</Nav>

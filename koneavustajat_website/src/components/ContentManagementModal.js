@@ -2,9 +2,11 @@
 import React, { useState, useEffect } from "react";
 import { Modal, Button, Form, Alert } from "react-bootstrap";
 import { useModal, useLanguage, useContent, useError } from "../utils/Contexts";
+import { useRenderContent } from "../utils/ContentUtils";
 import { useLocation } from "react-router-dom";
 
 const ContentManagementModal = ({ fetchWholeContent, fetchContentIdentifiers, addContent, updateContent}) => {
+	const renderContent = useRenderContent();
 	const { displayError } = useError();
 	const { isOpen, modalContent, closeModal } = useModal();
 	const { fetchPageContent } = useContent();
@@ -235,7 +237,7 @@ const ContentManagementModal = ({ fetchWholeContent, fetchContentIdentifiers, ad
 	return (
 		<Modal show={isOpen} onHide={closeModal} centered className="cms-modal">
 			<Modal.Header closeButton>
-				<Modal.Title>{mode === "add" ? "Add Content" : "Update Content"}</Modal.Title>
+				<Modal.Title>{mode === "add" ? renderContent("contentmanagementmodal.button.submit_add", "Add Content") : renderContent("contentmanagementmodal.button.submit_update", "Update Content")}</Modal.Title>
 			</Modal.Header>
 			<Modal.Body>
 				<Form>
@@ -246,7 +248,7 @@ const ContentManagementModal = ({ fetchWholeContent, fetchContentIdentifiers, ad
 					</Form.Group>
 					{warning && <Alert variant="warning">{warning}</Alert>}
 					<Form.Group className="mb-3">
-						<Form.Label>Site Identifier</Form.Label>
+						<Form.Label>{renderContent("contentmanagementmodal.field.site_identifier", "Site Identifier")}</Form.Label>
 						{mode === "add" ? (
 							<>
 								<Form.Control
@@ -254,26 +256,26 @@ const ContentManagementModal = ({ fetchWholeContent, fetchContentIdentifiers, ad
 									name="Identifiers.page"
 									value={formFields.Identifiers.page}
 									onChange={handleChange}
-									placeholder="page"
+									placeholder={renderContent("contentmanagementmodal.placeholder.page", "page")}
 								/>
 								<Form.Control
 									type="text"
 									name="Identifiers.section"
 									value={formFields.Identifiers.section}
 									onChange={handleChange}
-									placeholder="section"
+									placeholder={renderContent("contentmanagementmodal.placeholder.section", "section")}
 								/>
 								<Form.Control
 									type="text"
 									name="Identifiers.specific"
 									value={formFields.Identifiers.specific}
 									onChange={handleChange}
-									placeholder="specific"
+									placeholder={renderContent("contentmanagementmodal.placeholder.specific", "specific")}
 								/>
 							</>
 						) : (
 							<Form.Select className="modal-select" value={formFields.Site_Identifier} onChange={handleIdentifierSelect}>
-								<option value="" className="modal-select-option">Select an identifier</option>
+								<option value="" className="modal-select-option">{renderContent("contentmanagementmodal.identifier.select", "Select an identifier")}</option>
 								{availableIdentifiers.map((id) => (
 									<option key={id} value={id} className="modal-select-option">
 										{id}
@@ -283,7 +285,7 @@ const ContentManagementModal = ({ fetchWholeContent, fetchContentIdentifiers, ad
 						)}
 					</Form.Group>
 					<Form.Group className="mb-3">
-					<Form.Label>Language</Form.Label>
+					<Form.Label>{renderContent("contentmanagementmodal.field.language", "Language")}</Form.Label>
 					<Form.Select className="modal-select" value={languageOverride || language} onChange={overrideLanguage}>
 						{availableLanguages.map((id) => (
 							<option key={id} value={id} className="modal-select-option">
@@ -304,7 +306,7 @@ const ContentManagementModal = ({ fetchWholeContent, fetchContentIdentifiers, ad
 						</Form.Group>
 					))}
 					{mode === "update" && (
-						<p>Current version: {formFields.Version || "No version"}</p>
+						<p>{renderContent("contentmanagementmodal.version.current", "Current version:")} {formFields.Version || "No version"}</p>
 					)}
 					<Form.Group className="mb-3">
 						<Form.Check
@@ -312,17 +314,17 @@ const ContentManagementModal = ({ fetchWholeContent, fetchContentIdentifiers, ad
 							checked={formFields.Status === "published"}
 							type="checkbox"
 							name="Status"
-							label="Publish"
+							label={renderContent("contentmanagementmodal.label.publish", "Publish")}
 						/>
 					</Form.Group>
 				</Form>
 			</Modal.Body>
 			<Modal.Footer>
 				<Button variant="secondary" onClick={closeModal}>
-					Close
+					{renderContent("contentmanagementmodal.button.close", "Close")}
 				</Button>
 				<Button variant="primary" onClick={handleSubmit}>
-					{mode === "add" ? "Add Content" : "Update Content"}
+					{mode === "add" ? renderContent("contentmanagementmodal.button.submit_add", "Add Content") : renderContent("contentmanagementmodal.button.submit_update", "Update Content")}
 				</Button>
 			</Modal.Footer>
 		</Modal>

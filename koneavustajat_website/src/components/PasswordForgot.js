@@ -5,10 +5,12 @@ import React, { useState, useEffect } from "react";
 import { Container, Button, Form, Spinner, OverlayTrigger, Tooltip } from "react-bootstrap";
 import { useNavigate } from "react-router-dom";
 import { useError } from "../utils/Contexts";
+import { useRenderContent } from "../utils/ContentUtils";
 
 
 // Function for rendering sign up page, takes onSubmit as a prop
 const PasswordForgot = ({ postDynamicData }) => {
+	const renderContent = useRenderContent();
     const { displayError } = useError();
 	const navigate = useNavigate();
 	const [formFields, setFormFields] = useState({
@@ -78,13 +80,13 @@ const PasswordForgot = ({ postDynamicData }) => {
 							boxShadow: "0 4px 8px rgba(0,0,0,0.1)"
 						}}>
 						<Form style={{ textAlign: "left" }} onSubmit={handleSubmit}>
-							<h1>Forgot password</h1>
+							<h1>{renderContent("passwordforgot.title", "Forgot password")}</h1>
 
 							<Form.Group className="mb-3" controlId="formBasicEmail">
-								<Form.Label>Email address</Form.Label>
+								<Form.Label>{renderContent("passwordforgot.label.email", "Email address")}</Form.Label>
 								<Form.Control
 									type="Email"
-									placeholder="Enter Recovery Email"
+									placeholder={renderContent("passwordforgot.placeholder.email", "Enter Recovery Email")}
 									required
 									name="Email"
 									value={formFields.Email}
@@ -93,7 +95,7 @@ const PasswordForgot = ({ postDynamicData }) => {
 								/>
 							</Form.Group>
 							<Button type="submit" style={{ width: "100%" }}>
-								Request reset
+								{renderContent("passwordforgot.button.request_reset", "Request reset")}
 							</Button>
 						</Form>
 					</div>

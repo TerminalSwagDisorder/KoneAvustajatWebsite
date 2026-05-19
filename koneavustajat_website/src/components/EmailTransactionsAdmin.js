@@ -16,8 +16,10 @@ import {
 import { FaChevronUp, FaChevronDown, FaAngleDoubleLeft, FaAngleDoubleRight, FaAngleLeft, FaAngleRight } from "react-icons/fa";
 import { useAuth, useError } from "../utils/Contexts";
 import DOMPurify from "dompurify";
+import { useRenderContent } from "../utils/ContentUtils";
 
 const EmailTransactionsAdmin = ({ fetchDynamicData, fetchDataAmount, fetchSearchData, updateDynamicData }) => {
+	const renderContent = useRenderContent();
 	const { displayError } = useError();
 	const { currentUser } = useAuth();
 	const { state } = useLocation();
@@ -283,8 +285,8 @@ const EmailTransactionsAdmin = ({ fetchDynamicData, fetchDataAmount, fetchSearch
 	const searchButton = () => {
 		return (
 			<>
-				<Button onClick={() => handleSearchRendering()}>Toggle search</Button>
-				<Button onClick={() => clearSearchTerm()}  disabled={Object.entries(searchTerm).length === 0}>Clear search</Button>
+				<Button onClick={() => handleSearchRendering()}>{renderContent("emailtransactionsadmin.search.toggle", "Toggle search")}</Button>
+				<Button onClick={() => clearSearchTerm()}  disabled={Object.entries(searchTerm).length === 0}>{renderContent("emailtransactionsadmin.search.clear", "Clear search")}</Button>
 			</>
 		)
 	}
@@ -345,7 +347,7 @@ const EmailTransactionsAdmin = ({ fetchDynamicData, fetchDataAmount, fetchSearch
 				<Form.Group className="mb-3">
 					<Form.Check
 						type="checkbox"
-						label="Strict search"
+						label={renderContent("emailtransactionsadmin.label.strict_search", "Strict search")}
 						name="strict"
 						onChange={handleSearchTerm}
 						id="strict"
@@ -355,7 +357,7 @@ const EmailTransactionsAdmin = ({ fetchDynamicData, fetchDataAmount, fetchSearch
 				<Form.Group className="mb-3">
 					<Form.Check
 						type="checkbox"
-						label="Inverted search"
+						label={renderContent("emailtransactionsadmin.label.inverted_search", "Inverted search")}
 						name="inverted"
 						onChange={handleSearchTerm}
 						id="inverted"
@@ -423,7 +425,7 @@ const EmailTransactionsAdmin = ({ fetchDynamicData, fetchDataAmount, fetchSearch
 				</>
 			);
 		} else {
-			return <h3>No emailTransactions available</h3>;
+			return <h3>{renderContent("emailtransactionsadmin.section.no_data", "No emailTransactions available")}</h3>;
 		}
 	};
 
@@ -461,7 +463,7 @@ const EmailTransactionsAdmin = ({ fetchDynamicData, fetchDataAmount, fetchSearch
 					<div className="d-flex justify-content-end mb-3">
 						<CloseButton onClick={closeForm} />
 					</div>
-					<h4 className="mb-3">Email transaction details</h4>
+					<h4 className="mb-3">{renderContent("emailtransactionsadmin.section.details", "Email transaction details")}</h4>
 					{keysToRender.map((key, index) => (
 						<ul key={index}>
 							<li>
@@ -556,15 +558,15 @@ const EmailTransactionsAdmin = ({ fetchDynamicData, fetchDataAmount, fetchSearch
 			{searchButton()}
 			{renderSearch()}
 			{renderPagination()}
-			<h1>Manage Transactions</h1>
+			<h1>{renderContent("emailtransactionsadmin.title.manage", "Manage Transactions")}</h1>
 			<Table responsive="md" hover bordered className="table-striped">
 				<thead>
 					<tr>
-						<th className="order-by" onClick={() => handleOrderBy("EmailID")}>EmailID {renderSortIcon("EmailID")}</th>
-						<th className="order-by" onClick={() => handleOrderBy("ToEmail")}>ToEmail{renderSortIcon("ToEmail")}</th>
-						<th className="order-by" onClick={() => handleOrderBy("FromEmail")}>FromEmail{renderSortIcon("FromEmail")}</th>
-						<th className="order-by" onClick={() => handleOrderBy("Subject")}>Subject{renderSortIcon("Subject")}</th>
-						<th>Actions</th>
+						<th className="order-by" onClick={() => handleOrderBy("EmailID")}>{renderContent("emailtransactionsadmin.table.emailid", "EmailID")} {renderSortIcon("EmailID")}</th>
+						<th className="order-by" onClick={() => handleOrderBy("ToEmail")}>{renderContent("emailtransactionsadmin.table.toemail", "ToEmail")}{renderSortIcon("ToEmail")}</th>
+						<th className="order-by" onClick={() => handleOrderBy("FromEmail")}>{renderContent("emailtransactionsadmin.table.fromemail", "FromEmail")}{renderSortIcon("FromEmail")}</th>
+						<th className="order-by" onClick={() => handleOrderBy("Subject")}>{renderContent("emailtransactionsadmin.table.subject", "Subject")}{renderSortIcon("Subject")}</th>
+						<th>{renderContent("emailtransactionsadmin.table.actions", "Actions")}</th>
 					</tr>
 				</thead>
 				<tbody>{renderEmailTransactions()}</tbody>

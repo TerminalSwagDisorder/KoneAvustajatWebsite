@@ -4,8 +4,10 @@ import { ListGroup, Col } from "react-bootstrap";
 import { Button, Table, Form, Dropdown, Spinner } from "react-bootstrap";
 import { FaChevronUp, FaChevronDown } from "react-icons/fa";
 import { useAuth, useError } from "../utils/Contexts";
+import { useRenderContent } from "../utils/ContentUtils";
 
 const OpensearchAdmin = ({ fetchDynamicData, fetchSearchData }) => {
+	const renderContent = useRenderContent();
 	const { displayError } = useError();
 	const { currentUser } = useAuth();
 	const { state } = useLocation();
@@ -270,7 +272,7 @@ const OpensearchAdmin = ({ fetchDynamicData, fetchSearchData }) => {
 				</>
 			);
 		} else {
-			return <h3>No data available</h3>;
+			return <h3>{renderContent("opensearchadmin.section.no_data", "No data available")}</h3>;
 		}
 	};
 
@@ -296,7 +298,7 @@ const OpensearchAdmin = ({ fetchDynamicData, fetchSearchData }) => {
 				</>
 			);
 		} else {
-			return <h3>No data available</h3>;
+			return <h3>{renderContent("opensearchadmin.section.no_data", "No data available")}</h3>;
 		}
 	};
 
@@ -363,7 +365,7 @@ const OpensearchAdmin = ({ fetchDynamicData, fetchSearchData }) => {
 		return (
 			<>
 				<Form.Group className="mb-3">
-					<Form.Label>Method</Form.Label>
+					<Form.Label>{renderContent("opensearchadmin.label.method", "Method")}</Form.Label>
 					<Form.Select 
 						value={searchTerm.method || ""}
 						name="method"
@@ -382,7 +384,7 @@ const OpensearchAdmin = ({ fetchDynamicData, fetchSearchData }) => {
 					</Form.Select>
 				</Form.Group>
 				<Form.Group className="mb-3">
-					<Form.Label>Amount</Form.Label>
+					<Form.Label>{renderContent("opensearchadmin.label.amount", "Amount")}</Form.Label>
 					<Form.Select 
 						value={searchTerm.amount || ""}
 						name="amount"
@@ -401,7 +403,7 @@ const OpensearchAdmin = ({ fetchDynamicData, fetchSearchData }) => {
 						</Form.Select>
 				</Form.Group>
 				<Form.Group className="mb-3">
-					<Form.Label>Type</Form.Label>
+					<Form.Label>{renderContent("opensearchadmin.label.type", "Type")}</Form.Label>
 					<Form.Select 
 						value={searchTerm.type || ""}
 						name="type"
@@ -420,7 +422,7 @@ const OpensearchAdmin = ({ fetchDynamicData, fetchSearchData }) => {
 						</Form.Select>
 				</Form.Group>
 				<Form.Group className="mb-3">
-					<Form.Label>Part</Form.Label>
+					<Form.Label>{renderContent("opensearchadmin.label.part", "Part")}</Form.Label>
 					<Form.Select 
 						value={searchTerm.part || ""}
 						name="part"
@@ -439,7 +441,7 @@ const OpensearchAdmin = ({ fetchDynamicData, fetchSearchData }) => {
 						</Form.Select>
 				</Form.Group>
 				<Form.Group className="mb-3">
-					<Form.Label>Id</Form.Label>
+					<Form.Label>{renderContent("opensearchadmin.label.id", "Id")}</Form.Label>
 					<Form.Control
 					type="number"
 					name="id"
@@ -454,8 +456,8 @@ const OpensearchAdmin = ({ fetchDynamicData, fetchSearchData }) => {
 	const searchButton = () => {
 		return (
 			<>
-				<Button onClick={() => handleQueryToggle()}>Manage opensearch</Button>
-				<Button onClick={() => clearSearchTerm()}  disabled={Object.entries(searchTerm).every(([key, value]) => value == null || String(value).trim() === "")}>Clear query</Button>
+				<Button onClick={() => handleQueryToggle()}>{renderContent("opensearchadmin.button.manage", "Manage opensearch")}</Button>
+				<Button onClick={() => clearSearchTerm()}  disabled={Object.entries(searchTerm).every(([key, value]) => value == null || String(value).trim() === "")}>{renderContent("opensearchadmin.button.clear_query", "Clear query")}</Button>
 			</>
 		)
 	}
@@ -467,7 +469,7 @@ const OpensearchAdmin = ({ fetchDynamicData, fetchSearchData }) => {
 			<br />
 			<br />
 			{typeChoice()}
-			<h1>Manage opensearch</h1>
+			<h1>{renderContent("opensearchadmin.title.manage", "Manage opensearch")}</h1>
 			<Table responsive hover bordered className="table-striped">
 				<thead>
 					<tr>

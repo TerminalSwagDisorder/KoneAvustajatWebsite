@@ -15,9 +15,11 @@ import {
 	Spinner
 } from "react-bootstrap";
 import { useAuth, useError } from "../utils/Contexts";
+import { useRenderContent } from "../utils/ContentUtils";
 import { FaChevronUp, FaChevronDown, FaAngleDoubleLeft, FaAngleDoubleRight, FaAngleLeft, FaAngleRight } from "react-icons/fa";
 
 const UsersAdmin = ({ fetchDynamicData, fetchDataAmount, fetchSearchData, updateDynamicData, postDynamicData }) => {
+	const renderContent = useRenderContent();
 	const { displayError } = useError();
 	const { currentUser } = useAuth();
 	const navigate = useNavigate();
@@ -40,10 +42,10 @@ const UsersAdmin = ({ fetchDynamicData, fetchDataAmount, fetchSearchData, update
 	
 	
 	const roleMap = {
-		1: "guest",
-		2: "customer",
-		3: "employee",
-		4: "admin"
+		1: renderContent("usersadmin.option.guest", "Guest"),
+		2: renderContent("usersadmin.option.customer", "Customer"),
+		3: renderContent("usersadmin.option.employee", "Employee"),
+		4: renderContent("usersadmin.option.admin", "Admin")
 	};
 
 	// Function to fetch data and set users state
@@ -326,14 +328,14 @@ const UsersAdmin = ({ fetchDynamicData, fetchDataAmount, fetchSearchData, update
 				</>
 			);
 		} else {
-			return <h3>No users available</h3>;
+			return <h3>{renderContent("usersadmin.section.no_users", "No users available")}</h3>;
 		}
 	};
 
 	const renderOtherButtons = () => {
 		return (
 			<Button className="user-add-button" onClick={() => handleAddNewUser("add")}>
-				Add new user
+				{renderContent("usersadmin.button.add_new_user", "Add new user")}
 			</Button>
 	)};
 
@@ -345,7 +347,7 @@ const UsersAdmin = ({ fetchDynamicData, fetchDataAmount, fetchSearchData, update
 						{user.Activated === 1 ? "Deactivate" : "Activate"} User
 					</Button>
 					<Button className="user-select-button" onClick={() => handleSelectUser(user, "modify")}>
-						Modify user
+						{renderContent("usersadmin.button.modify_user", "Modify user")}
 					</Button>
 				</>
 			);
@@ -360,7 +362,7 @@ const UsersAdmin = ({ fetchDynamicData, fetchDataAmount, fetchSearchData, update
 						<div className="d-flex justify-content-end mb-3">
 							<CloseButton onClick={() => closeForm()} />
 						</div>
-						<h4 className=" mb-3">User details</h4>
+						<h4 className=" mb-3">{renderContent("usersadmin.section.user_details", "User details")}</h4>
 						{Object.keys(selectedUser).map((key, index) => (
 							<ul key={index}>
 								<li>
@@ -423,17 +425,17 @@ const UsersAdmin = ({ fetchDynamicData, fetchDataAmount, fetchSearchData, update
 						</div>
 						{currentOperation === "activation" ? (
 							<>
-							<h4 className=" mb-3">Are you sure you want to toggle the activation of this user?</h4>
+							<h4 className=" mb-3">{renderContent("usersadmin.section.confirm_activation", "Are you sure you want to toggle the activation of this user?")}</h4>
 								<ul>
-									<p><b>Current activation status:</b> {selectedUser.Activated ? "Activated" : "Unactivated"} </p>
-									<p><b>ID:</b> {selectedUser.UserID} </p>
-									<p><b>Email:</b> {selectedUser.Email} </p>
-									<p><b>Name:</b> {selectedUser.Name} </p>
+									<p><b>{renderContent("usersadmin.label.current_activation_status", "Current activation status:")}</b> {selectedUser.Activated ? "Activated" : "Unactivated"} </p>
+									<p><b>{renderContent("usersadmin.label.id", "ID:")}</b> {selectedUser.UserID} </p>
+									<p><b>{renderContent("usersadmin.label.email", "Email:")}</b> {selectedUser.Email} </p>
+									<p><b>{renderContent("usersadmin.label.name", "Name:")}</b> {selectedUser.Name} </p>
 								</ul>
 							</>
 						) : (
 							<>
-								<h4 className=" mb-3">Unsupported operation type</h4>
+								<h4 className=" mb-3">{renderContent("usersadmin.section.unsupported_operation", "Unsupported operation type")}</h4>
 							</>
 						)}
 						<Button variant="primary" type="submit">
@@ -484,8 +486,8 @@ const UsersAdmin = ({ fetchDynamicData, fetchDataAmount, fetchSearchData, update
 	const searchButton = () => {
 		return (
 			<>
-				<Button onClick={() => handleSearchRendering()}>Toggle search</Button>
-				<Button onClick={() => clearSearchTerm()}  disabled={Object.entries(searchTerm).length === 0}>Clear search</Button>
+				<Button onClick={() => handleSearchRendering()}>{renderContent("usersadmin.search.toggle", "Toggle search")}</Button>
+				<Button onClick={() => clearSearchTerm()}  disabled={Object.entries(searchTerm).length === 0}>{renderContent("usersadmin.search.clear", "Clear search")}</Button>
 			</>
 		)
 	}
@@ -598,13 +600,13 @@ const UsersAdmin = ({ fetchDynamicData, fetchDataAmount, fetchSearchData, update
 							<div className="d-flex justify-content-end mb-3">
 								<CloseButton onClick={() => closeForm()} />
 							</div>
-							<h1>Sign up</h1>
+							<h1>{renderContent("usersadmin.title.signup", "Sign up")}</h1>
 
 							<Form.Group className="mb-3">
-								<Form.Label>Name</Form.Label>
+								<Form.Label>{renderContent("usersadmin.label.name_form", "Name")}</Form.Label>
 								<Form.Control
 									type="text"
-									placeholder="Enter Name"
+									placeholder={renderContent("usersadmin.placeholder.name", "Enter Name")}
 									required
 									name="Name"
 									value={formFields.Name}
@@ -613,10 +615,10 @@ const UsersAdmin = ({ fetchDynamicData, fetchDataAmount, fetchSearchData, update
 							</Form.Group>
 
 							<Form.Group className="mb-3" controlId="formBasicEmail">
-								<Form.Label>Email address</Form.Label>
+								<Form.Label>{renderContent("usersadmin.label.email_form", "Email address")}</Form.Label>
 								<Form.Control
 									type="Email"
-									placeholder="Enter Email"
+									placeholder={renderContent("usersadmin.placeholder.email", "Enter Email")}
 									required
 									name="Email"
 									value={formFields.Email}
@@ -626,7 +628,7 @@ const UsersAdmin = ({ fetchDynamicData, fetchDataAmount, fetchSearchData, update
 							</Form.Group>
 
 							<Form.Group className="mb-3">
-								<Form.Label>Role</Form.Label>
+								<Form.Label>{renderContent("usersadmin.label.role", "Role")}</Form.Label>
 								<Form.Select name="RoleID" value={formFields.RoleID} onChange={handleInputChange}>
 									<option disabled>
 										Guest
@@ -645,10 +647,10 @@ const UsersAdmin = ({ fetchDynamicData, fetchDataAmount, fetchSearchData, update
 
 							{formFields && formFields.RoleID === "4" && (
 							<Form.Group className="mb-3">
-								<Form.Label>Department</Form.Label>
+								<Form.Label>{renderContent("usersadmin.label.department", "Department")}</Form.Label>
 								<Form.Control
 									type="text"
-									placeholder="Enter department"
+									placeholder={renderContent("usersadmin.placeholder.department", "Enter department")}
 									required
 									name="Department"
 									value={formFields.Department}
@@ -664,7 +666,7 @@ const UsersAdmin = ({ fetchDynamicData, fetchDataAmount, fetchSearchData, update
 										<span className="visually-hidden">Loading...</span>
 									</>
 								) : (
-									"Send invitation"
+									renderContent("usersadmin.button.send_invitation", "Send invitation")
 								)}
 							</Button>
 						</Form>
@@ -684,7 +686,7 @@ const UsersAdmin = ({ fetchDynamicData, fetchDataAmount, fetchSearchData, update
 						<div className="d-flex justify-content-end mb-3">
 							<CloseButton onClick={() => closeForm()} />
 						</div>
-						<h4 className=" mb-3">Modify order</h4>
+						<h4 className=" mb-3">{renderContent("usersadmin.button.modify_user_form", "Modify user")}</h4>
 						{Object.keys(selectedUser).map((key, index) => (
 							<ul key={index}>
 									<b>{key}</b>:{" "}
@@ -713,7 +715,7 @@ const UsersAdmin = ({ fetchDynamicData, fetchDataAmount, fetchSearchData, update
 							</ul>
 						))}
 						<Button variant="primary" type="submit">
-							Modify user
+							{renderContent("usersadmin.button.modify_user", "Modify user")}
 						</Button>
 					</Form>
 				</div>
@@ -731,15 +733,15 @@ const UsersAdmin = ({ fetchDynamicData, fetchDataAmount, fetchSearchData, update
 			{renderConfirmation()}
 			{renderUserModification()}
 			{renderPagination()}
-			<h1>Manage Users</h1>
+			<h1>{renderContent("usersadmin.title.manage", "Manage Users")}</h1>
 			<Table responsive="md" hover bordered className="table-striped">
 				<thead>
 					<tr>
-						<th className="order-by" onClick={() => handleOrderBy("UserID")}>UserID {renderSortIcon("UserID")}</th>
-						<th className="order-by" onClick={() => handleOrderBy("Email")}>Email {renderSortIcon("Email")}</th>
-						<th className="order-by" onClick={() => handleOrderBy("RoleID")}>Role {renderSortIcon("RoleID")}</th>
-						<th className="order-by" onClick={() => handleOrderBy("Activated")}>Activated {renderSortIcon("Activated")}</th>
-						<th>Actions</th>
+						<th className="order-by" onClick={() => handleOrderBy("UserID")}>{renderContent("usersadmin.table.userid", "UserID")} {renderSortIcon("UserID")}</th>
+						<th className="order-by" onClick={() => handleOrderBy("Email")}>{renderContent("usersadmin.table.email", "Email")} {renderSortIcon("Email")}</th>
+						<th className="order-by" onClick={() => handleOrderBy("RoleID")}>{renderContent("usersadmin.table.role", "Role")} {renderSortIcon("RoleID")}</th>
+						<th className="order-by" onClick={() => handleOrderBy("Activated")}>{renderContent("usersadmin.table.activated", "Activated")} {renderSortIcon("Activated")}</th>
+						<th>{renderContent("usersadmin.table.actions", "Actions")}</th>
 			 
 					</tr>
 				</thead>

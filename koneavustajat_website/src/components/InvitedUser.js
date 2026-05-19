@@ -1,9 +1,11 @@
 import React, { useState, useEffect, useCallback, useRef } from "react";
 import { Navigate, useLocation, Link } from "react-router-dom";
 import { useError } from "../utils/Contexts";
+import { useRenderContent } from "../utils/ContentUtils";
 import { Container, Button, Form, Spinner, OverlayTrigger, Tooltip } from "react-bootstrap";
 
 const InvitedUser = ({ activateAccount }) => {
+	const renderContent = useRenderContent();
 	const { displayError } = useError();
 	const location = useLocation();
 	const params = new URLSearchParams(location.search);
@@ -88,13 +90,13 @@ const InvitedUser = ({ activateAccount }) => {
 							boxShadow: "0 4px 8px rgba(0,0,0,0.1)"
 						}}>
 						<Form style={{ textAlign: "left" }} onSubmit={handleActivation}>
-							<h1>Complete your invitation!</h1>
+							<h1>{renderContent("inviteduser.title", "Complete your invitation!")}</h1>
 							<Form.Group className="mb-3" controlId="formBasicPassword">
-								<Form.Label>Password</Form.Label>
+								<Form.Label>{renderContent("inviteduser.label.password", "Password")}</Form.Label>
 								<OverlayTrigger placement="right" delay={{ hide: 400 }} overlay={renderTooltip}>
 									<Form.Control
 										type="Password"
-										placeholder="Enter Password"
+										placeholder={renderContent("inviteduser.placeholder.password", "Enter Password")}
 										required
 										name="Password"
 										value={formFields.Password}
@@ -111,12 +113,12 @@ const InvitedUser = ({ activateAccount }) => {
 										<span className="visually-hidden">Loading...</span>
 									</>
 								) : (
-									"Finalize invitation"
+								renderContent("inviteduser.button.finalize", "Finalize invitation")
 								)}
 							</Button>
 						</Form>
 						<Button as={Link} to="/signin" style={{ width: "100%" }}>
-							Sign in
+							{renderContent("inviteduser.button.signin", "Sign in")}
 						</Button>
 					</div>
 				</Container>

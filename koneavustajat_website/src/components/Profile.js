@@ -22,9 +22,11 @@ import {
 } from "react-bootstrap";
 import PaymentForm from "./PaymentForm.js";
 import { usePayment, useError, useAuth } from "../utils/Contexts";
+import { useRenderContent } from "../utils/ContentUtils";
 
 
 const Profile = ({ handleCredentialChange, handleSignout, fetchDynamicData, updateDynamicData, postDynamicData, downloadFile }) => {
+	const renderContent = useRenderContent();
 	const { displayError } = useError();
     const { clientSecret, setClientSecret } = usePayment();
 	const { currentUser, handleUserChange, refreshProfileData } = useAuth();
@@ -207,15 +209,15 @@ const Profile = ({ handleCredentialChange, handleSignout, fetchDynamicData, upda
 						<div className="d-flex justify-content-end mb-3">
 							<CloseButton onClick={() => closeForm()} />
 						</div>
-						<h4 className=" mb-3">Edit profile</h4>
+						<h4 className=" mb-3">{renderContent("profile.section.edit_profile", "Edit profile")}</h4>
 						<Form.Group className="mb-3">
-							<Form.Label htmlFor="ProfileImage"><FaCameraRetro /> Change profile picture</Form.Label>
+							<Form.Label htmlFor="ProfileImage"><FaCameraRetro /> {renderContent("profile.label.change_profile_picture", "Change profile picture")}</Form.Label>
 							<Form.Control type="file" name="ProfileImage" accept="image/png, image/jpeg, image/gif" onChange={handleInputChange} />
 						</Form.Group>
 						<Form.Group className="mb-3">
 								<Form.Control
 									type="text"
-									placeholder="Enter new name"
+									placeholder={renderContent("profile.placeholder.name", "Enter new name")}
 									name="Name"
 									value={formFields.Name}
 									onChange={handleInputChange}
@@ -223,7 +225,7 @@ const Profile = ({ handleCredentialChange, handleSignout, fetchDynamicData, upda
 							</Form.Group>
 							<Form.Group className="mb-3">
 								<Form.Select name="Gender" value={formFields.Gender} onChange={handleInputChange}>
-									<option value="">Select new gender</option>
+									<option value="">{renderContent("profile.label.gender", "Select new gender")}</option>
 									<option value="male">
 										Male
 									</option>
@@ -235,7 +237,7 @@ const Profile = ({ handleCredentialChange, handleSignout, fetchDynamicData, upda
 							<Form.Group className="mb-3">
 								<Form.Control
 									type="email"
-									placeholder="Enter new email"
+									placeholder={renderContent("profile.placeholder.email", "Enter new email")}
 									name="Email"
 									onChange={handleInputChange}
 									value={formFields.Email}
@@ -246,7 +248,7 @@ const Profile = ({ handleCredentialChange, handleSignout, fetchDynamicData, upda
 								<OverlayTrigger placement="right" delay={{ hide: 400 }} overlay={renderTooltip}>
 									<Form.Control
 										type="password"
-										placeholder="Enter new password"
+										placeholder={renderContent("profile.placeholder.password", "Enter new password")}
 										name="Password"
 										onChange={handleInputChange}
 										value={formFields.Password}
@@ -257,7 +259,7 @@ const Profile = ({ handleCredentialChange, handleSignout, fetchDynamicData, upda
 							<Form.Group className="mb-3">
 								<Form.Control
 									type="password"
-									placeholder="Enter current password"
+									placeholder={renderContent("profile.placeholder.current_password", "Enter current password")}
 									name="currentPassword"
 									onChange={handleInputChange}
 									value={formFields.currentPassword}
@@ -281,7 +283,7 @@ const Profile = ({ handleCredentialChange, handleSignout, fetchDynamicData, upda
 						<div className="d-flex justify-content-end mb-3">
 							<CloseButton onClick={() => closeForm()} />
 						</div>
-						<h4 className=" mb-3">Change address</h4>
+						<h4 className=" mb-3">{renderContent("profile.section.change_address", "Change address")}</h4>
 						<Form.Group className="mb-3">
 							<Form.Select name="AddressTypeID" value={formFields.AddressTypeID || currentAddressType} onChange={handleInputChange}>
 								{addressTypes && Object.keys(addressTypes).length > 0 ? (
@@ -291,14 +293,14 @@ const Profile = ({ handleCredentialChange, handleSignout, fetchDynamicData, upda
 										</option>
 									))
 								) : (
-									<option value="">No address types available</option>
+									<option value="">{renderContent("profile.message.no_address_types", "No address types available")}</option>
 								)}
 							</Form.Select>
 						</Form.Group>
 						<Form.Group className="mb-3">
 							<Form.Control
 								type="text"
-								placeholder="Enter new street"
+								placeholder={renderContent("profile.placeholder.street", "Enter new street")}
 								name="Street"
 								onChange={handleInputChange}
 								value={formFields.Street}
@@ -307,7 +309,7 @@ const Profile = ({ handleCredentialChange, handleSignout, fetchDynamicData, upda
 						<Form.Group className="mb-3">
 							<Form.Control
 								type="text"
-								placeholder="Enter new city"
+								placeholder={renderContent("profile.placeholder.city", "Enter new city")}
 								name="City"
 								onChange={handleInputChange}
 								value={formFields.City}
@@ -316,7 +318,7 @@ const Profile = ({ handleCredentialChange, handleSignout, fetchDynamicData, upda
 						<Form.Group className="mb-3">
 							<Form.Control
 								type="text"
-								placeholder="Enter new state"
+								placeholder={renderContent("profile.placeholder.state", "Enter new state")}
 								name="State"
 								onChange={handleInputChange}
 								value={formFields.State}
@@ -325,7 +327,7 @@ const Profile = ({ handleCredentialChange, handleSignout, fetchDynamicData, upda
 						<Form.Group className="mb-3">
 							<Form.Control
 								type="text"
-								placeholder="Enter new postal code"
+								placeholder={renderContent("profile.placeholder.postal_code", "Enter new postal code")}
 								name="PostalCode"
 								onChange={handleInputChange}
 								value={formFields.PostalCode}
@@ -334,7 +336,7 @@ const Profile = ({ handleCredentialChange, handleSignout, fetchDynamicData, upda
 						<Form.Group className="mb-3">
 							<Form.Control
 								type="text"
-								placeholder="Enter new country"
+								placeholder={renderContent("profile.placeholder.country", "Enter new country")}
 								name="Country"
 								onChange={handleInputChange}
 								value={formFields.Country}
@@ -343,7 +345,7 @@ const Profile = ({ handleCredentialChange, handleSignout, fetchDynamicData, upda
 						<Form.Group className="mb-3">
 							<Form.Control
 								type="password"
-								placeholder="Enter current password"
+								placeholder={renderContent("profile.placeholder.current_password", "Enter current password")}
 								name="currentPassword"
 								onChange={handleInputChange}
 								value={formFields.currentPassword}
@@ -402,7 +404,7 @@ const Profile = ({ handleCredentialChange, handleSignout, fetchDynamicData, upda
 									</ListGroup.Item>
 								) : (
 									<ListGroup.Item>
-										<span>{key}</span>: {val ? val : "No value"} <br />
+										<span>{key}</span>: {val ? val : renderContent("profile.message.no_value", "No value")} <br />
 									</ListGroup.Item>
 								)
 						))}
@@ -422,7 +424,7 @@ const Profile = ({ handleCredentialChange, handleSignout, fetchDynamicData, upda
 						<div className="d-flex justify-content-end mb-3">
 							<CloseButton onClick={() => closeForm()} />
 						</div>
-						<h4 className=" mb-3">View orders</h4>
+						<h4 className=" mb-3">{renderContent("profile.button.view_orders", "View orders")}</h4>
 						<Form.Group className="mb-3">
 							<Form.Select name="OrderID" value={currentOrder[0] ? currentOrder[0].OrderID : null} onChange={fetchCurrentOrder}>
 								{orders && Object.keys(orders).length > 0 ? (
@@ -432,7 +434,7 @@ const Profile = ({ handleCredentialChange, handleSignout, fetchDynamicData, upda
 										</option>
 									))
 								) : (
-									<option value="">No orders available</option>
+									<option value="">{renderContent("profile.message.no_orders", "No orders available")}</option>
 								)}
 							</Form.Select>
 						</Form.Group>
@@ -482,7 +484,7 @@ const Profile = ({ handleCredentialChange, handleSignout, fetchDynamicData, upda
 							<div className="d-flex justify-content-end mb-3">
 								<CloseButton onClick={() => setViewOrderDetails(false)} />
 							</div>
-							<h4 className=" mb-3">Order details</h4>
+							<h4 className=" mb-3">{renderContent("profile.section.order_details", "Order details")}</h4>
 							{renderOrderDetails(currentOrder[0])}
 						</Form>
 					</div>
@@ -726,15 +728,15 @@ const Profile = ({ handleCredentialChange, handleSignout, fetchDynamicData, upda
 		let ordersButton;
 
 		if (currentUser) {
-			editButton = <Button onClick={() => handleModifyProfile("edit")}>Edit your profile</Button>
+			editButton = <Button onClick={() => handleModifyProfile("edit")}>{renderContent("profile.button.edit_your_profile", "Edit your profile")}</Button>
 		}
 
 		if (currentUser && currentUser.RoleID === 2) {
 			customerButtons = (
 				<>
-					<Button onClick={() => handleModifyProfile("address")}>Change address details</Button>
+					<Button onClick={() => handleModifyProfile("address")}>{renderContent("profile.button.change_address_details", "Change address details")}</Button>
 					{/*<br />
-					<Button onClick={() => handleModifyProfile("payment")}>Change payment details</Button>*/}
+					<Button onClick={() => handleModifyProfile("payment")}>{renderContent("profile.button.change_payment_details", "Change payment details")}</Button>*/}
 				</>
 			);
 			ordersButton = (
@@ -756,7 +758,7 @@ const Profile = ({ handleCredentialChange, handleSignout, fetchDynamicData, upda
 		<Container>
 			<Row className="justify-content-center modal-body">
 				<Col lg={8}>
-					<h6 className="persInfo">Personal information</h6>
+					<h6 className="persInfo">{renderContent("profile.section.personal_information", "Personal information")}</h6>
 					<Row className="align-items-center border border-1">
 					{formButtons()}
 					<Col md={8} className="text-center">

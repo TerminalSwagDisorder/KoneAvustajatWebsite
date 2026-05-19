@@ -5,10 +5,12 @@ import React, { useState, useEffect } from "react";
 import { Container, Button, Form, Spinner, OverlayTrigger, Tooltip } from "react-bootstrap";
 import { useNavigate, Link } from "react-router-dom";
 import { useError } from "../utils/Contexts";
+import { useRenderContent } from "../utils/ContentUtils";
 
 
 // Function for rendering sign up page, takes onSubmit as a prop
 export const Signup = ({ handleSignup }) => {
+	const renderContent = useRenderContent();
     const { displayError } = useError();
 	const navigate = useNavigate();
 	const [isLoading, setIsLoading] = useState(false);
@@ -98,13 +100,13 @@ export const Signup = ({ handleSignup }) => {
 							boxShadow: "0 4px 8px rgba(0,0,0,0.1)"
 						}}>
 						<Form style={{ textAlign: "left" }} onSubmit={handleSubmit}>
-							<h1>Sign up</h1>
+							<h1>{renderContent("signup.title", "Sign up")}</h1>
 
 							<Form.Group className="mb-3">
-								<Form.Label>Name</Form.Label>
+								<Form.Label>{renderContent("signup.label.name", "Name")}</Form.Label>
 								<Form.Control
 									type="text"
-									placeholder="Enter Name"
+									placeholder={renderContent("signup.placeholder.name", "Enter Name")}
 									required
 									name="Name"
 									value={formFields.Name}
@@ -113,10 +115,10 @@ export const Signup = ({ handleSignup }) => {
 							</Form.Group>
 
 							<Form.Group className="mb-3" controlId="formBasicEmail">
-								<Form.Label>Email address</Form.Label>
+								<Form.Label>{renderContent("signup.label.email", "Email address")}</Form.Label>
 								<Form.Control
 									type="Email"
-									placeholder="Enter Email"
+									placeholder={renderContent("signup.placeholder.email", "Enter Email")}
 									required
 									name="Email"
 									value={formFields.Email}
@@ -126,11 +128,11 @@ export const Signup = ({ handleSignup }) => {
 							</Form.Group>
 
 							<Form.Group className="mb-3" controlId="formBasicPassword">
-								<Form.Label>Password</Form.Label>
+								<Form.Label>{renderContent("signup.label.password", "Password")}</Form.Label>
 								<OverlayTrigger placement="right" delay={{ hide: 400 }} overlay={renderTooltip}>
 									<Form.Control
 										type="Password"
-										placeholder="Enter Password"
+										placeholder={renderContent("signup.placeholder.password", "Enter Password")}
 										required
 										name="Password"
 										value={formFields.Password}
@@ -147,12 +149,12 @@ export const Signup = ({ handleSignup }) => {
 										<span className="visually-hidden">Loading...</span>
 									</>
 								) : (
-									"Sign up"
+									renderContent("signup.button.submit", "Sign up")
 								)}
 							</Button>
 						</Form>
 						<Button as={Link} to="/signin" style={{ width: "100%" }}>
-							Sign in
+							{renderContent("signup.button.signin", "Sign in")}
 						</Button>
 					</div>
 				</Container>

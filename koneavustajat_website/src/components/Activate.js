@@ -1,8 +1,10 @@
 import React, { useState, useEffect, useCallback, useRef } from "react";
 import { Navigate, useLocation } from "react-router-dom";
 import { useError } from "../utils/Contexts";
+import { useRenderContent } from "../utils/ContentUtils";
 
 const Activate = ({ activateAccount }) => {
+	const renderContent = useRenderContent();
 	const { displayError } = useError();
 	const location = useLocation();
 	const params = new URLSearchParams(location.search);
@@ -41,7 +43,7 @@ const Activate = ({ activateAccount }) => {
 			return <Navigate to="/profile" />;
 		}
 		if (!activationStatus) {
-			return <h2>Activating account...</h2>;
+			return <h2>{renderContent("activate.status.activating_account", "Activating account...")}</h2>;
 		}
 		return <Navigate to="/profile" />;
 	};

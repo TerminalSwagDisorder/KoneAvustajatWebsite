@@ -5,7 +5,6 @@ import { fetchContent } from "../api/api";
 export const useRenderContent = () => {
 	const { language } = useLanguage();
 	const { content, overridenContent } = useContent();
-
 	const renderContent = (identifier, fallback = "Content could not be loaded") => {
 		if (content && content[identifier]) {
 			return content[identifier][language || "en"] || fallback;

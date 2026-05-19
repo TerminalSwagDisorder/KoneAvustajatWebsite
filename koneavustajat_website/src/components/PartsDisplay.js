@@ -2,8 +2,10 @@ import React, { useState, useEffect } from "react";
 import { fetchDynamicData } from "../api/api";
 import { Button, Container, Table, Form } from "react-bootstrap";
 import { useError } from "../utils/Contexts";
+import { useRenderContent } from "../utils/ContentUtils";
 
 const PartsDisplay = ({ fetchDynamicData }) => {
+	const renderContent = useRenderContent();
 	const { displayError } = useError();
 	const [parts, setParts] = useState([]);
 	const [partName, setPartName] = useState("cpu");
@@ -57,18 +59,18 @@ const PartsDisplay = ({ fetchDynamicData }) => {
 					style={{ width: "400px" }}
 				>
 					<Form.Group className="mb-3">
-						<Form.Label>Part name</Form.Label>
+						<Form.Label>{renderContent("partsdisplay.label.part_name", "Part name")}</Form.Label>
 						<Form.Control
 							type="text"
 							id="search"
 							name="search"
 							value={partName}
 							onChange={handleSearchTerm}
-							/>
-					<Button style={{ width: "40%" }} type="submit">
-						Search
-					</Button>
-				</Form.Group>
+						/>
+						<Button style={{ width: "40%" }} type="submit">
+							{renderContent("partsdisplay.button.search", "Search")}
+						</Button>
+					</Form.Group>
 				</Form>
 				<br />
 			</div>
@@ -81,43 +83,43 @@ const PartsDisplay = ({ fetchDynamicData }) => {
 				<>
 					{parts.map((part) => (
 						<tr key={part.ID}>
-							<td>ID: {part.ID}</td>
-							<td>Name: {part.Name || "Unknown Name"}</td>
-							<td>Price: {part.Price || "N/A"} €</td>
+							<td>{renderContent("partsdisplay.table.id", "ID")}: {part.ID}</td>
+							<td>{renderContent("partsdisplay.table.name", "Name")}: {part.Name || "Unknown Name"}</td>
+							<td>{renderContent("partsdisplay.table.price", "Price")}: {part.Price || "N/A"} €</td>
 						</tr>
 					))}
 					<Button onClick={() => setPage(page > 1 ? page - 1 : 1)} disabled={page <= 1}>
-						Previous
+						{renderContent("partsdisplay.button.previous", "Previous")}
 					</Button>
-					<Button onClick={() => setPage(page + 1)}>Next</Button>
+					<Button onClick={() => setPage(page + 1)}>{renderContent("partsdisplay.button.next", "Next")}</Button>
 				</>
 			);
 		}
 		if (parts.length === 0 && page > 1) {
 			return (
 				<>
-					<h3>No parts available</h3>
+					<h3>{renderContent("partsdisplay.section.no_parts", "No parts available")}</h3>
 					<Button onClick={() => setPage(page > 1 ? page - 1 : 1)} disabled={page <= 1}>
-						Previous
+						{renderContent("partsdisplay.button.previous", "Previous")}
 					</Button>
 				</>
 			);
 		}
 		if (loading) {
-			return <h3>Loading parts...</h3>;
+			return <h3>{renderContent("partsdisplay.section.loading", "Loading parts...")}</h3>;
 		}
 	};
 
 	return (
 		<div>
-			<h1>Parts</h1>
+			<h1>{renderContent("partsdisplay.title.parts", "Parts")}</h1>
 			{searchParts()}
 			<Table responsive="md" hover bordered className="table-striped">
 				<thead>
 					<tr>
-						<th>ID</th>
-						<th>Name</th>
-						<th>Price</th>
+						<th>{renderContent("partsdisplay.table.id", "ID")}</th>
+						<th>{renderContent("partsdisplay.table.name", "Name")}</th>
+						<th>{renderContent("partsdisplay.table.price", "Price")}</th>
 					</tr>
 				</thead>
 				<tbody>{renderParts()}</tbody>

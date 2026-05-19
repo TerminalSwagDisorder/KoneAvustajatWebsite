@@ -15,8 +15,10 @@ import {
 } from "react-bootstrap";
 import { FaChevronUp, FaChevronDown, FaAngleDoubleLeft, FaAngleDoubleRight, FaAngleLeft, FaAngleRight } from "react-icons/fa";
 import { useAuth, useError } from "../utils/Contexts";
+import { useRenderContent } from "../utils/ContentUtils";
 
 const OrdersAdmin = ({ fetchDynamicData, fetchDataAmount, fetchSearchData, updateDynamicData }) => {
+	const renderContent = useRenderContent();
 	const { displayError } = useError();
 	const { currentUser } = useAuth();
 	const { state } = useLocation();
@@ -284,8 +286,8 @@ const OrdersAdmin = ({ fetchDynamicData, fetchDataAmount, fetchSearchData, updat
 	const searchButton = () => {
 		return (
 			<>
-				<Button onClick={() => handleSearchRendering()}>Toggle search</Button>
-				<Button onClick={() => clearSearchTerm()}  disabled={Object.entries(searchTerm).length === 0}>Clear search</Button>
+				<Button onClick={() => handleSearchRendering()}>{renderContent("ordersadmin.search.toggle", "Toggle search")}</Button>
+				<Button onClick={() => clearSearchTerm()}  disabled={Object.entries(searchTerm).length === 0}>{renderContent("ordersadmin.search.clear", "Clear search")}</Button>
 			</>
 		)
 	}
@@ -364,7 +366,7 @@ const OrdersAdmin = ({ fetchDynamicData, fetchDataAmount, fetchSearchData, updat
 					/>
 				</Form.Group>
 				<Form.Group className="mb-3">
-					<Form.Label>Max total price</Form.Label>
+					<Form.Label>{renderContent("ordersadmin.label.max_total_price", "Max total price")}</Form.Label>
 					<Form.Control 
 					type="number" 
 					id="priceMax"
@@ -374,7 +376,7 @@ const OrdersAdmin = ({ fetchDynamicData, fetchDataAmount, fetchSearchData, updat
 					/>
 				</Form.Group>
 				<Form.Group className="mb-3">
-					<Form.Label>Min total price</Form.Label>
+					<Form.Label>{renderContent("ordersadmin.label.min_total_price", "Min total price")}</Form.Label>
 					<Form.Control 
 					type="number" 
 					id="priceMin"
@@ -447,7 +449,7 @@ const OrdersAdmin = ({ fetchDynamicData, fetchDataAmount, fetchSearchData, updat
 				</>
 			);
 		} else {
-			return <h3>No orders available</h3>;
+			return <h3>{renderContent("ordersadmin.section.no_orders", "No orders available")}</h3>;
 		}
 	};
 
@@ -480,7 +482,7 @@ const OrdersAdmin = ({ fetchDynamicData, fetchDataAmount, fetchSearchData, updat
 					<div className="d-flex justify-content-end mb-3">
 						<CloseButton onClick={closeForm} />
 					</div>
-					<h4 className="mb-3">Order details</h4>
+					<h4 className="mb-3">{renderContent("ordersadmin.section.details", "Order details")}</h4>
 					{keysToRender.map((key, index) => (
 						<ul key={index}>
 							<li>
@@ -570,7 +572,7 @@ const OrdersAdmin = ({ fetchDynamicData, fetchDataAmount, fetchSearchData, updat
 						<div className="d-flex justify-content-end mb-3">
 							<CloseButton onClick={() => closeForm()} />
 						</div>
-						<h4 className=" mb-3">Modify order</h4>
+						<h4 className=" mb-3">{renderContent("ordersadmin.button.modify_order", "Modify order")}</h4>
 						{Object.keys(selectedOrder).map((key, index) => (
 							<ul key={index}>
 									<b>{key}</b>:{" "}
@@ -607,17 +609,17 @@ const OrdersAdmin = ({ fetchDynamicData, fetchDataAmount, fetchSearchData, updat
 			{renderSearch()}
 			{renderOrderModification()}
 			{renderPagination()}
-			<h1>Manage Orders</h1>
+			<h1>{renderContent("ordersadmin.title.manage", "Manage Orders")}</h1>
 			<Table responsive="md" hover bordered className="table-striped">
 				<thead>
 					<tr>
-						<th className="order-by" onClick={() => handleOrderBy("OrderID")}>OrderID {renderSortIcon("OrderID")}</th>
-						<th className="order-by" onClick={() => handleOrderBy("CustomerID")}>CustomerID{renderSortIcon("CustomerID")}</th>
-						<th className="order-by" onClick={() => handleOrderBy("ReceiptID")}>ReceiptID{renderSortIcon("ReceiptID")}</th>
-						<th className="order-by" onClick={() => handleOrderBy("OrderDate")}>OrderDate{renderSortIcon("OrderDate")}</th>
-						<th className="order-by" onClick={() => handleOrderBy("Status")}>Status{renderSortIcon("Status")}</th>
-						<th className="order-by" onClick={() => handleOrderBy("PaymentDate")}>PaymentDate{renderSortIcon("PaymentDate")}</th>
-						<th>Actions</th>
+						<th className="order-by" onClick={() => handleOrderBy("OrderID")}>{renderContent("ordersadmin.table.orderid", "OrderID")} {renderSortIcon("OrderID")}</th>
+						<th className="order-by" onClick={() => handleOrderBy("CustomerID")}>{renderContent("ordersadmin.table.customerid", "CustomerID")}{renderSortIcon("CustomerID")}</th>
+						<th className="order-by" onClick={() => handleOrderBy("ReceiptID")}>{renderContent("ordersadmin.table.receiptid", "ReceiptID")}{renderSortIcon("ReceiptID")}</th>
+						<th className="order-by" onClick={() => handleOrderBy("OrderDate")}>{renderContent("ordersadmin.table.orderdate", "OrderDate")}{renderSortIcon("OrderDate")}</th>
+						<th className="order-by" onClick={() => handleOrderBy("Status")}>{renderContent("ordersadmin.table.status", "Status")}{renderSortIcon("Status")}</th>
+						<th className="order-by" onClick={() => handleOrderBy("PaymentDate")}>{renderContent("ordersadmin.table.paymentdate", "PaymentDate")}{renderSortIcon("PaymentDate")}</th>
+						<th>{renderContent("ordersadmin.table.actions", "Actions")}</th>
 					</tr>
 				</thead>
 				<tbody>{renderOrders()}</tbody>
