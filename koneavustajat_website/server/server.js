@@ -24,6 +24,8 @@ const nodemailer = require("nodemailer");
 const { RateLimiterRedis, RateLimiterMemory } = require("rate-limiter-flexible");
 const Redis = require("ioredis");
 const { Client } = require("@opensearch-project/opensearch");
+const { RedisStore } = require("connect-redis");
+
 
 // User authentication exports
 const jwt = require("jsonwebtoken");
@@ -175,6 +177,11 @@ const redisClient = new Redis({
 		}
 		return 100;
 	}
+});
+
+const sessionRedisClient = new Redis({
+	host: redisHost,
+	port: redisPort
 });
 
 const checkRedisError = () => { // RIP, could use lodash to limit error spam, but alas dont have it at this point, so no.
@@ -348,8 +355,18 @@ app.use(
 		secret: sessionSecret,
 		resave: false,
 		saveUninitialized: false, // Can be useful, creates a cookie even when user is not logged in to track behaviour. This can be taxing though.
-		cookie: { httpOnly: true, sameSite: "lax", maxAge: 3600000 }
+		store: new RedisStore({
+			client: sessionRedisClient,
+			prefix: "sess:"
+		}),
+		rolling: true,
+		cookie: { 
+			httpOnly: true, 
+			sameSite: "lax", 
+			maxAge: 1000 * 60 * 60 * 24 * 7 // 7 days
+		}
 	})
+
 );
 
 // Middleware for checking if user is logged in
