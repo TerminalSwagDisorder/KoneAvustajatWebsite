@@ -1037,11 +1037,12 @@ const orderSchema = Joi.object({
 	OrderDate: Joi.date().optional(),
 	Status: Joi.string().trim().max(255).optional(),
 	TotalPrice: Joi.number().optional(),
+	OrderOnly: Joi.boolean().optional(),
 	Currency: Joi.string().trim().max(10).optional(),
 	Items: Joi.array().items(Joi.object().optional()).optional(),
 	PaymentMethod: Joi.string().trim().max(255).optional(),
 	PaymentProvider: Joi.string().trim().max(255).optional(),
-	TransactionID: Joi.string().trim().max(255).optional(),
+	TransactionID: Joi.string().trim().max(255).optional().allow(null),
 	PaymentStatus: Joi.string().trim().max(255).optional(),
 	PaymentDate: Joi.date().optional(),
 	ModifiedAt: Joi.date().optional()
@@ -1065,7 +1066,7 @@ const orderSearchSchema = Joi.object({
 	*/
 	PaymentMethod: Joi.string().trim().max(255).optional(),
 	PaymentProvider: Joi.string().trim().max(255).optional(),
-	TransactionID: Joi.string().trim().max(255).optional(),
+	TransactionID: Joi.string().trim().max(255).optional().allow(null),
 	PaymentStatus: Joi.string().trim().max(255).optional(),
 	PaymentDate: Joi.date().optional(),
 	ModifiedAt: Joi.date().optional(),
@@ -3354,8 +3355,9 @@ const generateReceipt = async (result, customer, items, calculatedPrice, payment
 	}
 
 	// Payment status
+	const paymentMethod = paymentIntent?.paymentMethod === "card" ? "Kortti" : paymentIntent?.paymentMethod === "cash" ? "Käteinen" : "Ei maksutapaa";
 	const paidStatus = paymentIntent?.status === "succeeded" ? "Kyllä" : "Ei";
-	const paidDate = paymentIntent?.status === "succeeded" ? (result.PaymentDate.toLocaleDateString() || "Ei päivämäärää") : "";
+	const paidDate = (paymentIntent?.status === "succeeded" && result.PaymentDate) ? (result.PaymentDate.toLocaleDateString() || "Ei päivämäärää") : "Ei päivämäärää";
 
 	// docDefinition for PDFMake
 	const docDefinition = {
@@ -3420,7 +3422,7 @@ const generateReceipt = async (result, customer, items, calculatedPrice, payment
 			},
 			{
 				//text: [{ text: "Maksettu: ", bold: true }, `Ei`, { text: "\nMaksutapa: ", bold: true }, "", { text: "\nMaksupäivämäärä: ", bold: true }, ``],
-				text: [{ text: "Maksettu: ", bold: true }, `${paidStatus}`, { text: "\nMaksutapa: ", bold: true }, "Kortti", { text: "\nMaksupäivämäärä: ", bold: true }, `${paidDate}\n`],
+				text: [{ text: "Maksettu: ", bold: true }, `${paidStatus}`, { text: "\nMaksutapa: ", bold: true }, paymentMethod, { text: "\nMaksupäivämäärä: ", bold: true }, `${paidDate}\n`],
 				style: "rightAlign"
 			},
 			{ text: "Takuuehdot:", style: "subheader", pageBreak: "before" },
@@ -5610,7 +5612,7 @@ app.post("/api/orders/add", rateLimitRoute(dataManipulationRateLimiter), authent
 
 	const userId = req.user.UserID;
 	const jsonFormFields = req.validatedForm;
-	const { TotalPrice,  Items } = jsonFormFields;
+	const { TotalPrice, Items, OrderOnly } = jsonFormFields;
 	const currency = "eur";
 	const allowedFields = ["Items"];
 	const customerSql = "SELECT * FROM customers WHERE UserID = ?";
@@ -5652,7 +5654,12 @@ app.post("/api/orders/add", rateLimitRoute(dataManipulationRateLimiter), authent
 
 		// OrderID, OrderTypeID, CustomerID, ReceiptID, OrderDate, Status, TotalPrice, Currency, Items, PaymentMethod, PaymentProvider, TransactionID, PaymentStatus, PaymentDate, ModifiedAt
 		insertQuery += " Items = ?, CustomerID = ?, TotalPrice = ?, OrderTypeID = ?, ReceiptID = ?, Status = ?, Currency = ?, PaymentProvider = ?, TransactionID = ?, PaymentMethod = ?, PaymentStatus = ?";
-		queryParams.push(JSON.stringify(dbItems), parseInt(customer[0].CustomerID), paymentIntent.amount / 100, 1, generateReceiptId(customer[0].CustomerID), "verifying", paymentIntent.currency, "stripe", paymentIntent.id, paymentIntent.payment_method_types, "unpaid");		
+		
+		if (OrderOnly) {
+			queryParams.push(JSON.stringify(dbItems), parseInt(customer[0].CustomerID), paymentIntent.amount / 100, 1, generateReceiptId(customer[0].CustomerID), "verifying", paymentIntent.currency, null, null, null, "unpaid");
+		} else {
+			queryParams.push(JSON.stringify(dbItems), parseInt(customer[0].CustomerID), paymentIntent.amount / 100, 1, generateReceiptId(customer[0].CustomerID), "verifying", paymentIntent.currency, "stripe", paymentIntent.id, paymentIntent.payment_method_types, "unpaid");
+		}
 
 		const [result] = await promisePool.query(insertQuery, queryParams);
 		return res.status(200).json({ message: "Added order successfully", id: result.insertId, clientSecret: paymentIntent.client_secret });
@@ -5707,59 +5714,80 @@ app.patch("/api/orders/update/:id", rateLimitRoute(dataManipulationRateLimiter),
 });
 
 app.patch("/api/orders/update/:id/verify", authenticateSession, idValidator, formFieldsValidator(orderSchema), async (req, res) => {
-    console.log("API verify order accessed");
-    
+	console.log("API verify order accessed");
+	
 	const jsonFormFields = req.validatedForm;
 	const { TransactionID } = jsonFormFields;
-    const userId = req.user.UserID;
-    const orderId = req.validatedId;
+	const userId = req.user.UserID;
+	const orderId = req.validatedId;
 
 	const customerSql = `SELECT c.CustomerID, c.UserID, u.Name, u.Email, a.AddressID, a.AddressTypeID, a.Street, a.City, a.State, a.PostalCode, a.Country 
 	FROM customers c LEFT JOIN users u ON c.UserID = u.UserID LEFT JOIN addresses a ON c.CustomerID = a.CustomerID WHERE a.AddressTypeID = 1 AND c.UserID = ?`;	
 	
-    const currentOrderSql = "SELECT * FROM orders WHERE OrderID = ?";
+	const currentOrderSql = "SELECT * FROM orders WHERE OrderID = ?";
 
-    try {
-		if (!TransactionID) {
-			return res.status(400).json({ message: "Transaction ID is required" });
+	try {
+		const [customer] = await promisePool.query(customerSql, [userId]);
+		if (!customer.length) {
+			return res.status(401).json({ message: "User is not a customer!" });
+		}
+		
+		const [currentOrder] = await promisePool.query(currentOrderSql, [orderId]);
+		if (!currentOrder.length) {
+			return res.status(404).json({ message: "Order not found!" });
 		}
 
-        const [customer] = await promisePool.query(customerSql, [userId]);
-        if (!customer.length) {
-            return res.status(401).json({ message: "User is not a customer!" });
-        }
-        
-        const [currentOrder] = await promisePool.query(currentOrderSql, [orderId]);
-        if (!currentOrder.length) {
-            return res.status(404).json({ message: "Order not found!" });
-        }
+		let paymentIntent = null;
+		let updateQuery = null;
 
-        // Validate payment with Stripe
-        const paymentIntent = await stripe.paymentIntents.retrieve(TransactionID);
-        if (!paymentIntent || paymentIntent.status !== "succeeded") {
-            return res.status(400).json({ message: "Payment not verified with Stripe" });
-        }
+		// Validate payment with Stripe only if a TransactionID exists
+		if (TransactionID) {
+			paymentIntent = await stripe.paymentIntents.retrieve(TransactionID);
+			if (!paymentIntent) {
+				return res.status(400).json({ message: "Payment not verified with Stripe" });
+			}
 
-        if (paymentIntent.id !== currentOrder[0].TransactionID) {
-            return res.status(400).json({ message: "Transaction ID mismatch" });
-        }
+			if (currentOrder[0].TransactionID && paymentIntent.id !== currentOrder[0].TransactionID) {
+				return res.status(400).json({ message: "Transaction ID mismatch" });
+			}
 
-        // Update order to "paid"
-        const updateQuery = "UPDATE orders SET PaymentStatus = ?, Status = ?, PaymentDate = NOW() WHERE OrderID = ?";
-        const [order] = await promisePool.query(updateQuery, ["paid", "processing", orderId]);
+			if (paymentIntent.status !== "succeeded") {
+				return res.status(400).json({ message: "Payment was not successful" });
+			}
+			paymentIntent.paymentStatus = "paid";
+			paymentIntent.paymentMethod = "card";
+			paymentIntent.paymentProvider = "stripe";
+			paymentIntent.overwrite_status = "processing";
+			updateQuery = "UPDATE orders SET PaymentStatus = ?, Status = ?, PaymentDate = NOW() WHERE OrderID = ?";
+			
+		} else {
+			updateQuery = "UPDATE orders SET PaymentStatus = ?, Status = ? WHERE OrderID = ?";
+			paymentIntent = {
+				paymentStatus: null,
+				status: null,
+				overwrite_status: null,
+				paymentMethod: "unpaid",
+				paymentProvider: "verifying",
+			};
+		}
 
-        if (order.affectedRows === 0) {
-            return res.status(404).json({ message: "Order not verified" });
-        }
+		// Update order to "paid"
+		const [order] = await promisePool.query(updateQuery, [paymentIntent.paymentStatus, paymentIntent.overwrite_status, orderId]);
 
-        const [updatedOrder] = await promisePool.query(currentOrderSql, [orderId]);
-        if (!updatedOrder.length) {
-            return res.status(404).json({ message: "Order not found!" });
-        }
+		if (order.affectedRows === 0) {
+			return res.status(404).json({ message: "Order not verified" });
+		}
+
+		const [updatedOrder] = await promisePool.query(currentOrderSql, [orderId]);
+		if (!updatedOrder.length) {
+			return res.status(404).json({ message: "Order not found!" });
+		}
 		
 		let parsedItems;
 		if (typeof updatedOrder[0].Items !== "object") {
-		 	parsedItems = JSON.parse(updatedOrder[0].Items);
+			parsedItems = JSON.parse(updatedOrder[0].Items);
+		} else {
+			parsedItems = updatedOrder[0].Items;
 		}
 		console.log(parsedItems);
 
@@ -5768,13 +5796,12 @@ app.patch("/api/orders/update/:id/verify", authenticateSession, idValidator, for
 			console.warn("Failed to generate receipt");
 		}
 		
-        return res.status(200).json({ message: `Order ${orderId} verified successfully` });
-    } catch (error) {
-        const [status, message] = handleServerError(error);
-        return res.status(status).json({ message: message });
-    }
+		return res.status(200).json({ message: `Order ${orderId} verified successfully` });
+	} catch (error) {
+		const [status, message] = handleServerError(error);
+		return res.status(status).json({ message: message });
+	}
 });
-
 
 // Route for viewing customers
 app.get("/api/users/customers", authenticateAdmin, routePagination, async (req, res) => {

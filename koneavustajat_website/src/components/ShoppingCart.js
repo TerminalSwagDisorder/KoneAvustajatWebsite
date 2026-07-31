@@ -27,7 +27,8 @@ const ShoppingCart = ({ postDynamicData, updateDynamicData }) => {
 		Items: {},
 	});
 	const [showPaymentForm, setShowPaymentForm] = useState(false);
-	const [currentOrder, setCurrentOrder] = useState({});
+	const [showConfirmOrder, setShowConfirmOrder] = useState(false);
+	const [currentOrder, setCurrentOrder] = useState(null);
 
 
 	const sortingId = (key) => parseInt(key.split('_')[1], 10);
@@ -85,16 +86,23 @@ const ShoppingCart = ({ postDynamicData, updateDynamicData }) => {
 		}
 	};
 
-	const handleSubmit = async () => {
+	const handleSubmit = async (payment) => {
 		formFields.TotalPrice = totalPrice;
 		formFields.Items = allCurrentItems;
-		console.log(typeof formFields.Items);
+		formFields.OrderOnly = payment === "nopayment" ? true : false;
+
 		try {
 			const paymentData = await postDynamicData(formFields, "orders/add");
-			if (paymentData && paymentData.clientSecret) {
+			if (paymentData && paymentData.clientSecret && paymentData.id) {
 				setClientSecret(paymentData.clientSecret);
 				setCurrentOrder(paymentData.id);
-				setShowPaymentForm(true);
+				if (payment === "payment") {
+					setShowPaymentForm(true);
+				}
+				if (payment === "nopayment") {
+					setShowConfirmOrder(true);
+				}
+				
 			} else {
 				throw new Error("Could not initiate payment. No client secret received!");
 			}
@@ -107,9 +115,10 @@ const ShoppingCart = ({ postDynamicData, updateDynamicData }) => {
 	const handlePaymentSuccess = async (transactionId) => {
 		const verifyPayment = await updateDynamicData({ TransactionID: transactionId }, `orders/update/${currentOrder}/verify`, null, null);
 		if (verifyPayment) {
-			displayError("Payment Succeeded!", "success");
+			displayError("Order Succeeded!", "success");
 			handleClearCart();
 			setShowPaymentForm(false);
+			setShowConfirmOrder(false);
 			return <Navigate to="/profile" />;
 			
 		} else {
@@ -119,6 +128,10 @@ const ShoppingCart = ({ postDynamicData, updateDynamicData }) => {
 	
 	const cancelPayment = () => {
 		setShowPaymentForm(false);
+	};	
+
+	const cancelOrder = () => {
+		setShowConfirmOrder(false);
 	};
 	
 	const formatString = str => str.replace(/_/g, " ").replace(/([a-z])([A-Z])/g, "$1 $2").toLowerCase().replace(/^./, c => c.toUpperCase());
@@ -216,9 +229,14 @@ const ShoppingCart = ({ postDynamicData, updateDynamicData }) => {
 				{renderContent("shoppingcart.button.clear_cart", "Clear Cart")}
 			</Button>
 			{allCurrentItems && (
-				<Button className="user-select-button" onClick={() => handleSubmit()}>
+				 <>
+				<Button className="user-select-button" onClick={() => handleSubmit("payment")}>
 					{renderContent("shoppingcart.button.proceed", "Proceed with order")}
 				</Button>
+				<Button className="user-select-button" onClick={() => handleSubmit("nopayment")}>
+					{renderContent("shoppingcart.button.proceed_nopay", "Proceed with order without paying")}
+				</Button>
+				</>
 			)}
 			{showPaymentForm && clientSecret && (
 				<PaymentForm
@@ -226,6 +244,16 @@ const ShoppingCart = ({ postDynamicData, updateDynamicData }) => {
 					onPaymentSuccess={handlePaymentSuccess}
 					onCancel={cancelPayment}
 				/>
+			)}
+			{showConfirmOrder && currentOrder && (
+				<div>
+				<Button onClick={() => handlePaymentSuccess(null)}>
+					{renderContent("shoppingcart.button.confirm_nopay", "Confirm order")}
+				</Button>
+				<Button onClick={() => cancelOrder()}>
+					{renderContent("shoppingcart.button.decline_nopay", "Decline order")}
+				</Button>
+				</div>
 			)}
 			<br />
 			<br />
