@@ -1,0 +1,75 @@
+
+Stage 1 - Fast fixes:
+-Fix HTTP error 400: "RoleID" must be less than or equal to 1 x
+-Fix HTTP error 500: Unknown column 'ID' in 'order clause'; in usedparts x
+-Clear product search after changing part type x
+-computerwizard/wizard -> add loading when fetching build x
+-Fix CMS supplemental content -> merge fetchPageContentOverride results instead of replacing previous content x
+
+
+Stage 2 - High priority (changes first, then additions):
+-Secure routes with sensitive data (eg. /api/orders), including order ownership checks
+-Fix used parts additional details
+-Add a normalized order_items table and migrate from orders.Items (before receipt/order changes below)
+-Show the labour cost separately in the receipt
+-Add a way to revoke tokens, check autofixari flow
+-Add addresses to orders (store billing/shipping address snapshots)
+-Create a receipt file even when failed payment
+
+
+Stage 3 - Remaining work (changes first, then additions):
+-Similar to in stage 1 "Clear product search...", check other search boxes, and implement same solution
+-Clean up React warnings
+-In cart, remove stuff like Table + ID (eg. Cpu 126) and tidy up the expanded view
+-Set up CMS texts -> finish EN/FI texts, fix route/identifier loading, finish renderContent coverage
+-Change users.Activated to statuses, check AutoFixari flow
+-For b2b, add order-level business info: ordering for a business, business name, Y-tunnus and separate business billing address (store in orders or a related table)
+-Set up custom confirmation prompts (use in eg. computerwizard/wizard)
+-Add contact & about us pages
+
+Stage 4 - Styling
+-Improve readability & ux (eg on order details, the item list should be improved)
+-Decide on central styling & themes
+-Add decided styling
+-Mirror db styling & conventions used in AF/GPS (column types, coallitions, etc.)
+
+
+Optional - Later, after stages 1-3:
+-deep dive check into React Suspense -> can it be used here?
+-Separate server functions from server routes (optional, later)
+-Redis caching (optional, later)
+-Externalize some functions (handleInputChange, handleSubmit, fetchData etc) (optional, later)
+
+
+Rendercontent checklist (Stage 3):
+Text conversion only; page/identifier loading is covered by the CMS task.
+x = current component text converted; unmarked = text remains to convert.
+	Activate.js
+	Admin.js x
+	ComputerWizard.js (n/a - no own text)
+	ComputerWizardBrowse.js
+	ComputerWizardBuild.js
+	ComputerWizardWizard.js
+	ContentManagementModal.js
+	DashboardAdmin.js
+	EmailTransactionsAdmin.js
+	ErrorModule.js (n/a - no own text)
+	Home.js x
+	InvitedUser.js
+	Nav.js
+	OpensearchAdmin.js
+	OrdersAdmin.js
+	PartsDisplay.js
+	PasswordForgot.js
+	PasswordReset.js
+	PaymentForm.js
+	Profile.js
+	ShoppingCart.js
+	Signin.js
+	Signup.js
+	UsedParts.js (n/a - no own text)
+	UsedPartsBrowse.js
+	UsedPartsBuild.js (placeholder heading only) x
+	UsedPartsModify.js (placeholder heading only) x
+	UsedPartsPurchase.js (placeholder heading only) x
+	UsersAdmin.js
