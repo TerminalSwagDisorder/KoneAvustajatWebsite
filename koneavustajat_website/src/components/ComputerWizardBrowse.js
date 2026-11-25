@@ -44,23 +44,13 @@ const ComputerWizardBrowse = ({ fetchDynamicData, fetchDataAmount, updateDynamic
 	const completedBuild = useSelector((state) => state.wizard.completedBuild);
 	const dispatch = useDispatch();
 
-	// On initial page load
 	useEffect(() => {
-		fetchData();
-	}, []);
-
-	useEffect(() => {
-		if (!searchActive) {
+		if (searchActive) {
+			reFetchSearchTermData();
+		} else {
 			fetchData();
 		}
-		if (searchActive && orderBy) {
-			reFetchSearchTermData();
-		}
-	}, [page, searchActive, orderBy]);
-
-	useEffect(() => {
-		fetchData();
-	}, [partName]);
+	}, [partName.key, page, searchActive, orderBy]);
 
 	const handleAddToCart = (item) => {
 		const newItem = {
@@ -116,8 +106,16 @@ const ComputerWizardBrowse = ({ fetchDynamicData, fetchDataAmount, updateDynamic
 	};
 
 	const handlePartTypeChange = (value) => {
+		if (value.key === partName.key) {
+			return;
+		}
+
 		setPartName(value);
 		setPage(1);
+		setSearchActive(false);
+		setSearchTerm({});
+		setSearchKey("ID");
+		closeForm();
 	};
 
 	const handleSearchKey = (value) => {

@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { useSelector, useDispatch } from "react-redux";
 import { addToWizard, removeFromWizard, clearWizard, addToCompletedBuild } from "../redux/wizardSlice";
-import { Form, Button, InputGroup, Dropdown, DropdownButton, Container, Row, Col, Image, CloseButton, ListGroup, Alert } from "react-bootstrap";
+import { Form, Button, InputGroup, Dropdown, DropdownButton, Container, Row, Col, Image, CloseButton, ListGroup, Alert, Spinner } from "react-bootstrap";
 import { FaChevronDown, FaChevronUp } from "react-icons/fa";
 import { useError } from "../utils/Contexts";
 import { useRenderContent } from "../utils/ContentUtils";
@@ -27,6 +27,7 @@ const ComputerWizardWizard = ({ wizardAlgorithm }) => {
 	const [currentBuild, setCurrentBuild] = useState({});
 	const [currentPrice, setCurrentPrice] = useState(0);
 	const [chosenPart, setChosenPart] = useState("");
+	const [isLoadingBuild, setIsLoadingBuild] = useState(false);
 
 	useEffect(() => {
 		if (Object.entries(currentBuild).length > 0) {
@@ -156,30 +157,36 @@ const ComputerWizardWizard = ({ wizardAlgorithm }) => {
 	const handleSubmit = async (event) => {
 		event.preventDefault();
 
-		if (Number.isNaN(formFields.price) || formFields.price === 0 || formFields.price === undefined) {
+		if (isLoadingBuild) {
+			return;
+		}
+
+		const price = Number(formFields.price);
+
+		if (!Number.isFinite(price) || price < 500 || price > 5000) {
 			displayError("Price must be a number between 500-5000");
+			return;
 		}
 
-		if (formFields.price < 500 || formFields.price > 5000) {
-			displayError("Price must be between 500-5000");
-		}
+		const dataToSubmit = {
+			...formFields,
+			price,
+			otherColor: formFields.colorPreference === "other" ? formFields.otherColor : ""
+		};
 
-		if (formFields.otherColor !== "" && formFields.colorPreference !== "other") {
-			let resetValue = "";
-			event.target.otherColor.value = resetValue;
-			formFields.otherColor = resetValue;
-		}
+		setIsLoadingBuild(true);
 
 		try {
-			const fetchBuild = await fetchRandomizedBuild(formFields);
+			const fetchBuild = await fetchRandomizedBuild(dataToSubmit);
+
 			if (fetchBuild) {
-				const handle = handleWizardBuild(fetchBuild);
-				if (handle) handleAddToWizard(currentBuild);
+				handleWizardBuild(fetchBuild);
 			}
-			//console.log(formFields);
 		} catch (error) {
 			displayError(error);
 			console.error(error);
+		} finally {
+			setIsLoadingBuild(false);
 		}
 	};
 	
@@ -328,7 +335,7 @@ const ComputerWizardWizard = ({ wizardAlgorithm }) => {
 				<Container id="wizardForm">
 					<Form onSubmit={handleSubmit} className="wizardForm">
 						<div className="d-flex justify-content-end mb-3">
-							<CloseButton onClick={closeForm} />
+							<CloseButton onClick={closeForm} disabled={isLoadingBuild} />
 						</div>
 						<h2>{renderContent("computerwizard/wizard.wizard.title", "Computer Wizard")}</h2>
 						<Alert variant="warning" className="wizardNotice">
@@ -447,12 +454,20 @@ const ComputerWizardWizard = ({ wizardAlgorithm }) => {
 						{renderAdvancedComputerWizard()}
 						<br />
 
-						<Button variant="primary" type="submit">
-							{renderContent("computerwizard/wizard.wizard.buttonbuildcomputer", "Build computer!")}
-						</Button>
-						<Button variant="primary" onClick={() => clearForm()}>
-							{renderContent("computerwizard/wizard.wizard.buttonclear", "Clear settings")}
-						</Button>
+					<Button variant="primary" type="submit" disabled={isLoadingBuild}>
+						{renderContent("computerwizard/wizard.wizard.buttonbuildcomputer", "Build computer!")}
+					</Button>
+
+					<Button variant="primary" type="button" onClick={() => clearForm()} disabled={isLoadingBuild}>
+						{renderContent("computerwizard/wizard.wizard.buttonclear", "Clear settings")}
+					</Button>
+
+					{isLoadingBuild && (
+						<div className="mt-2" role="status">
+							<Spinner animation="border" size="sm" className="me-2" aria-hidden="true" />
+							{renderContent("computerwizard/wizard.wizard.loading", "Generating your build...")}
+						</div>
+					)}
 					</Form>
 				</Container>
 			);

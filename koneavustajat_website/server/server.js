@@ -794,11 +794,9 @@ const adminUserSchema = Joi.object({
 			"string.empty": "Email cannot be empty",
 			"any.required": "Email is required"
 		}),
-	RoleID: Joi.number().min(1).max(1).required().valid(2, 4).messages({ // 1 & 3 are not yet implemented
+	RoleID: Joi.number().integer().valid(1, 2, 3, 4).required().messages({
 		"number.base": "RoleID must be a number",
-		"number.empty": "RoleID cannot be empty",
-		"number.min": "RoleID must be at least 1 character and cannot exceed 1 characters",
-		"number.max": "RoleID must be at least 1 character and cannot exceed 1 characters",
+		"any.only": "RoleID must be 1 (Guest) or 2 (Customer) or 3 (Business/Employee) or 4 (Admin)",
 		"any.required": "RoleID is required"
 	}),
 	Department: Joi.when("RoleID", {
@@ -820,7 +818,7 @@ const userSearchSchema = Joi.object({
 	Name: Joi.string().trim().max(50).optional(),
 	Gender: Joi.string().trim().max(100).optional(),
 	ProfileImage: Joi.string().trim().optional(),
-	RoleID: Joi.number().max(1).optional(),
+	RoleID: Joi.number().integer().valid(1, 2, 3, 4).optional(),
 	Email: Joi.string().trim().optional(),
 	Password: Joi.string().trim().optional(),
 	Activated: Joi.alternatives().try(
@@ -922,11 +920,9 @@ const adminUserUpdateSchema = Joi.object({
 		.messages({
 			"string.base": "Profile image must be a valid filename",
 		}),
-	RoleID: Joi.number().min(1).max(1).optional().valid(2, 4).messages({ // 1 & 3 are not yet implemented
+	RoleID: Joi.number().integer().valid(1, 2, 3, 4).optional().messages({
 		"number.base": "RoleID must be a number",
-		"number.empty": "RoleID cannot be empty",
-		"number.min": "RoleID must be at least 1 character and cannot exceed 1 characters",
-		"number.max": "RoleID must be at least 1 character and cannot exceed 1 characters",
+		"any.only": "RoleID must be 1 (Guest) or 2 (Customer) or 3 (Business/Employee) or 4 (Admin)"
 	}),
 	UserID: Joi.number().min(1).max(1).optional().messages({
 		"number.base": "UserID must be a number",
@@ -4848,7 +4844,8 @@ app.post("/api/users/login", rateLimitRoute(loginRateLimiter), unloggedOnly, for
 			if (!okRes) return;
 			return res.status(404).json({ message: "Email or password is incorrect" });
 		}
-
+		console.log(user);
+		console.log(fields);
 		const match = await bcrypt.compare(Password, user.Password);
 
 		if (!match) {

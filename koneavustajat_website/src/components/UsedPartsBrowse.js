@@ -801,7 +801,7 @@ const renderAddForm = () => {
 		<Table responsive="md" hover bordered className="table-striped">
 			<thead>
 				<tr>
-					<th className="order-by" onClick={() => handleOrderBy("ID")}>{renderContent("usedparts.table.headerid", "ID")} {renderSortIcon("ID")}</th>
+					<th className="order-by" onClick={() => handleOrderBy("PartID")}>{renderContent("usedparts.table.headerid", "ID")} {renderSortIcon("PartID")}</th>
 					<th className="order-by" onClick={() => handleOrderBy("Name")}>{renderContent("usedparts.table.headername", "Name")} {renderSortIcon("Name")}</th>
 					<th className="order-by" onClick={() => handleOrderBy("Price")}>{renderContent("usedparts.table.headerprice", "Price")} {renderSortIcon("Price")}</th>
 					<th className="order-by" onClick={() => handleOrderBy("PartTypeID")}>{renderContent("usedparts.table.headerparttype", "Part Type")} {renderSortIcon("PartTypeID")}</th>

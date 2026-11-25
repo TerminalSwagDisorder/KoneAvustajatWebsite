@@ -174,7 +174,18 @@ export const ContentProvider = ({ fetchContent, children }) => {
         }
 		try {
 			const data = await fetchContent(identifiers);
-            setOverridenContent(data);
+			setOverridenContent((previousContent) => {
+				const mergedContent = { ...previousContent };
+
+				for (const [identifier, translations] of Object.entries(data)) {
+					mergedContent[identifier] = {
+						...mergedContent[identifier],
+						...translations
+					};
+				}
+
+				return mergedContent;
+			});
 			return data;
 		} catch (error) {
 			console.error(`Error fetching content for page ${identifiers}:`, error);
