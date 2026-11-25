@@ -370,43 +370,110 @@ app.use(
 );
 
 // Middleware for checking if user is logged in
-const authenticateSession = (req, res, next) => {
-	//console.log(req.session)
-	if (req.session.user) {
-		if (req.session.user.Activated !== 1) {
+const getPublicUser = (user) => ({
+	UserID: user.UserID,
+	Name: user.Name,
+	Gender: user.Gender,
+	ProfileImage: user.ProfileImage,
+	RoleID: user.RoleID,
+	Email: user.Email,
+	Activated: user.Activated,
+	isAdmin: user.RoleID === 4
+});
+
+const authenticateSession = async (req, res, next) => {
+	res.set("Cache-Control", "no-store");
+
+	const userId = req.session?.user?.UserID;
+
+	if (!userId) {
+		return res.status(401).json({ message: "Not authenticated" });
+	}
+
+	try {
+		const [[user]] = await promisePool.query(
+			"SELECT * FROM users WHERE UserID = ?",
+			[userId]
+		);
+
+		if (!user || user.Activated !== 1) {
 			return res.status(401).json({
-				message: "Not activated"
+				message: "Account is unavailable or not activated"
 			});
 		}
-		req.user = req.session.user;
-		next();
-	} else {
-		return res.status(401).json({
-			message: "Not authenticated"
+
+		// Password is retained only for server-side password checks.
+		req.user = { ...user, isAdmin: user.RoleID === 4 };
+		req.session.user = getPublicUser(user);
+
+		return next();
+	} catch (error) {
+		console.error("Session authentication failed:", error);
+
+		return res.status(500).json({
+			message: "Could not verify authentication"
 		});
 	}
 };
 
 const authenticateAdmin = (req, res, next) => {
-	//console.log(req.session)
-	if (req.session.user) {
-		if (req.session.user.RoleID !== 4) {
-			return res.status(401).json({
-				message: "Not an admin"
+	return authenticateSession(req, res, () => {
+		if (!req.user.isAdmin) {
+			return res.status(403).json({
+				message: "Administrator access required"
 			});
 		}
-		if (req.session.user.Activated !== 1) {
-			return res.status(401).json({
-				message: "Not activated"
+
+		return next();
+	});
+};
+
+const authorizeOrder = (allowAdmin = false) => {
+	return async (req, res, next) => {
+		let sql = `SELECT o.* FROM orders o
+			INNER JOIN customers c ON c.CustomerID = o.CustomerID
+			WHERE o.OrderID = ?`;
+
+		const params = [req.validatedId];
+
+		if (!allowAdmin || !req.user.isAdmin) {
+			sql += " AND c.UserID = ?";
+			params.push(req.user.UserID);
+		}
+
+		try {
+			const [[order]] = await promisePool.query(sql, params);
+
+			if (!order) {
+				return res.status(404).json({
+					message: "Order not found"
+				});
+			}
+
+			req.order = order;
+			return next();
+		} catch (error) {
+			console.error("Order authorization failed:", error);
+
+			return res.status(500).json({
+				message: "Could not verify order access"
 			});
 		}
-		req.user = req.session.user;
-		next();
-	} else {
-		return res.status(401).json({
-			message: "Not authenticated"
-		});
+	};
+};
+
+const authorizeCount = (req, res, next) => {
+	const publicTables = [
+		"chassis", "cpu", "cpu_cooler", "gpu",
+		"memory", "motherboard", "psu", "storage",
+		"part_inventory", "part_types", "address_types", "order_types"
+	];
+
+	if (publicTables.includes(req.query.tableName)) {
+		return next();
 	}
+
+	return authenticateAdmin(req, res, next);
 };
 
 const unloggedOnly = (req, res, next) => {
@@ -544,8 +611,11 @@ const paginationSchema = Joi.object({
 
 const orderBySchema = Joi.object({
 	orderBy: Joi.array().items(Joi.object({
-		column: Joi.string(),
-		direction: Joi.string().valid("desc", "asc"),
+		column: Joi.string()
+			.pattern(/^[A-Za-z_][A-Za-z0-9_]*$/)
+			.max(64)
+			.required(),
+		direction: Joi.string().valid("desc", "asc").required()
 	}))
 });
 
@@ -657,7 +727,7 @@ const partSchema = Joi.object({
 });
 
 const idSchema = Joi.object({
-	id: Joi.number().min(1).default(1),
+	id: Joi.number().integer().positive().required()
 });
 
 const opensearchSchemaBasic = Joi.object({
@@ -1007,9 +1077,9 @@ const contentSchema = Joi.object({
 });
 
 const addressSchema = Joi.object({
-	AddressID: Joi.number().optional(),
-	CustomerID: Joi.number().optional(),
-	AddressTypeID: Joi.number().optional(),
+	AddressID: Joi.forbidden(),
+	CustomerID: Joi.forbidden(),
+	AddressTypeID: Joi.number().integer().valid(1, 2).required(),
 	Street: Joi.string().trim().max(100).optional(),
 	City: Joi.string().trim().max(100).optional(),
 	State: Joi.string().trim().max(100).optional(),
@@ -1042,6 +1112,15 @@ const orderSchema = Joi.object({
 	PaymentStatus: Joi.string().trim().max(255).optional(),
 	PaymentDate: Joi.date().optional(),
 	ModifiedAt: Joi.date().optional()
+});
+
+const orderVerificationSchema = Joi.object({
+	TransactionID: Joi.string()
+		.trim()
+		.pattern(/^pi_[A-Za-z0-9]+$/)
+		.max(255)
+		.allow(null)
+		.optional()
 });
 
 const orderSearchSchema = Joi.object({
@@ -1418,7 +1497,7 @@ const adminUserFieldsValidator = (req, res, next) => {
 
 const idValidator = (req, res, next) => {
 	try {
-		const id = req.query.id || req.params.id;
+		const id = req.params.id ?? req.query.id;
 		const value = Joi.attempt({ id: id }, idSchema);
 		req.validatedId = value.id;
 		next();
@@ -1477,6 +1556,11 @@ const checkRegex = (req, res, next) => {
 
 const handleServerError = (error) => {
 	console.log(error);
+
+	if (error?.statusCode === 400) {
+		return [400, error.message];
+	}
+
 	let errorMessage = `${error}`;
 
 	if (typeof error === "object") {
@@ -3638,7 +3722,7 @@ const generateReceipt = async (result, customer, items, calculatedPrice, payment
 };
 
 // Stripe payment
-const createPaymentIntent = async (amount, currency, customer) => {
+const createPaymentIntent = async (amount, currency, customer, includeCharges = true) => {
 	if (!customer) {
 		console.error("No customer given!");
 		return null;
@@ -3650,8 +3734,8 @@ const createPaymentIntent = async (amount, currency, customer) => {
 	FROM customers c LEFT JOIN users u ON c.UserID = u.UserID LEFT JOIN addresses a ON c.CustomerID = a.CustomerID WHERE a.AddressTypeID = 1 AND c.UserID = ?`;
 
 	const originalTotal = Math.round(amount * 100);
-	const taxPrice = originalTotal * 0.255;
-	const processingFee = originalTotal < 200000 ? originalTotal * 0.1 : 20000;
+	const taxPrice = includeCharges ? originalTotal * 0.255 : 0;
+	const processingFee = includeCharges ? (originalTotal < 200000 ? originalTotal * 0.1 : 20000) : 0;
 	const newTotal = originalTotal + taxPrice + processingFee;
 
 	try {
@@ -3676,13 +3760,23 @@ const createPaymentIntent = async (amount, currency, customer) => {
 			payment_method_types: ["card"]
 		});
 		
-		await storeTaxTransaction(paymentIntent.id, taxPrice);
+		if (includeCharges) {
+			await storeTaxTransaction(paymentIntent.id, taxPrice);
+		}
 
 		//console.log(paymentIntent);
 		return paymentIntent;
 	} catch (error) {
 		throw new Error(`Error while trying to pay: ${error.message ? error.message : error}`);
 	}
+};
+
+const paymentMatchesOrder = (paymentIntent, order) => {
+	const amount = Math.round(Number(order.TotalPrice) * 100);
+
+	return Number.isSafeInteger(amount) && amount > 0
+		&& paymentIntent.amount === amount
+		&& paymentIntent.currency === String(order.Currency).toLowerCase();
 };
 
 const generateStripeCustomer = async (customer) => {
@@ -3842,7 +3936,10 @@ const getPartIds = (items) => {
 		if (item.table === "completedBuild") {
 			for (const key in (item)) {
 				if (item[key] && (item[key].ID || item[key].PartID)) {
-					completedBuildIds.push({ ID: item[key].ID, table: key });
+					completedBuildIds.push({
+						ID: item[key].ID ?? item[key].PartID,
+						table: key
+					});
 				}
 			}
 		} else if (item.ID || item.PartID) {
@@ -3864,14 +3961,36 @@ const processItems = async (items) => {
 	const completedBuildQueries = [];
 	const otherQueries = [];
 	
+	const allowedTables = ["chassis", "cpu", "cpu_cooler", "gpu", "memory", "motherboard", "psu", "storage", "usedParts"];
+
+	// Validate everything before starting any database queries.
+	for (const itemIds of Object.values(allItemIds)) {
+		for (const item of itemIds) {
+			if (!allowedTables.includes(item.table) || !Number.isSafeInteger(item.ID) || item.ID < 1) {
+				throw Object.assign(new Error("Invalid order item"), {
+					statusCode: 400
+				});
+			}
+
+			if (item.quantity !== undefined && (!Number.isSafeInteger(item.quantity) || item.quantity < 1)) {
+				throw Object.assign(new Error("Invalid order item quantity"), {
+					statusCode: 400
+				});
+			}
+		}
+	}
+
 	for (const [key, itemIds] of Object.entries(allItemIds)) {
 		for (const item of Object.values(itemIds)) {
-			const sql = `SELECT * FROM ${item.table === "usedParts" ? "part_inventory" : item.table} WHERE ${item.table === "usedParts" ? "PartID" : "ID"} = ?`;
-			const id = item.ID;
+			const table = item.table === "usedParts" ? "part_inventory" : item.table;
+			const idColumn = item.table === "usedParts" ? "PartID" : "ID";
+
+			const query = promisePool.query("SELECT * FROM ?? WHERE ?? = ?", [table, idColumn, item.ID]);
+
 			if (key === "completedBuild") {
-				completedBuildQueries.push(promisePool.query(sql, [id]));
+				completedBuildQueries.push(query);
 			} else {
-				otherQueries.push(promisePool.query(sql, [id]));
+				otherQueries.push(query);
 			}
 		}
 	}
@@ -3955,20 +4074,34 @@ app.post("/api/stripe/webhook", express.raw({ type: "application/json" }), async
         case "payment_intent.succeeded":
             const paymentIntent = event.data.object;
 
-            await promisePool.query(
-                "UPDATE orders SET PaymentStatus = ?, Status = ?, PaymentDate = NOW() WHERE TransactionID = ?",
-                ["paid", "processing", paymentIntent.id]
-            );
+			await promisePool.query(
+				`UPDATE orders SET
+					Status = CASE
+						WHEN PaymentStatus = 'paid' OR Status IN ('completed', 'canceled')
+							THEN Status
+						ELSE 'processing'
+					END,
+					PaymentStatus = 'paid',
+					PaymentDate = COALESCE(PaymentDate, NOW())
+				WHERE TransactionID = ? AND LOWER(Currency) = ?
+					AND ROUND(TotalPrice * 100) = ?`,
+				[paymentIntent.id, paymentIntent.currency, paymentIntent.amount_received]
+			);
+
             console.log(`Payment succeeded for TransactionID: ${paymentIntent.id}`);
             break;
 
         case "payment_intent.payment_failed":
             const failedIntent = event.data.object;
 
-            await promisePool.query(
-                "UPDATE orders SET PaymentStatus = ?, Status = ? WHERE TransactionID = ?",
-                ["failed", "verifying", failedIntent.id]
-            );
+			await promisePool.query(
+				`UPDATE orders SET PaymentStatus = ?, Status = ?
+				WHERE TransactionID = ?
+					AND COALESCE(PaymentStatus, '') <> 'paid'
+					AND COALESCE(Status, '') NOT IN ('completed', 'canceled')`,
+				["failed", "verifying", failedIntent.id]
+			);
+
             console.log(`Payment failed for TransactionID: ${failedIntent.id}`);
             break;
 
@@ -3984,7 +4117,7 @@ app.use(express.json());
 
 app.use('/api/', rateLimitRoute());
 
-app.get("/", async (req, res) => {
+app.get("/", authenticateAdmin, async (req, res) => {
 	console.log("Index accessed");
 	const routes = getAllRoutes(app);
 	let links = routes
@@ -4016,7 +4149,7 @@ app.get("/", async (req, res) => {
 // MySQL & Express session
 
 // Route to check connection to the opensearch instance
-app.get("/api/health", async (req, res) => {
+app.get("/api/health", authenticateAdmin, async (req, res) => {
 	console.log("API health accessed");
 	const response = await checkApiHealth();
 	try {
@@ -4033,7 +4166,7 @@ app.get("/api/health", async (req, res) => {
 });
 
 // Route for frontend pagination in MySQL
-app.get("/api/count", routePagination, tableValidator(tableNameSchema, "tableName"), async (req, res) => {
+app.get("/api/count", routePagination, tableValidator(tableNameSchema, "tableName"), authorizeCount, async (req, res) => {
 	console.log("MySQL pagination accessed");
 
 	const tableName = req.query.tableName; // Get the table name from the query
@@ -4405,7 +4538,7 @@ app.post("/api/algorithm", rateLimitRoute(algorithmRateLimiter), routePagination
 });
 
 // Route for viewing regular users
-app.get("/api/users", routePagination, async (req, res) => {
+app.get("/api/users", authenticateAdmin, routePagination, async (req, res) => {
 	console.log("API users accessed");
 
 	const { items, offset } = req.pagination;
@@ -4428,7 +4561,7 @@ app.get("/api/users", routePagination, async (req, res) => {
 	}
 });
 
-app.get("/api/users/id/:id", idValidator, async (req, res) => {
+app.get("/api/users/id/:id", authenticateAdmin, idValidator, async (req, res) => {
 	console.log("API search users by id accessed");
 
 	const id = req.validatedId;
@@ -4844,8 +4977,8 @@ app.post("/api/users/login", rateLimitRoute(loginRateLimiter), unloggedOnly, for
 			if (!okRes) return;
 			return res.status(404).json({ message: "Email or password is incorrect" });
 		}
-		console.log(user);
-		console.log(fields);
+		//console.log(user);
+		//console.log(fields);
 		const match = await bcrypt.compare(Password, user.Password);
 
 		if (!match) {
@@ -4854,8 +4987,15 @@ app.post("/api/users/login", rateLimitRoute(loginRateLimiter), unloggedOnly, for
 			return res.status(401).json({ message: "Email or password is incorrect" });
 		}
 
-		const isAdmin = user.RoleID === 4;
-		req.session.user = { ...user, isAdmin };
+		await new Promise((resolve, reject) => {
+			req.session.regenerate((error) => error ? reject(error) : resolve());
+		});
+
+		req.session.user = getPublicUser(user);
+
+		await new Promise((resolve, reject) => {
+			req.session.save((error) => error ? reject(error) : resolve());
+		});
 
 		/*
 		// Provide an accessToken cookie
@@ -4871,7 +5011,12 @@ app.post("/api/users/login", rateLimitRoute(loginRateLimiter), unloggedOnly, for
 		
 		await clearRateLimit(req, loginFailsRateLimiter);
 
-		return res.status(200).json({ message: "Logged in successfully", user: req.session.user });
+		res.set("Cache-Control", "no-store");
+
+		return res.status(200).json({
+			message: "Logged in successfully",
+			user: getPublicUser(user)
+		});
 	} catch (error) {
 		const [status, message] = handleServerError(error);
 		return res.status(status).json({ message: message });
@@ -4896,7 +5041,7 @@ app.get("/api/profile", authenticateSession, (req, res) => {
 	// const userData = { userData: req.user };
 	res.json({
 		message: "Authenticated",
-		userData: req.user
+		userData: getPublicUser(req.user)
 	});
 });
 
@@ -4909,23 +5054,10 @@ app.post("/api/logout", (req, res) => {
 */
 
 // Profile refresh if userdata gets updated
-app.get("/api/profile/refresh", authenticateSession, async (req, res) => {
-	console.log("API profile refresh accessed");
-	const userId = req.user.UserID;
-	const sql = "SELECT * FROM users WHERE UserID = ?";
-	try {
-		const [[user], fields] = await promisePool.query(sql, [userId]);
-		if (!user) {
-			return res.status(404).json({ message: "User not found" });
-		}
-		const isAdmin = user.RoleID === 4;
-		// Exclude sensitive information like hashed password before sending the user data
-		const { ...userData } = user;
-		return res.status(200).json({ userData: { ...userData, isAdmin: isAdmin } });
-	} catch (error) {
-		const [status, message] = handleServerError(error);
-		return res.status(status).json({ message: message });
-	}
+app.get("/api/profile/refresh", authenticateSession, (req, res) => {
+	return res.status(200).json({
+		userData: getPublicUser(req.user)
+	});
 });
 
 app.get("/api/profile/addresses", authenticateSession, async (req, res) => {
@@ -5557,7 +5689,7 @@ app.get("/api/inventory/:id", idValidator, async (req, res) => {
 });
 
 // Route for viewing orders
-app.get("/api/orders", routePagination, async (req, res) => {
+app.get("/api/orders", authenticateAdmin, routePagination, async (req, res) => {
 	console.log("API inventory accessed");
 
 	const { items, offset } = req.pagination;
@@ -5579,29 +5711,11 @@ app.get("/api/orders", routePagination, async (req, res) => {
 	}
 });
 
-app.get("/api/orders/:id", idValidator, async (req, res) => {
-	console.log("API search parts by id accessed");
-
-	const id = req.validatedId;
-
-	const sql = "SELECT * FROM orders WHERE OrderID = ?";
-	try {
-		const [orders] = await promisePool.query(sql, [id]);
-		if (!orders.length) {
-			return res.status(404).json({ message: "Order not found" });
-		}
-
-		// Items needs to be parsed
-		const parseInventory = orders.map((item) => ({
-			...item,
-			Items: item.Items ? JSON.parse(item.Items) : null
-		}));
-
-		return res.status(200).json(parseInventory);
-	} catch (error) {
-		const [status, message] = handleServerError(error);
-		return res.status(status).json({ message: message });
-	}
+app.get("/api/orders/:id", authenticateSession, idValidator, authorizeOrder(true), (req, res) => {
+	return res.status(200).json([{
+		...req.order,
+		Items: parseJson(req.order.Items)
+	}]);
 });
 
 app.post("/api/orders/add", rateLimitRoute(dataManipulationRateLimiter), authenticateSession, formFieldsValidator(orderSchema), async (req, res) => {
@@ -5666,134 +5780,197 @@ app.post("/api/orders/add", rateLimitRoute(dataManipulationRateLimiter), authent
 	}
 });
 
-app.patch("/api/orders/update/:id", rateLimitRoute(dataManipulationRateLimiter), authenticateSession, idValidator, async (req, res) => {
-	console.log("API update order accessed");
-	
-	const userId = req.user.UserID;
-	const orderId = req.validatedId;
-
-	const customerSql = "SELECT * FROM customers WHERE UserID = ?";
-	const currentOrderSql = "SELECT * FROM orders WHERE OrderID = ?";
+app.patch("/api/orders/update/:id", rateLimitRoute(dataManipulationRateLimiter), authenticateSession, idValidator, authorizeOrder(), async (req, res) => {
+	const order = req.order;
 
 	try {
-		const [customer] = await promisePool.query(customerSql, [userId]);
-		if (!customer.length) {
-			return res.status(401).json({ message: "User is not a customer!" });
-		}
-		
-		const [currentOrder] = await promisePool.query(currentOrderSql, [orderId]);
-		if (!currentOrder.length) {
-			return res.status(404).json({ message: "Order not found!" });
-		}
-		const totalPrice = parseFloat(currentOrder[0].TotalPrice);
-		
-		const paymentIntent = await createPaymentIntent(totalPrice, "eur", customer[0]);
-
-		let updateQuery = `UPDATE orders SET `;
-		let queryParams = [];
-
-		updateQuery += "Status = ?, Currency = ?, PaymentProvider = ?, TransactionID = ?, PaymentMethod = ?, PaymentStatus = ? ";
-		queryParams.push("verifying", "eur", "stripe", paymentIntent.id, "card", "verifying");
-
-		updateQuery += "WHERE OrderID = ?";
-		queryParams.push(orderId);
-	
-		const [order] = await promisePool.query(updateQuery, queryParams);
-		if (order.affectedRows === 0) {
-			return res.status(404).json({ message: "Order not updated!" });
+		if (order.PaymentStatus === "paid" || ["completed", "canceled"].includes(order.Status)) {
+			return res.status(409).json({
+				message: "This order cannot start another payment"
+			});
 		}
 
-		return res.status(200).json({ message: `${order} updated succesfully`, clientSecret: paymentIntent.client_secret });
+		if (order.TransactionID) {
+			if (order.PaymentProvider !== "stripe") {
+				return res.status(409).json({
+					message: "Order uses another payment provider"
+				});
+			}
+
+			const existingIntent = await stripe.paymentIntents.retrieve(order.TransactionID);
+
+			if (!paymentMatchesOrder(existingIntent, order)) {
+				return res.status(409).json({
+					message: "Stored payment does not match the order"
+				});
+			}
+
+			if (["succeeded", "processing", "requires_capture"].includes(existingIntent.status)) {
+				return res.status(409).json({
+					message: "Payment has already succeeded or is being processed"
+				});
+			}
+
+			if (existingIntent.status !== "canceled") {
+				return res.status(200).json({
+					message: "Continue existing payment",
+					clientSecret: existingIntent.client_secret
+				});
+			}
+		}
+
+		const paymentIntent = await createPaymentIntent(
+			Number(order.TotalPrice),
+			String(order.Currency).toLowerCase(),
+			{ CustomerID: order.CustomerID, UserID: req.user.UserID },
+			false
+		);
+
+		const [result] = await promisePool.query(
+			`UPDATE orders SET
+				Status = ?, PaymentProvider = ?, TransactionID = ?,
+				PaymentMethod = ?, PaymentStatus = ?
+			WHERE OrderID = ? AND CustomerID = ? AND TransactionID <=> ?
+				AND COALESCE(PaymentStatus, '') <> 'paid'
+				AND COALESCE(Status, '') NOT IN ('completed', 'canceled')
+				AND TotalPrice = ? AND Currency = ?`,
+			[
+				"verifying", "stripe", paymentIntent.id, "card", "verifying",
+				order.OrderID, order.CustomerID, order.TransactionID, order.TotalPrice, order.Currency
+			]
+		);
+
+		if (result.affectedRows === 0) {
+			await stripe.paymentIntents.cancel(paymentIntent.id);
+
+			return res.status(409).json({
+				message: "Order changed; refresh it before trying again"
+			});
+		}
+
+		return res.status(200).json({
+			message: "Payment initialized",
+			clientSecret: paymentIntent.client_secret
+		});
 	} catch (error) {
 		const [status, message] = handleServerError(error);
 		return res.status(status).json({ message: message });
 	}
 });
 
-app.patch("/api/orders/update/:id/verify", authenticateSession, idValidator, formFieldsValidator(orderSchema), async (req, res) => {
-	console.log("API verify order accessed");
-	
-	const jsonFormFields = req.validatedForm;
-	const { TransactionID } = jsonFormFields;
-	const userId = req.user.UserID;
-	const orderId = req.validatedId;
-
-	const customerSql = `SELECT c.CustomerID, c.UserID, u.Name, u.Email, a.AddressID, a.AddressTypeID, a.Street, a.City, a.State, a.PostalCode, a.Country 
-	FROM customers c LEFT JOIN users u ON c.UserID = u.UserID LEFT JOIN addresses a ON c.CustomerID = a.CustomerID WHERE a.AddressTypeID = 1 AND c.UserID = ?`;	
-	
-	const currentOrderSql = "SELECT * FROM orders WHERE OrderID = ?";
+app.patch("/api/orders/update/:id/verify", authenticateSession, idValidator, authorizeOrder(), formFieldsValidator(orderVerificationSchema), async (req, res) => {
+	const order = req.order;
+	const { TransactionID } = req.validatedForm;
 
 	try {
-		const [customer] = await promisePool.query(customerSql, [userId]);
-		if (!customer.length) {
-			return res.status(401).json({ message: "User is not a customer!" });
-		}
-		
-		const [currentOrder] = await promisePool.query(currentOrderSql, [orderId]);
-		if (!currentOrder.length) {
-			return res.status(404).json({ message: "Order not found!" });
-		}
+		let paymentIntent;
+		let result;
 
-		let paymentIntent = null;
-		let updateQuery = null;
-
-		// Validate payment with Stripe only if a TransactionID exists
-		if (TransactionID) {
-			paymentIntent = await stripe.paymentIntents.retrieve(TransactionID);
-			if (!paymentIntent) {
-				return res.status(400).json({ message: "Payment not verified with Stripe" });
+		if (order.TransactionID) {
+			if (order.PaymentProvider !== "stripe" || TransactionID !== order.TransactionID) {
+				return res.status(400).json({
+					message: "Transaction ID does not match this order"
+				});
 			}
 
-			if (currentOrder[0].TransactionID && paymentIntent.id !== currentOrder[0].TransactionID) {
-				return res.status(400).json({ message: "Transaction ID mismatch" });
-			}
+			paymentIntent = await stripe.paymentIntents.retrieve(order.TransactionID);
 
 			if (paymentIntent.status !== "succeeded") {
-				return res.status(400).json({ message: "Payment was not successful" });
+				return res.status(400).json({
+					message: "Payment was not successful"
+				});
 			}
-			paymentIntent.paymentStatus = "paid";
+
+			if (
+				!paymentMatchesOrder(paymentIntent, order) ||
+				paymentIntent.amount_received !== paymentIntent.amount
+			) {
+				return res.status(400).json({
+					message: "Payment amount or currency does not match the order"
+				});
+			}
+
+			[result] = await promisePool.query(
+				`UPDATE orders SET
+				Status = CASE
+					WHEN PaymentStatus = 'paid' OR Status IN ('completed', 'canceled')
+						THEN Status
+					ELSE 'processing'
+				END,
+				PaymentStatus = 'paid',
+				PaymentDate = COALESCE(PaymentDate, NOW())
+			WHERE OrderID = ? AND CustomerID = ? AND TransactionID = ? AND TotalPrice = ? AND Currency = ?`,
+				[order.OrderID, order.CustomerID, order.TransactionID, order.TotalPrice, order.Currency]
+			);
+
 			paymentIntent.paymentMethod = "card";
-			paymentIntent.paymentProvider = "stripe";
-			paymentIntent.overwrite_status = "processing";
-			updateQuery = "UPDATE orders SET PaymentStatus = ?, Status = ?, PaymentDate = NOW() WHERE OrderID = ?";
-			
 		} else {
-			updateQuery = "UPDATE orders SET PaymentStatus = ?, Status = ? WHERE OrderID = ?";
+			if (TransactionID || order.PaymentStatus === "paid") {
+				return res.status(400).json({
+					message: "This order has no matching Stripe payment"
+				});
+			}
+
+			[result] = await promisePool.query(
+				`UPDATE orders SET
+					 PaymentStatus = COALESCE(PaymentStatus, 'unpaid'),
+					 Status = COALESCE(Status, 'verifying')
+			WHERE OrderID = ? AND CustomerID = ? AND TransactionID IS NULL
+				AND COALESCE(PaymentStatus, '') <> 'paid'
+				AND COALESCE(Status, '') NOT IN ('completed', 'canceled')`,
+				[order.OrderID, order.CustomerID]
+			);
+
 			paymentIntent = {
-				paymentStatus: null,
 				status: null,
-				overwrite_status: null,
-				paymentMethod: "unpaid",
-				paymentProvider: "verifying",
+				paymentMethod: "unpaid"
 			};
 		}
 
-		// Update order to "paid"
-		const [order] = await promisePool.query(updateQuery, [paymentIntent.paymentStatus, paymentIntent.overwrite_status, orderId]);
-
-		if (order.affectedRows === 0) {
-			return res.status(404).json({ message: "Order not verified" });
+		if (result.affectedRows === 0) {
+			return res.status(409).json({
+				message: "Order changed; refresh it before trying again"
+			});
 		}
 
-		const [updatedOrder] = await promisePool.query(currentOrderSql, [orderId]);
-		if (!updatedOrder.length) {
-			return res.status(404).json({ message: "Order not found!" });
-		}
-		
-		let parsedItems;
-		if (typeof updatedOrder[0].Items !== "object") {
-			parsedItems = JSON.parse(updatedOrder[0].Items);
-		} else {
-			parsedItems = updatedOrder[0].Items;
-		}
-		console.log(parsedItems);
+		const [[updatedOrder]] = await promisePool.query(
+			"SELECT * FROM orders WHERE OrderID = ? AND CustomerID = ?",
+			[order.OrderID, order.CustomerID]
+		);
 
-		const receipt = await generateReceipt(updatedOrder[0], customer[0], parsedItems, updatedOrder[0].TotalPrice, paymentIntent);
+		const [[customer]] = await promisePool.query(
+			`SELECT c.CustomerID, c.UserID, u.Name, u.Email,
+			a.AddressID, a.AddressTypeID, a.Street, a.City,
+			a.State, a.PostalCode, a.Country
+		FROM customers c
+		INNER JOIN users u ON u.UserID = c.UserID
+		LEFT JOIN addresses a
+			ON a.CustomerID = c.CustomerID AND a.AddressTypeID = 1
+		WHERE c.CustomerID = ? AND c.UserID = ?`,
+			[order.CustomerID, req.user.UserID]
+		);
+
+		if (!updatedOrder || !customer) {
+			return res.status(404).json({
+				message: "Order or customer not found"
+			});
+		}
+
+		const receipt = await generateReceipt(
+			updatedOrder,
+			customer,
+			parseJson(updatedOrder.Items),
+			updatedOrder.TotalPrice,
+			paymentIntent
+		);
+
 		if (!receipt) {
 			console.warn("Failed to generate receipt");
 		}
-		
-		return res.status(200).json({ message: `Order ${orderId} verified successfully` });
+
+		return res.status(200).json({
+			message: `Order ${order.OrderID} verified successfully`
+		});
 	} catch (error) {
 		const [status, message] = handleServerError(error);
 		return res.status(status).json({ message: message });
@@ -5805,7 +5982,7 @@ app.get("/api/users/customers", authenticateAdmin, routePagination, async (req, 
 	console.log("API inventory accessed");
 
 	const { items, offset } = req.pagination;
-	const sql = `SELECT c.CustomerID AS CustomerID, c.*, u.*, a.AddressID, a.AddressTypeID, a.Street, a.City, a.State, a.PostalCode, a.Country, o.OrderID, o.OrderTypeID, o.ReceiptID ,o.OrderDate, o.Status, o.TotalPrice, o.Items, o.PaymentMethod, o.PaymentStatus 
+	const sql = `SELECT c.CustomerID AS CustomerID, c.*, u.Name, u.Gender, u.ProfileImage, u.RoleID, u.Email, u.Activated, a.AddressID, a.AddressTypeID, a.Street, a.City, a.State, a.PostalCode, a.Country, o.OrderID, o.OrderTypeID, o.ReceiptID ,o.OrderDate, o.Status, o.TotalPrice, o.Items, o.PaymentMethod, o.PaymentStatus 
 	FROM customers c LEFT JOIN users u ON c.UserID = u.UserID LEFT JOIN addresses a ON c.CustomerID = a.CustomerID LEFT JOIN orders o ON c.CustomerID = o.CustomerID LIMIT ? OFFSET ?`;	
 	//const sql = `SELECT c.*, u.*, a.* FROM customers c LEFT JOIN users u ON c.UserID = u.UserID LEFT JOIN addresses a ON c.CustomerID = a.CustomerID LIMIT ? OFFSET ?`;
 
@@ -5840,7 +6017,7 @@ app.get("/api/users/customers", authenticateAdmin, routePagination, async (req, 
 				...customerData
 			} = item;
 			return {
-				UserData: { ...customerData, Name, Gender, ProfileImage, RoleID, Email, Password },
+				UserData: { ...customerData, Name, Gender, ProfileImage, RoleID, Email },
 				AddressData: { AddressID, AddressTypeID, Street, City, State, PostalCode, Country },
 				OrderData: {OrderID, OrderTypeID, ReceiptID, OrderDate, Status, TotalPrice, Items, PaymentMethod, PaymentStatus }
 			};
@@ -5861,50 +6038,6 @@ app.get("/api/users/customers", authenticateAdmin, routePagination, async (req, 
 			}
 		}));
 		*/
-
-		return res.status(200).json(parseCustomers);
-	} catch (error) {
-		const [status, message] = handleServerError(error);
-		return res.status(status).json({ message: message });
-	}
-});
-
-app.get("/api/users/customers/:id", authenticateAdmin, idValidator, async (req, res) => {
-	console.log("API search customer by id accessed");
-
-	const id = req.validatedId;
-	const sql = `SELECT c.CustomerID AS CustomerID, c.*, u.*, a.AddressID, a.AddressTypeID, a.Street, a.City, a.State, a.PostalCode, a.Country, o.OrderID, o.OrderTypeID, o.ReceiptID ,o.OrderDate, o.Status, o.TotalPrice, o.Items, o.PaymentMethod, o.PaymentStatus 
-	FROM customers c LEFT JOIN users u ON c.UserID = u.UserID LEFT JOIN addresses a ON c.CustomerID = a.CustomerID LEFT JOIN orders o ON c.CustomerID = o.CustomerID LIMIT ? OFFSET ? WHERE c.CustomerID = ?`;
-	//const sql = `SELECT c.*, u.*, a.* FROM customers c LEFT JOIN users u ON c.UserID = u.UserID LEFT JOIN addresses a ON c.CustomerID = a.CustomerID WHERE c.CustomerID = ? `;
-
-	try {
-		const [customers] = await promisePool.query(sql, [id]);
-		if (!customers.length) {
-			return res.status(404).json({ message: "Customer not found" });
-		}
-
-		const parseCustomers = customers.map((item) => {
-			const {
-				Name,
-				Gender,
-				ProfileImage,
-				RoleID,
-				Email,
-				Password,
-				AddressID,
-				AddressTypeID,
-				Street,
-				City,
-				State,
-				PostalCode,
-				Country,
-				CustomerID,
-			} = item;
-			return {
-				UserData: { CustomerID, Name, Gender, ProfileImage, RoleID, Email, Password },
-				AddressData: { AddressID, AddressTypeID, Street, City, State, PostalCode, Country }
-			};
-		});
 
 		return res.status(200).json(parseCustomers);
 	} catch (error) {
@@ -5944,7 +6077,7 @@ app.get("/api/users/customers/addresses", authenticateAdmin, routePagination, as
 	}
 });
 
-app.get("/api/users/customers/addresses/:id", idValidator, async (req, res) => {
+app.get("/api/users/customers/addresses/:id", authenticateAdmin, idValidator, async (req, res) => {
 	console.log("API search parts by id accessed");
 
 	const id = req.validatedId;
@@ -5969,7 +6102,7 @@ app.post("/api/users/customers/addresses/add", authenticateSession, formFieldsVa
 	const userId = req.user.UserID;
 	const jsonFormFields = req.validatedForm;
 	const { CustomerID, AddressTypeID, Street, City, State, PostalCode, Country } = jsonFormFields;	
-	const allowedFields = ["AddressID", "AddressTypeID", "Street", "City", "State", "PostalCode", "Country"];
+	const allowedFields = ["AddressTypeID", "Street", "City", "State", "PostalCode", "Country"];
 	const customerSql = "SELECT * FROM customers WHERE UserID = ?";
 
 	try {
@@ -6026,7 +6159,7 @@ app.patch("/api/users/customers/addresses/update", rateLimitRoute(dataManipulati
 	const userId = req.user.UserID;
 	const jsonFormFields = req.validatedForm;
 	const { AddressTypeID, Street, City, State, PostalCode, Country } = jsonFormFields;	
-	const allowedFields = ["AddressID", "CustomerID", "AddressTypeID", "Street", "City", "State", "PostalCode", "Country"];
+	const allowedFields = ["Street", "City", "State", "PostalCode", "Country"];
 	const customerSql = "SELECT * FROM customers WHERE UserID = ?";
 
 	try {
@@ -6084,7 +6217,51 @@ app.patch("/api/users/customers/addresses/update", rateLimitRoute(dataManipulati
 	}
 });
 
-app.get("/api/text-content", routePagination, tableSearch("content"), async (req, res) => {
+app.get("/api/users/customers/:id", authenticateAdmin, idValidator, async (req, res) => {
+	console.log("API search customer by id accessed");
+
+	const id = req.validatedId;
+	const sql = `SELECT c.CustomerID AS CustomerID, c.*, u.Name, u.Gender, u.ProfileImage, u.RoleID, u.Email, u.Activated, a.AddressID, a.AddressTypeID, a.Street, a.City, a.State, a.PostalCode, a.Country, o.OrderID, o.OrderTypeID, o.ReceiptID ,o.OrderDate, o.Status, o.TotalPrice, o.Items, o.PaymentMethod, o.PaymentStatus 
+	FROM customers c LEFT JOIN users u ON c.UserID = u.UserID LEFT JOIN addresses a ON c.CustomerID = a.CustomerID LEFT JOIN orders o ON c.CustomerID = o.CustomerID WHERE c.CustomerID = ?`;
+	//const sql = `SELECT c.*, u.*, a.* FROM customers c LEFT JOIN users u ON c.UserID = u.UserID LEFT JOIN addresses a ON c.CustomerID = a.CustomerID WHERE c.CustomerID = ? `;
+
+	try {
+		const [customers] = await promisePool.query(sql, [id]);
+		if (!customers.length) {
+			return res.status(404).json({ message: "Customer not found" });
+		}
+
+		const parseCustomers = customers.map((item) => {
+			const {
+				Name,
+				Gender,
+				ProfileImage,
+				RoleID,
+				Email,
+				Password,
+				AddressID,
+				AddressTypeID,
+				Street,
+				City,
+				State,
+				PostalCode,
+				Country,
+				CustomerID,
+			} = item;
+			return {
+				UserData: { CustomerID, Name, Gender, ProfileImage, RoleID, Email },
+				AddressData: { AddressID, AddressTypeID, Street, City, State, PostalCode, Country }
+			};
+		});
+
+		return res.status(200).json(parseCustomers);
+	} catch (error) {
+		const [status, message] = handleServerError(error);
+		return res.status(status).json({ message: message });
+	}
+});
+
+const getLatestContent = async (req, res) => {
 	console.log("API content accessed");
 
 	const { items, offset } = req.pagination;
@@ -6093,7 +6270,9 @@ app.get("/api/text-content", routePagination, tableSearch("content"), async (req
 	let notOperator = "";
 	let sqlParams = [];
 
-	let searchQuery = " WHERE 1=1";
+	let searchQuery = req.user?.isAdmin
+		? " WHERE 1=1"
+		: " WHERE c.Status = 'published'";
 	
 	if (searchTerms.inverted) {
 		notOperator = searchTerms.strict === true ? "!" : "NOT ";
@@ -6113,12 +6292,17 @@ app.get("/api/text-content", routePagination, tableSearch("content"), async (req
 		}
 	}
 
-	sql = `SELECT c.*
+	const columns = req.user?.isAdmin
+		? "c.*"
+		: "c.ContentID, c.Site_Identifier, c.Language, c.Main_Tag, c.Content_Text, c.Content_Type, c.Version, c.Status";
+
+	sql = `SELECT ${columns}
 		FROM content c
 		JOIN (
-		  SELECT Site_Identifier, Language, MAX(Version) AS max_version
-		  FROM content
-		  GROUP BY Site_Identifier, Language
+			SELECT Site_Identifier, Language, MAX(Version) AS max_version
+			FROM content
+			${req.user?.isAdmin ? "" : "WHERE Status = 'published'"}
+			GROUP BY Site_Identifier, Language
 		) AS latest
 		  ON c.Site_Identifier = latest.Site_Identifier
 		  AND c.Language = latest.Language
@@ -6142,9 +6326,13 @@ app.get("/api/text-content", routePagination, tableSearch("content"), async (req
 		const [status, message] = handleServerError(error);
 		return res.status(status).json({ message: message });
 	}
-});
+};
 
-app.get("/api/text-content/all", routePagination, tableSearch("content"), async (req, res) => {
+app.get("/api/text-content", routePagination, tableSearch("content"), getLatestContent);
+
+app.get("/api/text-content/latest", authenticateAdmin, routePagination, tableSearch("content"), getLatestContent);
+
+app.get("/api/text-content/all", authenticateAdmin, routePagination, tableSearch("content"), async (req, res) => {
 	console.log("API content accessed");
 
 	const { items, offset } = req.pagination;
@@ -6194,7 +6382,7 @@ app.get("/api/text-content/all", routePagination, tableSearch("content"), async 
 	}
 });
 
-app.get("/api/text-content/identifiers", async (req, res) => {
+app.get("/api/text-content/identifiers", authenticateAdmin, async (req, res) => {
 	console.log("API content accessed");
 	const sql = "SELECT DISTINCT Site_Identifier FROM content";
 	const sql2 = "SELECT DISTINCT Language FROM content";
@@ -6584,7 +6772,7 @@ app.post("/api/admin/users/add", rateLimitRoute(adminDataManipulationRateLimiter
 	}
 });
 
-app.get("/api/admin/users", routePagination, routeOrderBy, tableSearch("users"), async (req, res) => {
+app.get("/api/admin/users", authenticateAdmin, routePagination, routeOrderBy, tableSearch("users"), async (req, res) => {
 	console.log("API admin users accessed");
 
 	const { items, offset } = req.pagination;
@@ -6636,7 +6824,6 @@ app.get("/api/admin/users", routePagination, routeOrderBy, tableSearch("users"),
 		u.ProfileImage,
 		u.RoleID,
 		u.Email,
-		u.Password,
 		u.Activated,
 		JSON_ARRAY(
 			GROUP_CONCAT(

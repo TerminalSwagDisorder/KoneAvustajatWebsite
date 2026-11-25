@@ -420,7 +420,7 @@ export const fetchContent = async (identifiers) => {
 
 export const fetchWholeContent = async (identifiers) => {
 	try {
-		await checkAllowedTableNames(["getroutes"], "text-content");
+		await checkAllowedTableNames(["getroutes"], "text-content/latest");
 
 		if (!identifiers) {
 			throw new Error("No identifiers defined!");
@@ -452,7 +452,7 @@ export const fetchWholeContent = async (identifiers) => {
 
 		const query = await buildQuery(correctSearchTerms, true);
 		
-		const response = await fetch(`${apiUrl}/api/text-content?${query}`, {
+		const response = await fetch(`${apiUrl}/api/text-content/latest?${query}`, {
 			method: "GET",
 			credentials: "include", // Important, because we're using cookies
 		});

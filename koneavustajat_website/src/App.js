@@ -93,7 +93,9 @@ function App() {
 						<div className="App">
 						<NavBar handleSignout={handleSignout} /> 
 						<ErrorModule />
-						<ContentManagementModal fetchWholeContent={fetchWholeContent} fetchContentIdentifiers={fetchContentIdentifiers} addContent={addContent} updateContent={updateContent} />
+						{currentUser?.isAdmin && (
+							<ContentManagementModal fetchWholeContent={fetchWholeContent} fetchContentIdentifiers={fetchContentIdentifiers} addContent={addContent} updateContent={updateContent} />
+						)}
 						<Routes>
 							<Route path="/" element={<Home />} />
 							<Route path="/activate" element={<ProtectedRoute unloggedOnly><Activate activateAccount={activateAccount} /></ProtectedRoute>} />
