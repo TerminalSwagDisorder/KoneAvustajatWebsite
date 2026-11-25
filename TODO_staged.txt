@@ -8,7 +8,7 @@ Stage 1 - Fast fixes:
 
 
 Stage 2 - High priority (changes first, then additions):
--Secure routes with sensitive data (eg. /api/orders), including order ownership checks (https://chatgpt.com/s/t_6b0716efffd081919feaa77250040371)
+-Secure routes with sensitive data (eg. /api/orders), including order ownership checks x
 -Fix used parts additional details
 -Add a normalized order_items table and migrate from orders.Items (before receipt/order changes below)
 -Show the labour cost separately in the receipt
