@@ -147,7 +147,9 @@ const ShoppingCart = ({ postDynamicData, updateDynamicData }) => {
 					{typeof value === "object" && value !== null ? (
 						renderNestedObject(value)
 					) : (
-						value
+						<span style={{ whiteSpace: "pre-wrap", overflowWrap: "anywhere" }}>
+							{value}
+						</span>
 					)}
 					</ListGroup.Item>
 				))}
@@ -183,7 +185,9 @@ const ShoppingCart = ({ postDynamicData, updateDynamicData }) => {
 									) : typeof partVal[key] === "object" && partVal[key] !== null ? (
 										renderNestedObject(partVal[key])
 									) : (
-										partVal[key]
+										<span style={{ whiteSpace: "pre-wrap", overflowWrap: "anywhere" }}>
+											{partVal[key]}
+										</span>
 									)}
 								</ListGroup.Item>
 							))}

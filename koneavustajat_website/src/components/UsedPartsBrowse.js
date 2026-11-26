@@ -326,24 +326,34 @@ const UsedPartsBrowse = ({ fetchDynamicData, fetchDataAmount, postDynamicData, u
 
 	const handleSubmit = async (event) => {
 		event.preventDefault();
+
 		try {
+			const submittedFields = { ...formFields };
+
+			if (typeof submittedFields.AdditionalDetails === "string") {
+				submittedFields.AdditionalDetails = submittedFields.AdditionalDetails.trim() || null;
+			}
+
 			let success = false;
+
 			if (currentOperation === "add") {
-				success = await postDynamicData(formFields, "inventory/add");
+				success = await postDynamicData(submittedFields, "inventory/add");
 			} else if (currentOperation === "modify") {
-				success = await updateDynamicData(formFields, "inventory/update", null, selectedPart.PartID);
+				success = await updateDynamicData(submittedFields, "inventory/update", null, selectedPart.PartID);
 			} else if (currentOperation === "delete") {
 				success = await deleteDynamicData("inventory/delete", null, selectedPart.PartID);
 			} else {
 				console.error("No valid part operation for submission");
 				displayError("No valid part operation for submission");
 			}
+
 			if (success) {
 				const operationMessages = {
 					add: "added",
 					modify: "modified",
 					delete: "deleted"
 				};
+
 				await fetchData();
 				closeForm();
 				displayError(`Item ${operationMessages[currentOperation] || "invalid operation"} successfully!`, "success");
@@ -353,13 +363,25 @@ const UsedPartsBrowse = ({ fetchDynamicData, fetchDataAmount, postDynamicData, u
 			console.error(error);
 		}
 	};
-
+	
 	const handlePartTypeChange = (event) => {
 		const selectedKey = event.target.value;
 		const selectedValue = partNameMapping[selectedKey] || {};							
 		handleSearchTerm(event);
 		setPartName({ key: selectedKey, value: selectedValue });
 	};
+
+	const renderAdditionalDetailsInput = (value) => (
+		<Form.Control
+			as="textarea"
+			rows={4}
+			name="AdditionalDetails"
+			value={value}
+			placeholder={renderContent("usedparts.form.additionaldetails", "Additional details")}
+			aria-label={renderContent("usedparts.form.additionaldetails", "Additional details")}
+			onChange={handleInputChange}
+		/>
+	);
 
 	const renderPartModification = () => {
 		if (currentUser && currentUser.RoleID === 4 && selectedPart && currentOperation === "modify") {
@@ -393,6 +415,10 @@ const UsedPartsBrowse = ({ fetchDynamicData, fetchDataAmount, postDynamicData, u
 													</option>
 												))}
 											</Form.Select>
+										</Form.Group>
+									) : key === "AdditionalDetails" ? (
+										<Form.Group className="mb-3">
+											{renderAdditionalDetailsInput(formFields[key] ?? selectedPart[key] ?? "")}
 										</Form.Group>
 									) : key === "Price" ? (
 										<Form.Group className="mb-3">
@@ -466,7 +492,9 @@ const UsedPartsBrowse = ({ fetchDynamicData, fetchDataAmount, postDynamicData, u
 							<ul key={index}>
 								<li>
 									<b>{key}</b>:{" "}
-									{selectedPart[key]}
+									<span style={{ whiteSpace: "pre-wrap", overflowWrap: "anywhere" }}>
+										{selectedPart[key]}
+									</span>
 								</li>
 							</ul>
 						))}
@@ -692,6 +720,8 @@ const renderAddForm = () => {
 									<option value="">No part types available</option>
 								)}
 							</Form.Select>
+						) : key === "AdditionalDetails" ? (
+							renderAdditionalDetailsInput(value)
 						) : key === "Price" ? (
 							<Form.Control
 								key={key}

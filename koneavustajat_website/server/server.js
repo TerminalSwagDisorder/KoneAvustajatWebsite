@@ -1013,7 +1013,7 @@ const inventorySchema = Joi.object({
 	SerialNumber: Joi.string().trim().optional(),
 	Available: Joi.number().optional(),
 	DateAdded: Joi.string().trim().optional(),
-	AdditionalDetails: Joi.string().trim().optional(),
+		AdditionalDetails: Joi.string().trim().allow(null).optional(),
 	Price: Joi.number().optional(),
 	priceRange: Joi.string().trim()
 		.pattern(/^\d+-\d+$/)
@@ -5532,15 +5532,7 @@ app.get("/api/inventory", routePagination, routeOrderBy, tableSearch("inventory"
 	try {
 		const [partInventory] = await promisePool.query(sql, sqlParams);
 
-		// additionaldetails needs to be parsed
-		const parseInventory = partInventory.map((item) => ({
-			...item,
-			additionaldetails: item.additionaldetails ? JSON.parse(item.additionaldetails) : null
-		}));
-
-		
-
-		return res.status(200).json(parseInventory);
+		return res.status(200).json(partInventory);
 	} catch (error) {
 		const [status, message] = handleServerError(error);
 		return res.status(status).json({ message: message });
@@ -5675,13 +5667,7 @@ app.get("/api/inventory/:id", idValidator, async (req, res) => {
 			return res.status(404).json({ message: "Inventory item not found" });
 		}
 
-		// additionaldetails needs to be parsed
-		const parseInventory = partInventory.map((item) => ({
-			...item,
-			additionaldetails: item.additionaldetails ? JSON.parse(item.additionaldetails) : null
-		}));
-
-		return res.status(200).json(parseInventory);
+		return res.status(200).json(partInventory);
 	} catch (error) {
 		const [status, message] = handleServerError(error);
 		return res.status(status).json({ message: message });
