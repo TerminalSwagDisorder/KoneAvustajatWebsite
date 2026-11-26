@@ -9,7 +9,7 @@ Stage 1 - Fast fixes:
 
 Stage 2 - High priority (changes first, then additions):
 -Secure routes with sensitive data (eg. /api/orders), including order ownership checks x
--Fix used parts additional details
+-Fix used parts additional details x
 -Add a normalized order_items table and migrate from orders.Items (before receipt/order changes below)
 -Show the labour cost separately in the receipt
 -Add a way to revoke tokens, check autofixari flow
@@ -28,7 +28,7 @@ Stage 3 - Remaining work (changes first, then additions):
 -Add contact & about us pages
 
 Stage 4 - Styling
--Improve readability & ux (eg on order details, the item list should be improved)
+-Improve readability & ux (eg on order details, the item list formatting should be improved)
 -Decide on central styling & themes
 -Add decided styling
 -Mirror db styling & conventions used in AF/GPS (column types, coallitions, etc.)
